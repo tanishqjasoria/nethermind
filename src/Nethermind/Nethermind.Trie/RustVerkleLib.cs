@@ -57,6 +57,9 @@ namespace Nethermind.Trie
         [DllImport("rust_verkle")]
         private static extern bool verify_verkle_proof_multiple(IntPtr verkleTrie, byte[] verkleProof, int proof_len, byte[,] key, byte[,] value, int len);
 
+        [DllImport("rust_verkle")]
+        public static extern void setup_proof_free(IntPtr handle);
+
         public static IntPtr VerkleTrieNew()
         {
             return verkle_trie_new();
