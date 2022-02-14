@@ -456,7 +456,17 @@ public class VerkleTree
     {
         if (visitor is null) throw new ArgumentNullException(nameof(visitor));
         if (rootHash is null) throw new ArgumentNullException(nameof(rootHash));
-        throw new InvalidOperationException("No support for visiting a VerkleTree");
+
+        TrieVisitContext trieVisitContext = new()
+        {
+            // hacky but other solutions are not much better, something nicer would require a bit of thinking
+            // we introduced a notion of an account on the visit context level which should have no knowledge of account really
+            // but we know that we have multiple optimizations and assumptions on trees
+            ExpectAccounts = (visitingOptions & VisitingOptions.ExpectAccounts) != VisitingOptions.None,
+            Parallel = (visitingOptions & VisitingOptions.Parallel) != VisitingOptions.None
+        };
+
+        visitor.VisitTree(rootHash, trieVisitContext);
     }
     
     public void Commit(long blockNumber)
