@@ -77,7 +77,7 @@ namespace Nethermind.Core.Test.Blockchain
         }
 
         public IJsonSerializer JsonSerializer { get; set; }
-        public IStateProvider State { get; set; }
+        public VerkleStateProvider State { get; set; }
         public IReadOnlyStateProvider ReadOnlyState { get; private set; }
         public IDb StateDb => DbProvider.StateDb;
         public TrieStore TrieStore { get; set; }
@@ -120,8 +120,8 @@ namespace Nethermind.Core.Test.Blockchain
             SpecProvider = CreateSpecProvider(specProvider ?? MainnetSpecProvider.Instance);
             EthereumEcdsa = new EthereumEcdsa(ChainId.Mainnet, LogManager);
             DbProvider = await TestMemDbProvider.InitAsync();
-            TrieStore = new TrieStore(StateDb.Innermost, LogManager);
-            State = new StateProvider(TrieStore, DbProvider.CodeDb, LogManager);
+            VerkleStateProvider _stateProvider = new VerkleStateProvider(LogManager, DbProvider.CodeDb);
+            State = _stateProvider;
             State.CreateAccount(TestItem.AddressA, (initialValues ?? InitialValue));
             State.CreateAccount(TestItem.AddressB, (initialValues ?? InitialValue));
             State.CreateAccount(TestItem.AddressC, (initialValues ?? InitialValue));
@@ -130,15 +130,14 @@ namespace Nethermind.Core.Test.Blockchain
             State.UpdateCode(code);
             State.UpdateCodeHash(TestItem.AddressA, codeHash, SpecProvider.GenesisSpec);
 
-            Storage = new StorageProvider(TrieStore, State, LogManager);
+            Storage = new VerkleStorageProvider(_stateProvider, LogManager);
             Storage.Set(new StorageCell(TestItem.AddressA, UInt256.One), Bytes.FromHexString("0xabcdef"));
             Storage.Commit();
 
             State.Commit(SpecProvider.GenesisSpec);
             State.CommitTree(0);
             
-            ReadOnlyTrieStore = TrieStore.AsReadOnly(StateDb.Innermost);
-            StateReader = new StateReader(ReadOnlyTrieStore, CodeDb, LogManager);
+            StateReader = new VerkleStateReader(_stateProvider.GetTree(), CodeDb, LogManager);
             
             IDb blockDb = new MemDb();
             IDb headerDb = new MemDb();

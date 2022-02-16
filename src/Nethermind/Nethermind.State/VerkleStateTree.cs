@@ -127,6 +127,23 @@ namespace Nethermind.State
             }
             
         }
+        public byte[] GetStorageValue(StorageCell storageCell)
+        {
+            byte[] storageKey = GetTreeKeyForStorageSlot(storageCell.Address, storageCell.Index);
+            byte[]? value = GetValue(storageKey);
+            if (value is null)
+            {
+                return new byte[32];
+            }
+
+            return value;
+        }
         
+        public void SetStorageValue(StorageCell storageCell, byte[] value)
+        {
+            byte[] storageKey = GetTreeKeyForStorageSlot(storageCell.Address, storageCell.Index);
+            SetValue(storageKey, value);
+        }
+
     }
 }

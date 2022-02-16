@@ -28,7 +28,7 @@ using Nethermind.Trie.Pruning;
 // ReSharper disable UnusedAutoPropertyAccessor.Global
 namespace Nethermind.Blockchain.Processing
 {
-    public class ReadOnlyTxProcessingEnv : IReadOnlyTxProcessorSource
+    public class VerkleReadOnlyTxProcessingEnv : IReadOnlyTxProcessorSource
     {
         private readonly ReadOnlyDb _codeDb;
         public IStateReader StateReader { get; }
@@ -40,29 +40,27 @@ namespace Nethermind.Blockchain.Processing
         public IBlockhashProvider BlockhashProvider { get; }
         public IVirtualMachine Machine { get; }
 
-        public ReadOnlyTxProcessingEnv(
+        public VerkleReadOnlyTxProcessingEnv(
             IDbProvider? dbProvider,
-            IReadOnlyTrieStore? trieStore,
+            VerkleStateProvider stateProvider,
             IBlockTree? blockTree,
             ISpecProvider? specProvider,
             ILogManager? logManager) 
-            : this(dbProvider?.AsReadOnly(false), trieStore, blockTree?.AsReadOnly(), specProvider, logManager)
+            : this(dbProvider?.AsReadOnly(false), stateProvider, blockTree?.AsReadOnly(), specProvider, logManager)
         {
         }
 
-        public ReadOnlyTxProcessingEnv(
+        public VerkleReadOnlyTxProcessingEnv(
             IReadOnlyDbProvider? readOnlyDbProvider,
-            IReadOnlyTrieStore? readOnlyTrieStore,
+            VerkleStateProvider stateProvider,
             IReadOnlyBlockTree? readOnlyBlockTree,
             ISpecProvider? specProvider,
             ILogManager? logManager)
         {
             if (specProvider == null) throw new ArgumentNullException(nameof(specProvider));
-            
             DbProvider = readOnlyDbProvider ?? throw new ArgumentNullException(nameof(readOnlyDbProvider));
             _codeDb = readOnlyDbProvider.CodeDb.AsReadOnly(true);
-
-            VerkleStateProvider stateProvider = new(logManager, _codeDb);
+            
             StateProvider = stateProvider;
             StateReader = new VerkleStateReader(stateProvider.GetTree(), _codeDb, logManager);
             StorageProvider = new VerkleStorageProvider(stateProvider, logManager);
