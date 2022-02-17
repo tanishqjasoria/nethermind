@@ -52,7 +52,7 @@ using BlockTree = Nethermind.Blockchain.BlockTree;
 
 namespace Nethermind.Core.Test.Blockchain
 {
-    public class TestBlockchain : IDisposable
+    public class VerkleTestBlockchain : IDisposable
     {
         public const int DefaultTimeout = 4000;
         public IStateReader StateReader { get; private set; }
@@ -77,7 +77,7 @@ namespace Nethermind.Core.Test.Blockchain
         }
 
         public IJsonSerializer JsonSerializer { get; set; }
-        public IStateProvider State { get; set; }
+        public VerkleStateProvider State { get; set; }
         public IReadOnlyStateProvider ReadOnlyState { get; private set; }
         public IDb StateDb => DbProvider.StateDb;
         public TrieStore TrieStore { get; set; }
@@ -87,7 +87,7 @@ namespace Nethermind.Core.Test.Blockchain
         
         public ITransactionComparerProvider TransactionComparerProvider { get; set; }
 
-        protected TestBlockchain()
+        protected VerkleTestBlockchain()
         {
         }
         
@@ -113,15 +113,15 @@ namespace Nethermind.Core.Test.Blockchain
 
         public static TransactionBuilder<Transaction> BuildSimpleTransaction => Builders.Build.A.Transaction.SignedAndResolved(TestItem.PrivateKeyA).To(AccountB);
 
-        protected virtual async Task<TestBlockchain> Build(ISpecProvider? specProvider = null, UInt256? initialValues = null)
+        protected virtual async Task<VerkleTestBlockchain> Build(ISpecProvider? specProvider = null, UInt256? initialValues = null)
         {
             Timestamper = new ManualTimestamper(new DateTime(2020, 2, 15, 12, 50, 30, DateTimeKind.Utc));
             JsonSerializer = new EthereumJsonSerializer();
             SpecProvider = CreateSpecProvider(specProvider ?? MainnetSpecProvider.Instance);
             EthereumEcdsa = new EthereumEcdsa(ChainId.Mainnet, LogManager);
             DbProvider = await TestMemDbProvider.InitAsync();
-            TrieStore = new TrieStore(StateDb.Innermost, LogManager);
-            State = new StateProvider(TrieStore, DbProvider.CodeDb, LogManager);
+            VerkleStateProvider _stateProvider = new VerkleStateProvider(LogManager, DbProvider.CodeDb);
+            State = _stateProvider;
             State.CreateAccount(TestItem.AddressA, (initialValues ?? InitialValue));
             State.CreateAccount(TestItem.AddressB, (initialValues ?? InitialValue));
             State.CreateAccount(TestItem.AddressC, (initialValues ?? InitialValue));
@@ -130,15 +130,14 @@ namespace Nethermind.Core.Test.Blockchain
             State.UpdateCode(code);
             State.UpdateCodeHash(TestItem.AddressA, codeHash, SpecProvider.GenesisSpec);
 
-            Storage = new StorageProvider(TrieStore, State, LogManager);
+            Storage = new VerkleStorageProvider(_stateProvider, LogManager);
             Storage.Set(new StorageCell(TestItem.AddressA, UInt256.One), Bytes.FromHexString("0xabcdef"));
             Storage.Commit();
 
             State.Commit(SpecProvider.GenesisSpec);
             State.CommitTree(0);
             
-            ReadOnlyTrieStore = TrieStore.AsReadOnly(StateDb.Innermost);
-            StateReader = new StateReader(ReadOnlyTrieStore, CodeDb, LogManager);
+            StateReader = new VerkleStateReader(_stateProvider.GetTree(), CodeDb, LogManager);
             
             IDb blockDb = new MemDb();
             IDb headerDb = new MemDb();

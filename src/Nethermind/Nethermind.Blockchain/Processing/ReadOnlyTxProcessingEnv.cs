@@ -62,10 +62,9 @@ namespace Nethermind.Blockchain.Processing
             DbProvider = readOnlyDbProvider ?? throw new ArgumentNullException(nameof(readOnlyDbProvider));
             _codeDb = readOnlyDbProvider.CodeDb.AsReadOnly(true);
 
-            VerkleStateProvider stateProvider = new(logManager, _codeDb);
-            StateProvider = stateProvider;
-            StateReader = new VerkleStateReader(stateProvider.GetTree(), _codeDb, logManager);
-            StorageProvider = new VerkleStorageProvider(stateProvider, logManager);
+            StateReader = new StateReader(readOnlyTrieStore, _codeDb, logManager);
+            StateProvider = new StateProvider(readOnlyTrieStore, _codeDb, logManager);
+            StorageProvider = new StorageProvider(readOnlyTrieStore, StateProvider, logManager);
             IWorldState worldState = new WorldState(StateProvider, StorageProvider);
             
             BlockTree = readOnlyBlockTree ?? throw new ArgumentNullException(nameof(readOnlyBlockTree));
