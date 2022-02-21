@@ -84,9 +84,9 @@ public class VerkleStateReader: IStateReader
         return account is null ? Array.Empty<byte>() : GetCode(account.CodeHash);
     }
 
-    public void RunTreeVisitor(ITreeVisitor treeVisitor, Keccak rootHash)
+    public void RunTreeVisitor(ITreeVisitor treeVisitor, Keccak rootHash, VisitingOptions? visitingOptions = null)
     {
-        _state.Accept(treeVisitor, rootHash, treeVisitor.GetSupportedOptions());
+        _state.Accept(treeVisitor, rootHash, visitingOptions);
     }
 
 
