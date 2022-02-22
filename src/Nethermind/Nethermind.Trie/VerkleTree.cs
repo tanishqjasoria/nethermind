@@ -456,7 +456,8 @@ public class VerkleTree
     {
         if (visitor is null) throw new ArgumentNullException(nameof(visitor));
         if (rootHash is null) throw new ArgumentNullException(nameof(rootHash));
-
+        visitingOptions ??= VisitingOptions.Default;
+        
         TrieVisitContext trieVisitContext = new()
         {
             // hacky but other solutions are not much better, something nicer would require a bit of thinking
