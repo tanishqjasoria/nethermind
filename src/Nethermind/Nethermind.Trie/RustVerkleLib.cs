@@ -31,6 +31,7 @@ public enum DatabaseScheme
 {
     MemoryDb,
     RocksDb,
+    RocksDbReadOnly,
 }
     
 public enum CommitScheme
@@ -85,7 +86,7 @@ public static class RustVerkleLib {
     private static extern IntPtr verkle_trie_clear(IntPtr verkleTrie);
     
     public static RustVerkle VerkleTrieNew(
-        DatabaseScheme databaseScheme = DatabaseScheme.MemoryDb,
+        DatabaseScheme databaseScheme = DatabaseScheme.RocksDb,
         CommitScheme commitScheme = CommitScheme.TestCommitment,
         string pathname = "./db/verkle_db"
     )
@@ -276,12 +277,33 @@ public static class RustVerkleLib {
     
     public static void VerkleTrieFlush(RustVerkle verkleTrie)
     {
+        if (verkleTrie.databaseScheme == DatabaseScheme.RocksDbReadOnly)
+        {
+            throw new InvalidOperationException("Readonly trie cannot be flushed");
+        }
         verkle_trie_flush(verkleTrie.trie);
     }
     
     public static void VerkleTrieClear(RustVerkle verkleTrie)
     {
         verkle_trie_clear(verkleTrie.trie);
+    }
+
+    public static RustVerkle VerkleTrieGetReadOnly(RustVerkle verkleTrie)
+    {
+        RustVerkle verkleTrieNew = new();
+        verkleTrieNew.commitScheme =verkleTrie.commitScheme;
+        verkleTrieNew.trie = verkleTrie.trie;
+        if (verkleTrie.databaseScheme == DatabaseScheme.RocksDb)
+        {
+            verkleTrieNew.databaseScheme = DatabaseScheme.RocksDbReadOnly;
+        }
+        else
+        {
+            verkleTrieNew.databaseScheme = verkleTrie.databaseScheme;
+        }
+
+        return verkleTrie;
     }
 }
 

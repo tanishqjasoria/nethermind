@@ -29,10 +29,10 @@ namespace Nethermind.Trie.Test
     {
         static object[] Variants =
         {
-            new object[] {DatabaseScheme.MemoryDb, CommitScheme.TestCommitment},
+            // new object[] {DatabaseScheme.MemoryDb, CommitScheme.TestCommitment},
             // new object[] {DatabaseScheme.MemoryDb, CommitScheme.PrecomputeLagrange},
             new object[] {DatabaseScheme.RocksDb, CommitScheme.TestCommitment},
-            // new object[] {DatabaseScheme.RocksDb, CommitScheme.PrecomputeLagrange}
+            new object[] {DatabaseScheme.RocksDb, CommitScheme.PrecomputeLagrange}
         };
 
         private readonly byte[] treeKeyVersion =
