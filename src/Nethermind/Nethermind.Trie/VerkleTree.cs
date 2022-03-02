@@ -49,7 +49,7 @@ public class VerkleTree
     private readonly UInt256 MainStorageOffset;
 
     
-    private readonly IntPtr _verkleTrieObj;
+    private readonly RustVerkle _verkleTrieObj;
     private readonly ILogger _logger;
     
     public static readonly Keccak EmptyTreeHash = new (UInt256.Zero.ToBigEndian());
