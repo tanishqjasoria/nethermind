@@ -20,19 +20,14 @@ using System.Collections.Concurrent;
 using Nethermind.Core.Extensions;
 using Nethermind.Int256;
 using Nethermind.Logging;
-using Nethermind.Trie;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Runtime.InteropServices;
 using Nethermind.Core;
 using Nethermind.Core.Crypto;
 using Nethermind.Crypto;
-using Nethermind.Trie.Pruning;
 
-namespace Nethermind.State;
+namespace Nethermind.Trie;
 
-public class VerkleTree
+public class VerkleTree 
 {
     private const int VersionLeafKey = 0;
     private const int BalanceLeafKey = 1;
@@ -96,18 +91,11 @@ public class VerkleTree
     [DebuggerStepThrough]
     // TODO: add functionality to start with a given root hash (traverse from a starting node)
     // public byte[]? Get(Span<byte> rawKey, Keccak? rootHash = null)
-    public byte[]? GetValue(Span<byte> rawKey)
-    {
-        byte[]? result = RustVerkleLib.VerkleTrieGet(_verkleTrieObj, rawKey);
-        return result;
-    }
-    
-    public byte[]? GetValue(byte[] rawKey)
-    {
-        byte[]? result = RustVerkleLib.VerkleTrieGet(_verkleTrieObj, rawKey);
-        return result;
-    }
-    
+    public byte[]? GetValue(Span<byte> rawKey) => RustVerkleLib.VerkleTrieGet(_verkleTrieObj, rawKey);
+    public byte[]? GetValue(byte[] rawKey) => RustVerkleLib.VerkleTrieGet(_verkleTrieObj, rawKey);
+
+    public void ClearTempChanges() => RustVerkleLib.VerkleTrieClear(_verkleTrieObj);
+
     public Span<byte> GetValueSpan(byte[] rawKey) => RustVerkleLib.VerkleTrieGetSpan(_verkleTrieObj, rawKey);
     public Span<byte> GetValueSpan(Span<byte> rawKey) => RustVerkleLib.VerkleTrieGetSpan(_verkleTrieObj, rawKey);
 
@@ -182,11 +170,8 @@ public class VerkleTree
         return Sha2.Compute(keyPrefix);
     }
     
-    public byte[] GetTreeKeyPrefixAccount(Address address)
-    {
-        return GetTreeKeyPrefix(address, 0);
-    }
-    
+    public byte[] GetTreeKeyPrefixAccount(Address address) => GetTreeKeyPrefix(address, 0);
+
     public byte[]? GetValue(byte[] keyPrefix, byte subIndex)
     {
         keyPrefix[31] = subIndex;
@@ -239,30 +224,11 @@ public class VerkleTree
     //     return GetTreeKey(address, UInt256.Zero, leaf);
     // }
 
-    private byte[] GetTreeKeyForVersion(Address address)
-    {
-        return GetTreeKey(address, UInt256.Zero, VersionLeafKey);
-    }
-
-    private byte[] GetTreeKeyForBalance(Address address)
-    {
-        return GetTreeKey(address, UInt256.Zero, BalanceLeafKey);
-    }
-
-    private byte[] GetTreeKeyForNonce(Address address)
-    {
-        return GetTreeKey(address, UInt256.Zero, NonceLeafKey);
-    }
-
-    private byte[] GetTreeKeyForCodeKeccak(Address address)
-    {
-        return GetTreeKey(address, UInt256.Zero, CodeKeccakLeafKey);
-    }
-
-    private byte[] GetTreeKeyForCodeSize(Address address)
-    {
-        return GetTreeKey(address, UInt256.Zero, CodeSizeLeafKey);
-    }
+    private byte[] GetTreeKeyForVersion(Address address) => GetTreeKey(address, UInt256.Zero, VersionLeafKey);
+    private byte[] GetTreeKeyForBalance(Address address) => GetTreeKey(address, UInt256.Zero, BalanceLeafKey);
+    private byte[] GetTreeKeyForNonce(Address address) => GetTreeKey(address, UInt256.Zero, NonceLeafKey);
+    private byte[] GetTreeKeyForCodeKeccak(Address address) => GetTreeKey(address, UInt256.Zero, CodeKeccakLeafKey);
+    private byte[] GetTreeKeyForCodeSize(Address address) => GetTreeKey(address, UInt256.Zero, CodeSizeLeafKey);
     
     public byte[] GetTreeKeyForCodeChunk(Address address, UInt256 chunk)
     {
