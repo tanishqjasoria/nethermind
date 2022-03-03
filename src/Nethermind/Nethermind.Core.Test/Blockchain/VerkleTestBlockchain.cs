@@ -137,7 +137,7 @@ namespace Nethermind.Core.Test.Blockchain
             State.Commit(SpecProvider.GenesisSpec);
             State.CommitTree(0);
             
-            StateReader = new VerkleStateReader(_stateProvider.GetTree(), CodeDb, LogManager);
+            StateReader = new VerkleStateReader(_stateProvider.GetReadOnlyTree(), CodeDb, LogManager);
             
             IDb blockDb = new MemDb();
             IDb headerDb = new MemDb();
@@ -237,7 +237,7 @@ namespace Nethermind.Core.Test.Blockchain
             return new TestBlockProducer(env.TxSource, env.ChainProcessor, env.ReadOnlyStateProvider, sealer, BlockTree, BlockProductionTrigger, Timestamper, SpecProvider, LogManager);
         }
 
-        public virtual ILogManager LogManager { get; } = LimboLogs.Instance;
+        public virtual ILogManager LogManager { get; } = NUnitLogManager.Instance;
 
         protected virtual TxPool.TxPool CreateTxPool() =>
             new(
@@ -250,7 +250,7 @@ namespace Nethermind.Core.Test.Blockchain
 
         protected virtual TxPoolTxSource CreateTxPoolTxSource()
         {
-            ITxFilterPipeline txFilterPipeline = TxFilterPipelineBuilder.CreateStandardFilteringPipeline(LimboLogs.Instance,
+            ITxFilterPipeline txFilterPipeline = TxFilterPipelineBuilder.CreateStandardFilteringPipeline(NUnitLogManager.Instance,
                 SpecProvider);
             return new TxPoolTxSource(TxPool, SpecProvider, TransactionComparerProvider, LogManager, txFilterPipeline);
         }

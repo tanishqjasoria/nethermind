@@ -103,8 +103,8 @@ namespace Nethermind.Blockchain.Producers
                     _logManager,
                     BlockchainProcessor.Options.NoReceipts);
 
-            OneTimeChainProcessor chainProcessor = new(
-                readOnlyDbProvider,
+            VerkleOneTimeChainProcessor chainProcessor = new(
+                _stateProvider,
                 blockchainProcessor);
 
             return new BlockProducerEnv

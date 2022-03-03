@@ -44,13 +44,14 @@ public class VerkleTree
     private readonly UInt256 MainStorageOffset;
 
     
-    private readonly RustVerkle _verkleTrieObj;
+    protected readonly RustVerkle _verkleTrieObj;
     private readonly ILogger _logger;
+    protected readonly ILogManager _logManager;
     
     public static readonly Keccak EmptyTreeHash = new (UInt256.Zero.ToBigEndian());
     public TrieType TrieType { get; protected set; }
     
-    private readonly bool _allowCommits;
+    protected readonly bool _allowCommits;
 
     public Keccak RootHash;
     
@@ -73,6 +74,29 @@ public class VerkleTree
     {
         // TODO: do i need to pass roothash here to rust to use for initialization of the library?
         _verkleTrieObj = RustVerkleLib.VerkleTrieNew();
+        _logManager = logManager;
+        _logger = logManager?.GetClassLogger<VerkleTree>() ?? throw new ArgumentNullException(nameof(logManager));
+        _logger.Info(_verkleTrieObj.ToString());
+        _allowCommits = allowCommits;
+        RootHash = rootHash;
+        MainStorageOffsetBase.LeftShift(MainStorageOffsetExponent, out MainStorageOffset);
+        
+        if (_allowCommits)
+        {
+            _currentCommit = new ConcurrentQueue<NodeCommitInfo>();
+            _commitExceptions = new ConcurrentQueue<Exception>();
+        }
+    }
+    
+    protected VerkleTree(
+        RustVerkle verkleTrieObj,
+        Keccak rootHash,
+        bool allowCommits,
+        ILogManager? logManager)
+    {
+        // TODO: do i need to pass roothash here to rust to use for initialization of the library?
+        _verkleTrieObj = verkleTrieObj;
+        _logManager = logManager;
             
         _logger = logManager?.GetClassLogger<VerkleTree>() ?? throw new ArgumentNullException(nameof(logManager));
         _logger.Info(_verkleTrieObj.ToString());
@@ -95,6 +119,13 @@ public class VerkleTree
     public byte[]? GetValue(byte[] rawKey) => RustVerkleLib.VerkleTrieGet(_verkleTrieObj, rawKey);
 
     public void ClearTempChanges() => RustVerkleLib.VerkleTrieClear(_verkleTrieObj);
+    public void FlushTree() => RustVerkleLib.VerkleTrieFlush(_verkleTrieObj);
+    
+    public VerkleTree GetReadOnly()
+    {
+        RustVerkle treeReadOnly = RustVerkleLib.VerkleTrieGetReadOnly(_verkleTrieObj);
+        return new VerkleTree(treeReadOnly, RootHash, _allowCommits, _logManager);
+    }
 
     public Span<byte> GetValueSpan(byte[] rawKey) => RustVerkleLib.VerkleTrieGetSpan(_verkleTrieObj, rawKey);
     public Span<byte> GetValueSpan(Span<byte> rawKey) => RustVerkleLib.VerkleTrieGetSpan(_verkleTrieObj, rawKey);

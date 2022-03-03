@@ -660,6 +660,11 @@ namespace Nethermind.State
         
             _tree.Commit(blockNumber);
         }
+
+        public void ClearTempChanges()
+        {
+            _tree.ClearTempChanges();
+        }
         
         public bool AccountExists(Address address)
         {
@@ -825,6 +830,11 @@ namespace Nethermind.State
         public VerkleStateTree GetTree()
         {
             return _tree;
+        }
+        
+        public VerkleStateTree GetReadOnlyTree()
+        {
+            return _tree.GetReadOnly();
         }
 
         public IKeyValueStore GetCodeDb()
