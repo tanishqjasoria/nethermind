@@ -50,6 +50,18 @@ namespace Nethermind.State
         {
             TrieType = TrieType.State;
         }
+        
+        public VerkleStateTree(RustVerkle _treeObj, Keccak _rootHash, bool _allowCommits, ILogManager? logManager)
+            : base(_treeObj, _rootHash, _allowCommits, logManager)
+        {
+            TrieType = TrieType.State;
+        }
+        
+        public VerkleStateTree GetReadOnly()
+        {
+            RustVerkle treeReadOnly = RustVerkleLib.VerkleTrieGetReadOnly(_verkleTrieObj);
+            return new VerkleStateTree(treeReadOnly, RootHash, _allowCommits, _logManager);
+        }
 
         [DebuggerStepThrough]
         public Account? Get(Address address, Keccak? rootHash = null)
@@ -126,6 +138,24 @@ namespace Nethermind.State
                 }
             }
             
+        }
+        
+        public void SetStorageValue(StorageCell storageCell, byte[] value)
+        {
+            byte[] storageKey = GetTreeKeyForStorageSlot(storageCell.Address, storageCell.Index);
+            SetValue(storageKey, value);
+        }
+
+        public byte[] GetStorageValue(StorageCell storageCell)
+        {
+            byte[] storageKey = GetTreeKeyForStorageSlot(storageCell.Address, storageCell.Index);
+            byte[]? value = GetValue(storageKey);
+            if (value is null)
+            {
+                return new byte[32];
+            }
+
+            return value;
         }
         
     }

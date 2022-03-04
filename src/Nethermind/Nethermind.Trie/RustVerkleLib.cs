@@ -31,12 +31,20 @@ public enum DatabaseScheme
 {
     MemoryDb,
     RocksDb,
+    RocksDbReadOnly,
 }
     
 public enum CommitScheme
 {
     TestCommitment,
     PrecomputeLagrange,
+}
+
+public struct RustVerkle
+{
+    public CommitScheme commitScheme;
+    public DatabaseScheme databaseScheme;
+    public IntPtr trie;
 }
 
 public static class RustVerkleLib {
@@ -77,16 +85,22 @@ public static class RustVerkleLib {
     [DllImport("rust_verkle")]
     private static extern IntPtr verkle_trie_clear(IntPtr verkleTrie);
     
-    public static IntPtr VerkleTrieNew(
-        DatabaseScheme databaseScheme = DatabaseScheme.MemoryDb,
+    public static RustVerkle VerkleTrieNew(
+        DatabaseScheme databaseScheme = DatabaseScheme.RocksDb,
         CommitScheme commitScheme = CommitScheme.TestCommitment,
         string pathname = "./db/verkle_db"
     )
     {
-        return verkle_trie_new(databaseScheme, commitScheme, pathname);
+        IntPtr trie = verkle_trie_new(databaseScheme, commitScheme, pathname);
+
+        RustVerkle verkleTrie = new();
+        verkleTrie.commitScheme = commitScheme;
+        verkleTrie.databaseScheme = databaseScheme;
+        verkleTrie.trie = trie;
+        return verkleTrie;
     }
     
-    public static unsafe void VerkleTrieInsert(IntPtr verkleTrie, Span<byte> key, Span<byte> value)
+    public static unsafe void VerkleTrieInsert(RustVerkle verkleTrie, Span<byte> key, Span<byte> value)
     {
         int valueLength = value.Length;
         if (valueLength != 32)
@@ -98,12 +112,12 @@ public static class RustVerkleLib {
         {
             fixed (byte* pValue = &MemoryMarshal.GetReference(value))
             {
-                verkle_trie_insert(verkleTrie, pKey, pValue);
+                verkle_trie_insert(verkleTrie.trie, pKey, pValue);
             }
         }
     }
     
-    public static unsafe void VerkleTrieInsert(IntPtr verkleTrie, byte[] key, byte[] value)
+    public static unsafe void VerkleTrieInsert(RustVerkle verkleTrie, byte[] key, byte[] value)
     {
         int valueLength = value.Length;
         if (valueLength != 32)
@@ -115,16 +129,16 @@ public static class RustVerkleLib {
         {
             fixed (byte* pValue = value)
             {
-                verkle_trie_insert(verkleTrie, pKey, pValue);
+                verkle_trie_insert(verkleTrie.trie, pKey, pValue);
             }
         }
     }
 
-    public static unsafe byte[]? VerkleTrieGet(IntPtr verkleTrie, Span<byte> key)
+    public static unsafe byte[]? VerkleTrieGet(RustVerkle verkleTrie, Span<byte> key)
     {
         fixed (byte* p = &MemoryMarshal.GetReference(key))
         {
-            IntPtr value = verkle_trie_get(verkleTrie, p);
+            IntPtr value = verkle_trie_get(verkleTrie.trie, p);
             if (value == IntPtr.Zero)
             {
                 return null;
@@ -136,11 +150,11 @@ public static class RustVerkleLib {
         
     }
     
-    public static unsafe byte[]? VerkleTrieGet(IntPtr verkleTrie, byte[] key)
+    public static unsafe byte[]? VerkleTrieGet(RustVerkle verkleTrie, byte[] key)
     {
         fixed (byte* p = key)
         {
-            IntPtr value = verkle_trie_get(verkleTrie, p);
+            IntPtr value = verkle_trie_get(verkleTrie.trie, p);
             if (value == IntPtr.Zero)
             {
                 return null;
@@ -152,37 +166,37 @@ public static class RustVerkleLib {
         
     }
     
-    public static unsafe Span<byte> VerkleTrieGetSpan(IntPtr verkleTrie, Span<byte> key)
+    public static unsafe Span<byte> VerkleTrieGetSpan(RustVerkle verkleTrie, Span<byte> key)
     {
         fixed (byte* p = &MemoryMarshal.GetReference(key))
         {
-            IntPtr value = verkle_trie_get(verkleTrie, p);
+            IntPtr value = verkle_trie_get(verkleTrie.trie, p);
             return value == IntPtr.Zero ? Span<byte>.Empty : new Span<byte>(value.ToPointer(), 32);
         }
     }
     
-    public static unsafe Span<byte> VerkleTrieGetSpan(IntPtr verkleTrie, byte[] key)
+    public static unsafe Span<byte> VerkleTrieGetSpan(RustVerkle verkleTrie, byte[] key)
     {
         fixed (byte* p = key)
         {
-            IntPtr value = verkle_trie_get(verkleTrie, p);
+            IntPtr value = verkle_trie_get(verkleTrie.trie, p);
             return value == IntPtr.Zero ? Span<byte>.Empty : new Span<byte>(value.ToPointer(), 32);
         }
     }
     
-    public static byte[] VerkleTrieGetStateRoot(IntPtr verkleTrie)
+    public static byte[] VerkleTrieGetStateRoot(RustVerkle verkleTrie)
     {
-        IntPtr value = get_root_hash(verkleTrie);
+        IntPtr value = get_root_hash(verkleTrie.trie);
         byte[] managedValue = new byte[32];
         Marshal.Copy(value, managedValue, 0, 32);
         return managedValue;
     }
 
-    public static unsafe byte[] VerkleProofGet(IntPtr verkleTrie, byte[] key)
+    public static unsafe byte[] VerkleProofGet(RustVerkle verkleTrie, byte[] key)
     {
         fixed (byte* p = key)
         {
-            IntPtr proofBox =  get_verkle_proof(verkleTrie, p);
+            IntPtr proofBox =  get_verkle_proof(verkleTrie.trie, p);
             Proof vp = (Proof)Marshal.PtrToStructure(proofBox, typeof(Proof));
             byte[] proofBytes = new byte[vp.len];
             Marshal.Copy(vp.ptr, proofBytes, 0, vp.len);
@@ -190,17 +204,17 @@ public static class RustVerkleLib {
         }
     }
     
-    public static unsafe Span<byte> VerkleProofGetSpan(IntPtr verkleTrie, byte[] key)
+    public static unsafe Span<byte> VerkleProofGetSpan(RustVerkle verkleTrie, byte[] key)
     {
         fixed (byte* p = key)
         {
-            IntPtr proofBox =  get_verkle_proof(verkleTrie, p);
+            IntPtr proofBox =  get_verkle_proof(verkleTrie.trie, p);
             Proof vp = (Proof)Marshal.PtrToStructure(proofBox, typeof(Proof));
             return vp.ptr == IntPtr.Zero ? Span<byte>.Empty : new Span<byte>(vp.ptr.ToPointer(), vp.len);
         }
     }
 
-    public static unsafe bool VerkleProofVerify(IntPtr verkleTrie, byte[] verkleProof, int proofLen, byte[] key, byte[] value)
+    public static unsafe bool VerkleProofVerify(RustVerkle verkleTrie, byte[] verkleProof, int proofLen, byte[] key, byte[] value)
     {
         fixed(byte* pProof = verkleProof)
         {
@@ -208,7 +222,7 @@ public static class RustVerkleLib {
             {
                 fixed(byte* pValue = value)
                 {
-                    byte verification = verify_verkle_proof(verkleTrie, pProof, proofLen, pKey, pValue);
+                    byte verification = verify_verkle_proof(verkleTrie.trie, pProof, proofLen, pKey, pValue);
                     if (verification == 0)
                     {
                         return false;
@@ -219,22 +233,22 @@ public static class RustVerkleLib {
         }
     }
 
-    public static unsafe void VerkleTrieInsertMultiple(IntPtr verkleTrie, byte[,] keys, byte[,] vals, int len)
+    public static unsafe void VerkleTrieInsertMultiple(RustVerkle verkleTrie, byte[,] keys, byte[,] vals, int len)
     {
         fixed (byte*  pKey = keys)
         {
             fixed (byte* pValue = vals)
             {
-                verkle_trie_insert_multiple(verkleTrie, pKey, pValue, len);
+                verkle_trie_insert_multiple(verkleTrie.trie, pKey, pValue, len);
             }
         }
     }
 
-    public static unsafe byte[] VerkleProofGetMultiple(IntPtr verkleTrie, byte[,] keys, int len)
+    public static unsafe byte[] VerkleProofGetMultiple(RustVerkle verkleTrie, byte[,] keys, int len)
     {
         fixed(byte* pKey = keys)
         {
-            IntPtr proofBox = get_verkle_proof_multiple(verkleTrie, pKey, len);
+            IntPtr proofBox = get_verkle_proof_multiple(verkleTrie.trie, pKey, len);
             Proof vp = (Proof)Marshal.PtrToStructure(proofBox, typeof(Proof));
             byte[] proofBytes = new byte[vp.len];
             Marshal.Copy(vp.ptr, proofBytes, 0, vp.len);
@@ -242,7 +256,7 @@ public static class RustVerkleLib {
         }
     }
 
-    public static unsafe bool VerkleProofVerifyMultiple(IntPtr verkleTrie, byte[] verkleProof, int proofLen, byte[,] keys, byte[,] values, int len)
+    public static unsafe bool VerkleProofVerifyMultiple(RustVerkle verkleTrie, byte[] verkleProof, int proofLen, byte[,] keys, byte[,] values, int len)
     {
         fixed(byte* pProof = verkleProof)
         {
@@ -250,7 +264,7 @@ public static class RustVerkleLib {
             {
                 fixed(byte* pValue = values)
                 {
-                    byte verification = verify_verkle_proof_multiple(verkleTrie, pProof, proofLen, pKey, pValue, len);
+                    byte verification = verify_verkle_proof_multiple(verkleTrie.trie, pProof, proofLen, pKey, pValue, len);
                     if (verification == 0)
                     {
                         return false;
@@ -261,14 +275,35 @@ public static class RustVerkleLib {
         }
     }
     
-    public static void VerkleTrieFlush(IntPtr verkleTrie)
+    public static void VerkleTrieFlush(RustVerkle verkleTrie)
     {
-        verkle_trie_flush(verkleTrie);
+        if (verkleTrie.databaseScheme == DatabaseScheme.RocksDbReadOnly)
+        {
+            throw new InvalidOperationException("Readonly trie cannot be flushed");
+        }
+        verkle_trie_flush(verkleTrie.trie);
     }
     
-    public static void VerkleTrieClear(IntPtr verkleTrie)
+    public static void VerkleTrieClear(RustVerkle verkleTrie)
     {
-        verkle_trie_clear(verkleTrie);
+        verkle_trie_clear(verkleTrie.trie);
+    }
+
+    public static RustVerkle VerkleTrieGetReadOnly(RustVerkle verkleTrie)
+    {
+        RustVerkle verkleTrieNew = new();
+        verkleTrieNew.commitScheme =verkleTrie.commitScheme;
+        verkleTrieNew.trie = verkleTrie.trie;
+        if (verkleTrie.databaseScheme == DatabaseScheme.RocksDb)
+        {
+            verkleTrieNew.databaseScheme = DatabaseScheme.RocksDbReadOnly;
+        }
+        else
+        {
+            verkleTrieNew.databaseScheme = verkleTrie.databaseScheme;
+        }
+
+        return verkleTrie;
     }
 }
 

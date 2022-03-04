@@ -660,6 +660,11 @@ namespace Nethermind.State
         
             _tree.Commit(blockNumber);
         }
+
+        public void ClearTempChanges()
+        {
+            _tree.ClearTempChanges();
+        }
         
         public bool AccountExists(Address address)
         {
@@ -791,23 +796,8 @@ namespace Nethermind.State
             return GetCode(account.CodeHash);
         }
         
-        public byte[] GetStorageValue(StorageCell storageCell)
-        {
-            byte[] storageKey = _tree.GetTreeKeyForStorageSlot(storageCell.Address, storageCell.Index);
-            byte[]? value = _tree.GetValue(storageKey);
-            if (value is null)
-            {
-                return new byte[32];
-            }
-
-            return value;
-        }
-        
-        public void SetStorageValue(StorageCell storageCell, byte[] value)
-        {
-            byte[] storageKey = _tree.GetTreeKeyForStorageSlot(storageCell.Address, storageCell.Index);
-            _tree.SetValue(storageKey, value);
-        }
+        public byte[] GetStorageValue(StorageCell storageCell) => _tree.GetStorageValue(storageCell);
+        public void SetStorageValue(StorageCell storageCell, byte[] value) => _tree.SetStorageValue(storageCell, value);
         
         int IJournal<int>.TakeSnapshot()
         {
@@ -836,6 +826,20 @@ namespace Nethermind.State
         public Keccak GetStorageRoot(Address address)
         {
             throw new InvalidOperationException("No storage root in verkle trees");
+        }
+        public VerkleStateTree GetTree()
+        {
+            return _tree;
+        }
+        
+        public VerkleStateTree GetReadOnlyTree()
+        {
+            return _tree.GetReadOnly();
+        }
+
+        public IKeyValueStore GetCodeDb()
+        {
+            return _codeDb;
         }
         
     }

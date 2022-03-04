@@ -20,19 +20,14 @@ using System.Collections.Concurrent;
 using Nethermind.Core.Extensions;
 using Nethermind.Int256;
 using Nethermind.Logging;
-using Nethermind.Trie;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Runtime.InteropServices;
 using Nethermind.Core;
 using Nethermind.Core.Crypto;
 using Nethermind.Crypto;
-using Nethermind.Trie.Pruning;
 
-namespace Nethermind.State;
+namespace Nethermind.Trie;
 
-public class VerkleTree
+public class VerkleTree 
 {
     private const int VersionLeafKey = 0;
     private const int BalanceLeafKey = 1;
@@ -49,13 +44,14 @@ public class VerkleTree
     private readonly UInt256 MainStorageOffset;
 
     
-    private readonly IntPtr _verkleTrieObj;
+    protected readonly RustVerkle _verkleTrieObj;
     private readonly ILogger _logger;
+    protected readonly ILogManager _logManager;
     
     public static readonly Keccak EmptyTreeHash = new (UInt256.Zero.ToBigEndian());
     public TrieType TrieType { get; protected set; }
     
-    private readonly bool _allowCommits;
+    protected readonly bool _allowCommits;
 
     public Keccak RootHash;
     
@@ -78,6 +74,29 @@ public class VerkleTree
     {
         // TODO: do i need to pass roothash here to rust to use for initialization of the library?
         _verkleTrieObj = RustVerkleLib.VerkleTrieNew();
+        _logManager = logManager;
+        _logger = logManager?.GetClassLogger<VerkleTree>() ?? throw new ArgumentNullException(nameof(logManager));
+        _logger.Info(_verkleTrieObj.ToString());
+        _allowCommits = allowCommits;
+        RootHash = rootHash;
+        MainStorageOffsetBase.LeftShift(MainStorageOffsetExponent, out MainStorageOffset);
+        
+        if (_allowCommits)
+        {
+            _currentCommit = new ConcurrentQueue<NodeCommitInfo>();
+            _commitExceptions = new ConcurrentQueue<Exception>();
+        }
+    }
+    
+    protected VerkleTree(
+        RustVerkle verkleTrieObj,
+        Keccak rootHash,
+        bool allowCommits,
+        ILogManager? logManager)
+    {
+        // TODO: do i need to pass roothash here to rust to use for initialization of the library?
+        _verkleTrieObj = verkleTrieObj;
+        _logManager = logManager;
             
         _logger = logManager?.GetClassLogger<VerkleTree>() ?? throw new ArgumentNullException(nameof(logManager));
         _logger.Info(_verkleTrieObj.ToString());
@@ -96,18 +115,18 @@ public class VerkleTree
     [DebuggerStepThrough]
     // TODO: add functionality to start with a given root hash (traverse from a starting node)
     // public byte[]? Get(Span<byte> rawKey, Keccak? rootHash = null)
-    public byte[]? GetValue(Span<byte> rawKey)
-    {
-        byte[]? result = RustVerkleLib.VerkleTrieGet(_verkleTrieObj, rawKey);
-        return result;
-    }
+    public byte[]? GetValue(Span<byte> rawKey) => RustVerkleLib.VerkleTrieGet(_verkleTrieObj, rawKey);
+    public byte[]? GetValue(byte[] rawKey) => RustVerkleLib.VerkleTrieGet(_verkleTrieObj, rawKey);
+
+    public void ClearTempChanges() => RustVerkleLib.VerkleTrieClear(_verkleTrieObj);
+    public void FlushTree() => RustVerkleLib.VerkleTrieFlush(_verkleTrieObj);
     
-    public byte[]? GetValue(byte[] rawKey)
+    public VerkleTree GetReadOnly()
     {
-        byte[]? result = RustVerkleLib.VerkleTrieGet(_verkleTrieObj, rawKey);
-        return result;
+        RustVerkle treeReadOnly = RustVerkleLib.VerkleTrieGetReadOnly(_verkleTrieObj);
+        return new VerkleTree(treeReadOnly, RootHash, _allowCommits, _logManager);
     }
-    
+
     public Span<byte> GetValueSpan(byte[] rawKey) => RustVerkleLib.VerkleTrieGetSpan(_verkleTrieObj, rawKey);
     public Span<byte> GetValueSpan(Span<byte> rawKey) => RustVerkleLib.VerkleTrieGetSpan(_verkleTrieObj, rawKey);
 
@@ -182,11 +201,8 @@ public class VerkleTree
         return Sha2.Compute(keyPrefix);
     }
     
-    public byte[] GetTreeKeyPrefixAccount(Address address)
-    {
-        return GetTreeKeyPrefix(address, 0);
-    }
-    
+    public byte[] GetTreeKeyPrefixAccount(Address address) => GetTreeKeyPrefix(address, 0);
+
     public byte[]? GetValue(byte[] keyPrefix, byte subIndex)
     {
         keyPrefix[31] = subIndex;
@@ -239,30 +255,11 @@ public class VerkleTree
     //     return GetTreeKey(address, UInt256.Zero, leaf);
     // }
 
-    private byte[] GetTreeKeyForVersion(Address address)
-    {
-        return GetTreeKey(address, UInt256.Zero, VersionLeafKey);
-    }
-
-    private byte[] GetTreeKeyForBalance(Address address)
-    {
-        return GetTreeKey(address, UInt256.Zero, BalanceLeafKey);
-    }
-
-    private byte[] GetTreeKeyForNonce(Address address)
-    {
-        return GetTreeKey(address, UInt256.Zero, NonceLeafKey);
-    }
-
-    private byte[] GetTreeKeyForCodeKeccak(Address address)
-    {
-        return GetTreeKey(address, UInt256.Zero, CodeKeccakLeafKey);
-    }
-
-    private byte[] GetTreeKeyForCodeSize(Address address)
-    {
-        return GetTreeKey(address, UInt256.Zero, CodeSizeLeafKey);
-    }
+    private byte[] GetTreeKeyForVersion(Address address) => GetTreeKey(address, UInt256.Zero, VersionLeafKey);
+    private byte[] GetTreeKeyForBalance(Address address) => GetTreeKey(address, UInt256.Zero, BalanceLeafKey);
+    private byte[] GetTreeKeyForNonce(Address address) => GetTreeKey(address, UInt256.Zero, NonceLeafKey);
+    private byte[] GetTreeKeyForCodeKeccak(Address address) => GetTreeKey(address, UInt256.Zero, CodeKeccakLeafKey);
+    private byte[] GetTreeKeyForCodeSize(Address address) => GetTreeKey(address, UInt256.Zero, CodeSizeLeafKey);
     
     public byte[] GetTreeKeyForCodeChunk(Address address, UInt256 chunk)
     {
@@ -490,7 +487,18 @@ public class VerkleTree
     {
         if (visitor is null) throw new ArgumentNullException(nameof(visitor));
         if (rootHash is null) throw new ArgumentNullException(nameof(rootHash));
-        throw new InvalidOperationException("No support for visiting a VerkleTree");
+        visitingOptions ??= VisitingOptions.Default;
+        
+        TrieVisitContext trieVisitContext = new()
+        {
+            // hacky but other solutions are not much better, something nicer would require a bit of thinking
+            // we introduced a notion of an account on the visit context level which should have no knowledge of account really
+            // but we know that we have multiple optimizations and assumptions on trees
+            ExpectAccounts = visitingOptions.ExpectAccounts,
+            MaxDegreeOfParallelism = visitingOptions.MaxDegreeOfParallelism
+        };
+
+        visitor.VisitTree(rootHash, trieVisitContext);
     }
     
     public void Commit(long blockNumber)
