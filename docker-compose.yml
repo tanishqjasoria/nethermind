@@ -1,0 +1,57 @@
+version: "3.5"
+services:
+  
+  node_1:
+    image: nethermind
+    command: --config Condrieu
+    container_name: node_1
+#    volumes:
+#      - ./genesis:/config/genesis
+#      - ./node_1/configs/config.cfg:/nethermind/configs/config.cfg
+#      - ./static-nodes.json:/nethermind/Data/static-nodes.json
+#      - ./node_1/db/clique:/nethermind/nethermind_db/clique
+#      - ./node_1/keystore:/nethermind/keystore
+    ports:
+      - 0.0.0.0:8547:8545
+    networks:
+      vpcbr:
+        ipv4_address: 10.5.0.2
+
+  node_2:
+    image: nethermind
+    command: --config Condrieu
+    container_name: node_2
+#    volumes:
+#      - ./genesis:/config/genesis
+#      - ./node_2/configs/config.cfg:/nethermind/configs/config.cfg
+#      - ./static-nodes.json:/nethermind/Data/static-nodes.json
+#      - ./node_2/db/clique:/nethermind/nethermind_db/clique
+#      - ./node_2/keystore:/nethermind/keystore
+    ports:
+      - 0.0.0.0:8548:8545
+    networks:
+      vpcbr:
+        ipv4_address: 10.5.0.3
+
+  node_3:
+    image: nethermind
+    command: --config Condrieu
+    container_name: node_3
+#    volumes:
+#      - ./genesis:/config/genesis
+#      - ./node_3/configs/config.cfg:/nethermind/configs/config.cfg
+#      - ./static-nodes.json:/nethermind/Data/static-nodes.json
+#      - ./node_3/db/clique:/nethermind/nethermind_db/clique
+#      - ./node_3/keystore:/nethermind/keystore
+    ports:
+      - 0.0.0.0:8549:8545
+    networks:
+      vpcbr:
+        ipv4_address: 10.5.0.4
+
+networks:
+  vpcbr:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.5.0.0/16
