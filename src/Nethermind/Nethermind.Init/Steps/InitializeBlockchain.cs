@@ -117,56 +117,60 @@ namespace Nethermind.Init.Steps
             IKeyValueStore codeDb = getApi.DbProvider.CodeDb
                 .WitnessedBy(witnessCollector);
 
-            TrieStore trieStore;
-            IKeyValueStoreWithBatching stateWitnessedBy = setApi.MainStateDbWithCache.WitnessedBy(witnessCollector);
-            if (pruningConfig.Mode.IsMemory())
-            {
-                IPersistenceStrategy persistenceStrategy = Persist.IfBlockOlderThan(pruningConfig.PersistenceInterval); // TODO: this should be based on time
-                if (pruningConfig.Mode.IsFull())
-                {
-                    PruningTriggerPersistenceStrategy triggerPersistenceStrategy = new((IFullPruningDb)getApi.DbProvider!.StateDb, getApi.BlockTree!, getApi.LogManager);
-                    getApi.DisposeStack.Push(triggerPersistenceStrategy);
-                    persistenceStrategy = persistenceStrategy.Or(triggerPersistenceStrategy);
-                }
-                
-                setApi.TrieStore = trieStore = new TrieStore(
-                    stateWitnessedBy,
-                    Prune.WhenCacheReaches(pruningConfig.CacheMb.MB()), // TODO: memory hint should define this
-                    persistenceStrategy, 
-                    getApi.LogManager);
+            VerkleTrieStore trieStore;
+            // if (pruningConfig.Mode.IsMemory())
+            // {
+            //     IPersistenceStrategy persistenceStrategy = Persist.IfBlockOlderThan(pruningConfig.PersistenceInterval); // TODO: this should be based on time
+            //     if (pruningConfig.Mode.IsFull())
+            //     {
+            //         PruningTriggerPersistenceStrategy triggerPersistenceStrategy = new((IFullPruningDb)getApi.DbProvider!.StateDb, getApi.BlockTree!, getApi.LogManager);
+            //         getApi.DisposeStack.Push(triggerPersistenceStrategy);
+            //         persistenceStrategy = persistenceStrategy.Or(triggerPersistenceStrategy);
+            //     }
+            //     
+            //     setApi.TrieStore = trieStore = new TrieStore(
+            //         stateWitnessedBy,
+            //         Prune.WhenCacheReaches(pruningConfig.CacheMb.MB()), // TODO: memory hint should define this
+            //         persistenceStrategy, 
+            //         getApi.LogManager);
+            //
+            //     if (pruningConfig.Mode.IsFull())
+            //     {
+            //         IFullPruningDb fullPruningDb = (IFullPruningDb)getApi.DbProvider!.StateDb;
+            //         fullPruningDb.PruningStarted += (_, args) =>
+            //         {
+            //             cachedStateDb.PersistCache(args.Context);
+            //             trieStore.PersistCache(args.Context, args.Context.CancellationTokenSource.Token);
+            //         };
+            //     }
+            // }
+            // else
+            // {
+            //     setApi.TrieStore = trieStore = new TrieStore(
+            //         stateWitnessedBy,
+            //         No.Pruning,
+            //         Persist.EveryBlock,
+            //         getApi.LogManager);
+            // }
 
-                if (pruningConfig.Mode.IsFull())
-                {
-                    IFullPruningDb fullPruningDb = (IFullPruningDb)getApi.DbProvider!.StateDb;
-                    fullPruningDb.PruningStarted += (_, args) =>
-                    {
-                        cachedStateDb.PersistCache(args.Context);
-                        trieStore.PersistCache(args.Context, args.Context.CancellationTokenSource.Token);
-                    };
-                }
-            }
-            else
-            {
-                setApi.TrieStore = trieStore = new TrieStore(
-                    stateWitnessedBy,
-                    No.Pruning,
-                    Persist.EveryBlock,
-                    getApi.LogManager);
-            }
-            
+            setApi.TrieStore = setApi.VerkleTrieStore = trieStore = new VerkleTrieStore(DatabaseScheme.RocksDb, getApi.LogManager);
             getApi.DisposeStack.Push(trieStore);
             TrieStoreBoundaryWatcher trieStoreBoundaryWatcher = new(trieStore, _api.BlockTree!, _api.LogManager);
             getApi.DisposeStack.Push(trieStoreBoundaryWatcher);
-            ITrieStore readOnlyTrieStore = setApi.ReadOnlyTrieStore = trieStore.AsReadOnly(cachedStateDb);
+            IVerkleReadOnlyVerkleTrieStore readOnlyTrieStore =  trieStore.AsReadOnly();
+            setApi.VerkleReadOnlyTrieStore = readOnlyTrieStore;
+            setApi.ReadOnlyTrieStore = readOnlyTrieStore;
 
-            IStateProvider stateProvider = setApi.StateProvider = new StateProvider(
+            VerkleStateProvider stateProvider = new (
                 trieStore,
-                codeDb,
-                getApi.LogManager);
+                getApi.LogManager,
+                codeDb);
+
+            setApi.StateProvider = stateProvider;
 
             ReadOnlyDbProvider readOnly = new(getApi.DbProvider, false);
             
-            IStateReader stateReader = setApi.StateReader = new StateReader(readOnlyTrieStore, readOnly.GetDb<IDb>(DbNames.Code), getApi.LogManager);
+            IStateReader stateReader = setApi.StateReader = new VerkleStateReader(readOnlyTrieStore, readOnly.GetDb<IDb>(DbNames.Code), getApi.LogManager);
             
             setApi.TransactionComparerProvider =
                 new TransactionComparerProvider(getApi.SpecProvider!, getApi.BlockTree.AsReadOnly());
@@ -208,8 +212,7 @@ namespace Nethermind.Init.Steps
             _api.BlockPreprocessor.AddFirst(
                 new RecoverSignatures(getApi.EthereumEcdsa, txPool, getApi.SpecProvider, getApi.LogManager));
             
-            IStorageProvider storageProvider = setApi.StorageProvider = new StorageProvider(
-                trieStore,
+            IStorageProvider storageProvider = setApi.StorageProvider = new VerkleStorageProvider(
                 stateProvider,
                 getApi.LogManager);
 
