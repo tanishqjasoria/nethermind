@@ -17,29 +17,24 @@
 
 using System;
 using System.Runtime.InteropServices;
+using Nethermind.Core;
+using Nethermind.Core.Crypto;
 using Nethermind.Core.Extensions;
 using Nethermind.Logging;
 using Nethermind.Trie.Pruning;
 
 namespace Nethermind.Trie;
 
-public interface IVerkleTrieStore :IDisposable
+public interface IVerkleTrieStore : ITrieStore
 {
-
-    void CommitNode(long blockNumber, NodeCommitInfo nodeCommitInfo);
-        
-    void FinishBlockCommit(TrieType trieType, long blockNumber);
-
-    void HackPersistOnShutdown();
     
-    public event EventHandler<ReorgBoundaryReached>? ReorgBoundaryReached;
-        
+    void FinishBlockCommit(TrieType trieType, long blockNumber);
     IVerkleReadOnlyVerkleTrieStore AsReadOnly();
 
     public RustVerkle CreateTrie(CommitScheme commitScheme);
 }
 
-public interface IVerkleReadOnlyVerkleTrieStore : IVerkleTrieStore
+public interface IVerkleReadOnlyVerkleTrieStore : IVerkleTrieStore, IReadOnlyTrieStore
 {
     void ClearTempChanges();
 }
@@ -60,6 +55,11 @@ public class VerkleTrieStore: IVerkleTrieStore
         
     }
 
+    public void FinishBlockCommit(TrieType trieType, long blockNumber, TrieNode? root)
+    {
+        throw new NotImplementedException();
+    }
+
     public void FinishBlockCommit(TrieType trieType, long blockNumber)
     {
         // RustVerkleLib.VerkleTrieFlush(_verkleTrie);
@@ -69,7 +69,9 @@ public class VerkleTrieStore: IVerkleTrieStore
     {
         // RustVerkleLib.VerkleTrieFlush(_verkleTrie);
     }
-    
+
+    public IReadOnlyTrieStore AsReadOnly(IKeyValueStore? keyValueStore) => AsReadOnly();
+
     public event EventHandler<ReorgBoundaryReached>? ReorgBoundaryReached
     {
         add { }
@@ -92,7 +94,16 @@ public class VerkleTrieStore: IVerkleTrieStore
     {
         return RustVerkleLib.VerkleTrieNewFromDb(_verkleDb, commitScheme);
     }
-    
+
+    public TrieNode FindCachedOrUnknown(Keccak hash)
+    {
+        throw new NotImplementedException();
+    }
+
+    public byte[]? LoadRlp(Keccak hash)
+    {
+        throw new NotImplementedException();
+    }
 }
 
 public class ReadOnlyVerkleTrieStore: IVerkleReadOnlyVerkleTrieStore
@@ -113,11 +124,16 @@ public class ReadOnlyVerkleTrieStore: IVerkleReadOnlyVerkleTrieStore
     }
 
     public void CommitNode(long blockNumber, NodeCommitInfo nodeCommitInfo) { }
+    public void FinishBlockCommit(TrieType trieType, long blockNumber, TrieNode? root)
+    {
+        throw new NotImplementedException();
+    }
 
     public void FinishBlockCommit(TrieType trieType, long blockNumber) { }
 
     public void HackPersistOnShutdown() { }
-    
+    public IReadOnlyTrieStore AsReadOnly(IKeyValueStore? keyValueStore) => AsReadOnly();
+
     public event EventHandler<ReorgBoundaryReached> ReorgBoundaryReached
     {
         add { }
@@ -143,5 +159,15 @@ public class ReadOnlyVerkleTrieStore: IVerkleReadOnlyVerkleTrieStore
     public void ClearTempChanges()
     {
         RustVerkleLib.VerkleTrieClearTempChanges(_verkleDb);
+    }
+
+    public TrieNode FindCachedOrUnknown(Keccak hash)
+    {
+        throw new NotImplementedException();
+    }
+
+    public byte[]? LoadRlp(Keccak hash)
+    {
+        throw new NotImplementedException();
     }
 }
