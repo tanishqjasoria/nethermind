@@ -80,13 +80,26 @@ namespace Nethermind.Consensus.Ethash
             if (logger.IsWarn) logger.Warn("Starting Neth Dev block producer & sealer");
 
 
-            ReadOnlyTxProcessingEnv producerEnv = new(
-                readOnlyDbProvider,
-                getFromApi.ReadOnlyTrieStore,
-                readOnlyBlockTree,
-                getFromApi.SpecProvider,
-                getFromApi.LogManager);
-
+            IReadOnlyTxProcessorSourceExt producerEnv;
+            if (_nethermindApi.StateProvider is VerkleStateProvider)
+            {
+                producerEnv = new VerkleReadOnlyTxProcessingEnv(
+                    readOnlyDbProvider,
+                    getFromApi.VerkleReadOnlyTrieStore,
+                    readOnlyBlockTree,
+                    getFromApi.SpecProvider,
+                    getFromApi.LogManager);
+            }
+            else
+            {
+                producerEnv = new ReadOnlyTxProcessingEnv(
+                    readOnlyDbProvider,
+                    getFromApi.ReadOnlyTrieStore,
+                    readOnlyBlockTree,
+                    getFromApi.SpecProvider,
+                    getFromApi.LogManager);
+            }
+            
             BlockProcessor producerProcessor = new(
                 getFromApi!.SpecProvider,
                 getFromApi!.BlockValidator,
