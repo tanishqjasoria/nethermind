@@ -68,6 +68,7 @@ using Nethermind.Wallet;
 using Nethermind.Sockets;
 using Nethermind.State.Snap;
 using Nethermind.Synchronization.SnapSync;
+using Nethermind.Trie;
 
 namespace Nethermind.Api
 {
@@ -156,6 +157,7 @@ namespace Nethermind.Api
         public IWitnessCollector? WitnessCollector { get; set; }
         public IWitnessRepository? WitnessRepository { get; set; }
         public IReceiptFinder? ReceiptFinder { get; set; }
+        public IVerkleReadOnlyVerkleTrieStore? VerkleReadOnlyTrieStore { get; set; }
         public IRewardCalculatorSource? RewardCalculatorSource { get; set; } = NoBlockRewards.Instance;
         public IRlpxHost? RlpxPeer { get; set; }
         public IRpcModuleProvider RpcModuleProvider { get; set; } = NullModuleProvider.Instance;
@@ -177,6 +179,7 @@ namespace Nethermind.Api
         public ITimerFactory TimerFactory { get; } = Core.Timers.TimerFactory.Default;
         public ITransactionProcessor? TransactionProcessor { get; set; }
         public ITrieStore? TrieStore { get; set; }
+        public IVerkleTrieStore? VerkleTrieStore { get; set; }
         public IReadOnlyTrieStore? ReadOnlyTrieStore { get; set; }
         public ITxSender? TxSender { get; set; }
         public ITxPool? TxPool { get; set; }
