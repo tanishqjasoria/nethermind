@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Nethermind.Core;
 using Nethermind.Core.Crypto;
+using Nethermind.Core.Extensions;
 using Nethermind.Int256;
 
 namespace Nethermind.Serialization.Rlp
@@ -94,6 +95,10 @@ namespace Nethermind.Serialization.Rlp
             if (blockHeader.Number >= VerkleTreeTransitionBlock)
             {
                 blockHeader.VerkleProof = decoderContext.DecodeByteArray();
+                if (blockHeader.VerkleProof.IsZero())
+                {
+                    blockHeader.VerkleProof = null;
+                }
                 
                 int verkleWitnessSequenceLength = decoderContext.ReadSequenceLength();
                 int verkleWitnessCheck = decoderContext.Position + verkleWitnessSequenceLength;
@@ -106,6 +111,10 @@ namespace Nethermind.Serialization.Rlp
                     decoderContext.Check(witnessCheck);
                 }
                 decoderContext.Check(verkleWitnessCheck);
+                if (blockHeader.VerkleWitnesses.Capacity == 0)
+                {
+                    blockHeader.VerkleWitnesses = null;
+                }
             }
 
             if ((rlpBehaviors & RlpBehaviors.AllowExtraData) != RlpBehaviors.AllowExtraData)
@@ -179,6 +188,10 @@ namespace Nethermind.Serialization.Rlp
             if (blockHeader.Number >= VerkleTreeTransitionBlock)
             {
                 blockHeader.VerkleProof = rlpStream.DecodeByteArray();
+                if (blockHeader.VerkleProof.IsZero())
+                {
+                    blockHeader.VerkleProof = null;
+                }
                 
                 int verkleWitnessSequenceLength = rlpStream.ReadSequenceLength();
                 int verkleWitnessCheck = rlpStream.Position + verkleWitnessSequenceLength;
@@ -191,6 +204,10 @@ namespace Nethermind.Serialization.Rlp
                     rlpStream.Check(witnessCheck);
                 }
                 rlpStream.Check(verkleWitnessCheck);
+                if (blockHeader.VerkleWitnesses.Capacity == 0)
+                {
+                    blockHeader.VerkleWitnesses = null;
+                }
             }
 
             if ((rlpBehaviors & RlpBehaviors.AllowExtraData) != RlpBehaviors.AllowExtraData)
@@ -252,7 +269,7 @@ namespace Nethermind.Serialization.Rlp
                 if (header.VerkleProof == null)
                 {
                     rlpStream.EncodeEmptyArray();
-                    rlpStream.EncodeEmptyArray();
+                    rlpStream.EncodeNullObject();
                 }
                 else
                 {
