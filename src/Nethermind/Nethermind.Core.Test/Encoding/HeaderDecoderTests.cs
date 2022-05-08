@@ -156,5 +156,26 @@ namespace Nethermind.Core.Test.Encoding
                 HeaderDecoder.VerkleTreeTransitionBlock = long.MaxValue;
             }
         }
+        
+        [Test]
+        public void Can_encode_decode_with_verkle_proof_empty()
+        {
+            try
+            {
+                HeaderDecoder.Eip1559TransitionBlock = 0;
+                HeaderDecoder.VerkleTreeTransitionBlock = 0;
+                BlockHeader header = Build.A.BlockHeader.WithBaseFee(123).WithVerkleWitness(null, null).TestObject;
+                Rlp rlp = Rlp.Encode(header);
+                BlockHeader blockHeader = Rlp.Decode<BlockHeader>(rlp);
+                blockHeader.BaseFeePerGas.Should().Be(123);
+                blockHeader.VerkleProof.Should().BeNull();
+                blockHeader.VerkleWitnesses.Should().BeNull();
+            }
+            finally
+            {
+                HeaderDecoder.Eip1559TransitionBlock = long.MaxValue;
+                HeaderDecoder.VerkleTreeTransitionBlock = long.MaxValue;
+            }
+        }
     }
 }
