@@ -49,6 +49,7 @@ namespace Nethermind.Core
             GasLimit = gasLimit;
             Timestamp = timestamp;
             ExtraData = extraData;
+            VerkleWitnesses = new();
         }
 
         public WeakReference<BlockHeader>? MaybeParent { get; set; }
