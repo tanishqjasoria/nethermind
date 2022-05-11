@@ -157,7 +157,7 @@ namespace Nethermind.Blockchain.Test
         {
             var address = TestItem.Addresses[0];
             var spec = new SingleReleaseSpecProvider(ConstantinopleFix.Instance, 1);
-            var testRpc = await TestRpcBlockchain.ForTest(SealEngineType.NethDev)
+            var testRpc = await VerkleTestRpcBlockchain.ForTest(SealEngineType.NethDev)
                 .Build(spec);
             testRpc.TestWallet.UnlockAccount(address, new SecureString());
             await testRpc.AddFunds(address, 1.Ether());
