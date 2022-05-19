@@ -23,6 +23,7 @@ using Nethermind.Blockchain;
 using Nethermind.Blockchain.Producers;
 using Nethermind.Consensus;
 using Nethermind.Logging;
+using Nethermind.State;
 
 namespace Nethermind.Init.Steps
 {
@@ -47,18 +48,37 @@ namespace Nethermind.Init.Steps
 
         protected virtual async Task<IBlockProducer> BuildProducer()
         {
-            _api.BlockProducerEnvFactory = new BlockProducerEnvFactory(_api.DbProvider,
-                _api.BlockTree,
-                _api.ReadOnlyTrieStore,
-                _api.SpecProvider,
-                _api.BlockValidator,
-                _api.RewardCalculatorSource,
-                _api.ReceiptStorage,
-                _api.BlockPreprocessor,
-                _api.TxPool,
-                _api.TransactionComparerProvider,
-                _api.Config<IMiningConfig>(),
-                _api.LogManager);
+            if (_api.StateProvider is not VerkleStateProvider)
+            {
+                _api.BlockProducerEnvFactory = new BlockProducerEnvFactory(_api.DbProvider,
+                    _api.BlockTree,
+                    _api.ReadOnlyTrieStore,
+                    _api.SpecProvider,
+                    _api.BlockValidator,
+                    _api.RewardCalculatorSource,
+                    _api.ReceiptStorage,
+                    _api.BlockPreprocessor,
+                    _api.TxPool,
+                    _api.TransactionComparerProvider,
+                    _api.Config<IMiningConfig>(),
+                    _api.LogManager);
+            }
+            else
+            {
+                _api.BlockProducerEnvFactory = new VerkleBlockProducerEnvFactory(_api.DbProvider,
+                    _api.BlockTree,
+                    _api.VerkleReadOnlyTrieStore,
+                    _api.SpecProvider,
+                    _api.BlockValidator,
+                    _api.RewardCalculatorSource,
+                    _api.ReceiptStorage,
+                    _api.BlockPreprocessor,
+                    _api.TxPool,
+                    _api.TransactionComparerProvider,
+                    _api.Config<IMiningConfig>(),
+                    _api.LogManager);
+            }
+            
             
             if (_api.ChainSpec == null) throw new StepDependencyException(nameof(_api.ChainSpec));
             IConsensusPlugin? consensusPlugin = _api.GetConsensusPlugin();
