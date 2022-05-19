@@ -46,6 +46,7 @@ using Nethermind.Db.Blooms;
 using Nethermind.Evm.TransactionProcessing;
 using Nethermind.Synchronization.ParallelSync;
 using Nethermind.Synchronization.Peers;
+using Nethermind.Synchronization.SnapSync;
 using Nethermind.Trie;
 using Nethermind.Trie.Pruning;
 using Nethermind.TxPool;
@@ -353,9 +354,12 @@ namespace Nethermind.Synchronization.Test
                 new MiningConfig(),
                 logManager);
 
+            ProgressTracker progressTracker = new(tree, dbProvider.StateDb, LimboLogs.Instance);
+            
             SyncProgressResolver resolver = new(
-                tree, receiptStorage, stateDb, NullTrieNodeResolver.Instance, syncConfig, logManager);
+                tree, receiptStorage, stateDb, NullTrieNodeResolver.Instance, progressTracker, syncConfig, logManager);
             MultiSyncModeSelector selector = new(resolver, syncPeerPool, syncConfig, logManager);
+            SnapProvider snapProvider = new(progressTracker, dbProvider, LimboLogs.Instance);
             Synchronizer synchronizer = new(
                 dbProvider,
                 MainnetSpecProvider.Instance,
@@ -367,6 +371,7 @@ namespace Nethermind.Synchronization.Test
                 nodeStatsManager,
                 StaticSelector.Full,
                 syncConfig,
+                snapProvider,
                 logManager);
             SyncServer syncServer = new(
                 stateDb,

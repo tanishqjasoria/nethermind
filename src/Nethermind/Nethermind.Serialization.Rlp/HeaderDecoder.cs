@@ -268,7 +268,7 @@ namespace Nethermind.Serialization.Rlp
                 // ANS: yes, add a null proof maybe?
                 if (header.VerkleProof == null)
                 {
-                    rlpStream.EncodeEmptyArray();
+                    rlpStream.EncodeEmptyByteArray();
                     rlpStream.EncodeNullObject();
                 }
                 else
