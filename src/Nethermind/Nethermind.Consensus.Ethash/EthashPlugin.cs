@@ -24,6 +24,7 @@ using Nethermind.Blockchain.Producers;
 using Nethermind.Blockchain.Rewards;
 using Nethermind.Consensus.Transactions;
 using Nethermind.Core;
+using Nethermind.State;
 
 namespace Nethermind.Consensus.Ethash
 {
@@ -66,6 +67,15 @@ namespace Nethermind.Consensus.Ethash
         public Task<IBlockProducer> InitBlockProducer(IBlockProductionTrigger? blockProductionTrigger = null, ITxSource? additionalTxSource = null)
         {
             var (getFromApi, setInApi) = _nethermindApi!.ForProducer;
+
+            // if (_nethermindApi.StateProvider is VerkleStateProvider)
+            // {
+            //     
+            // }
+            // else
+            // {
+            //     BlockProducerEnv producerEnv = _nethermindApi.BlockProducerEnvFactory.Create(additionalTxSource);
+            // }
             
             BlockProducerEnv producerEnv = _nethermindApi.BlockProducerEnvFactory.Create(additionalTxSource);
 
