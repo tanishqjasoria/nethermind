@@ -2,7 +2,7 @@
   "name": "Condrieu",
   "dataDir": "Condrieu",
   "engine": {
-    "NethDev": {
+    "Ethash": {
       "params": {
       }
     }
