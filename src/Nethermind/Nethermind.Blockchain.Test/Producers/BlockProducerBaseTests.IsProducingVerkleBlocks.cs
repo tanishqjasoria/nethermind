@@ -93,7 +93,8 @@ public partial class BlockProducerBaseTests
             Substitute.For<IGasLimitCalculator>(),
             testRpc.Timestamper,
             testRpc.SpecProvider,
-            LimboLogs.Instance);
+            LimboLogs.Instance,
+            Substitute.For<IManualBlockProductionTrigger>());
         await AssertIsProducingVerkleBlocks(blockProducer);
     }
     

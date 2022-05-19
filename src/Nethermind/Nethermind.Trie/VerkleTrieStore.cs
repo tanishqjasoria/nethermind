@@ -60,6 +60,11 @@ public class VerkleTrieStore: IVerkleTrieStore
         throw new NotImplementedException();
     }
 
+    public bool IsPersisted(Keccak keccak)
+    {
+        throw new NotImplementedException();
+    }
+
     public void FinishBlockCommit(TrieType trieType, long blockNumber)
     {
         // RustVerkleLib.VerkleTrieFlush(_verkleTrie);
@@ -125,6 +130,11 @@ public class ReadOnlyVerkleTrieStore: IVerkleReadOnlyVerkleTrieStore
 
     public void CommitNode(long blockNumber, NodeCommitInfo nodeCommitInfo) { }
     public void FinishBlockCommit(TrieType trieType, long blockNumber, TrieNode? root)
+    {
+        throw new NotImplementedException();
+    }
+
+    public bool IsPersisted(Keccak keccak)
     {
         throw new NotImplementedException();
     }
