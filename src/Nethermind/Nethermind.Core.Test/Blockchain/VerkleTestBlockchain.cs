@@ -145,7 +145,7 @@ namespace Nethermind.Core.Test.Blockchain
             IDb blockDb = new MemDb();
             IDb headerDb = new MemDb();
             IDb blockInfoDb = new MemDb();
-            BlockTree = new BlockTree(blockDb, headerDb, blockInfoDb, new ChainLevelInfoRepository(blockInfoDb), SpecProvider, NullBloomStorage.Instance, LimboLogs.Instance);
+            BlockTree = new BlockTree(blockDb, headerDb, blockInfoDb, new ChainLevelInfoRepository(blockInfoDb), SpecProvider, NullBloomStorage.Instance, SimpleConsoleLogManager.Instance);
             ReadOnlyState = new ChainHeadReadOnlyStateProvider(BlockTree, StateReader);
             TransactionComparerProvider = new TransactionComparerProvider(SpecProvider, BlockTree);
             TxPool = CreateTxPool();
@@ -247,7 +247,7 @@ namespace Nethermind.Core.Test.Blockchain
             return new TestBlockProducer(env.TxSource, env.ChainProcessor, env.ReadOnlyStateProvider, sealer, BlockTree, BlockProductionTrigger, Timestamper, SpecProvider, LogManager);
         }
 
-        public virtual ILogManager LogManager { get; } = LimboLogs.Instance;
+        public virtual ILogManager LogManager { get; } = SimpleConsoleLogManager.Instance;
 
         protected virtual TxPool.TxPool CreateTxPool() =>
             new(
@@ -260,7 +260,7 @@ namespace Nethermind.Core.Test.Blockchain
 
         protected virtual TxPoolTxSource CreateTxPoolTxSource()
         {
-            ITxFilterPipeline txFilterPipeline = TxFilterPipelineBuilder.CreateStandardFilteringPipeline(LimboLogs.Instance,
+            ITxFilterPipeline txFilterPipeline = TxFilterPipelineBuilder.CreateStandardFilteringPipeline(SimpleConsoleLogManager.Instance,
                 SpecProvider);
             return new TxPoolTxSource(TxPool, SpecProvider, TransactionComparerProvider, LogManager, txFilterPipeline);
         }
@@ -389,6 +389,7 @@ namespace Nethermind.Core.Test.Blockchain
                 .To(address)
                 .WithNonce(nonce + index)
                 .WithValue(ether)
+                .WithGasPrice(10)
                 .TestObject;
             return tx;
         }
