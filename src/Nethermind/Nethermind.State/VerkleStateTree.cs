@@ -30,13 +30,13 @@ namespace Nethermind.State
     public class VerkleStateTree : VerkleTree
     {
         
-        public VerkleStateTree()
-            : base(EmptyTreeHash, true, NullLogManager.Instance)
+        public VerkleStateTree(string pathName = "./db/verkle_db")
+            : base(EmptyTreeHash, true, NullLogManager.Instance, pathName)
         {
             TrieType = TrieType.State;
         }
-        public VerkleStateTree(ILogManager? logManager)
-            : base(EmptyTreeHash, true, logManager)
+        public VerkleStateTree(ILogManager? logManager, string pathName = "./db/verkle_db")
+            : base(EmptyTreeHash, true, logManager, pathName)
         {
             TrieType = TrieType.State;
         }

@@ -44,9 +44,9 @@ public class VerkleTrieStore: IVerkleTrieStore
     public readonly RustVerkleDb _verkleDb;
     private readonly ILogger _logger;
     
-    public VerkleTrieStore(DatabaseScheme databaseScheme, ILogManager? logManager)
+    public VerkleTrieStore(DatabaseScheme databaseScheme, ILogManager? logManager, string pathname = "./db/verkle_db")
     {
-        _verkleDb = RustVerkleLib.VerkleDbNew(databaseScheme);
+        _verkleDb = RustVerkleLib.VerkleDbNew(databaseScheme, pathname);
         _logger = logManager?.GetClassLogger<VerkleTrieStore>() ?? throw new ArgumentNullException(nameof(logManager));
     }
 
@@ -116,9 +116,9 @@ public class ReadOnlyVerkleTrieStore: IVerkleReadOnlyVerkleTrieStore
     public readonly RustVerkleDb _verkleDb;
     private readonly ILogger _logger;
     
-    public ReadOnlyVerkleTrieStore(DatabaseScheme databaseScheme, CommitScheme commitScheme)
+    public ReadOnlyVerkleTrieStore(DatabaseScheme databaseScheme, string pathname)
     {
-        _verkleDb = RustVerkleLib.VerkleDbNew(databaseScheme);
+        _verkleDb = RustVerkleLib.VerkleDbNew(databaseScheme, pathname);
         _logger = SimpleConsoleLogger.Instance;
     }
 

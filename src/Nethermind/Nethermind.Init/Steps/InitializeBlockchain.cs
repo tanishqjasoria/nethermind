@@ -152,8 +152,8 @@ namespace Nethermind.Init.Steps
             //         Persist.EveryBlock,
             //         getApi.LogManager);
             // }
-
-            setApi.TrieStore = setApi.VerkleTrieStore = trieStore = new VerkleTrieStore(DatabaseScheme.RocksDb, getApi.LogManager);
+            var path = "verkle".GetApplicationResourcePath(initConfig.BaseDbPath);
+            setApi.TrieStore = setApi.VerkleTrieStore = trieStore = new VerkleTrieStore(DatabaseScheme.RocksDb, getApi.LogManager, path);
             getApi.DisposeStack.Push(trieStore);
             TrieStoreBoundaryWatcher trieStoreBoundaryWatcher = new(trieStore, _api.BlockTree!, _api.LogManager);
             getApi.DisposeStack.Push(trieStoreBoundaryWatcher);

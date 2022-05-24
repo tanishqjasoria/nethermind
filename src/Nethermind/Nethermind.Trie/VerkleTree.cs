@@ -61,10 +61,11 @@ public class VerkleTree
     public VerkleTree(
         Keccak rootHash,
         bool allowCommits,
-        ILogManager? logManager)
+        ILogManager? logManager,
+        string pathName = "./db/verkle_db")
     {
         // TODO: do i need to pass roothash here to rust to use for initialization of the library?
-        _verkleTrieStore = new VerkleTrieStore(DatabaseScheme.MemoryDb, logManager);
+        _verkleTrieStore = new VerkleTrieStore(DatabaseScheme.MemoryDb, logManager, pathName);
         _verkleTrie = _verkleTrieStore.CreateTrie(CommitScheme.TestCommitment);
         _logger = logManager?.GetClassLogger<VerkleTree>() ?? throw new ArgumentNullException(nameof(logManager));
         _logger.Info(_verkleTrieStore.ToString());

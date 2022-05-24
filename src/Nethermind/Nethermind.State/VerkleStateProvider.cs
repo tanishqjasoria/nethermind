@@ -69,9 +69,9 @@ namespace Nethermind.State
         
         
         
-        public VerkleStateProvider(ILogManager? logManager, IKeyValueStore? codeDb)
+        public VerkleStateProvider(ILogManager? logManager, IKeyValueStore? codeDb, string pathName = "./db/verkle_db")
         {
-            _tree = new VerkleStateTree(logManager);
+            _tree = new VerkleStateTree(logManager, pathName);
             _codeDb = codeDb ?? throw new ArgumentNullException(nameof(codeDb));
             _logger = logManager?.GetClassLogger<VerkleStateProvider>() ?? throw new ArgumentNullException(nameof(logManager));
         }
