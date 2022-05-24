@@ -27,6 +27,7 @@ using Nethermind.Db;
 using Nethermind.Evm.TransactionProcessing;
 using Nethermind.JsonRpc.Data;
 using Nethermind.Logging;
+using Nethermind.Trie;
 using Nethermind.Trie.Pruning;
 using Newtonsoft.Json;
 
@@ -36,7 +37,7 @@ namespace Nethermind.JsonRpc.Modules.Trace
     {
         private readonly ReadOnlyDbProvider _dbProvider;
         private readonly IReadOnlyBlockTree _blockTree;
-        private readonly IReadOnlyTrieStore _trieNodeResolver;
+        private readonly IVerkleReadOnlyVerkleTrieStore _trieNodeResolver;
         private readonly IJsonRpcConfig _jsonRpcConfig;
         private readonly IReceiptStorage _receiptStorage;
         private readonly ISpecProvider _specProvider;
@@ -48,7 +49,7 @@ namespace Nethermind.JsonRpc.Modules.Trace
         public TraceModuleFactory(
             IDbProvider dbProvider,
             IBlockTree blockTree,
-            IReadOnlyTrieStore trieNodeResolver,
+            IVerkleReadOnlyVerkleTrieStore trieNodeResolver,
             IJsonRpcConfig jsonRpcConfig,
             IBlockPreprocessorStep recoveryStep,
             IRewardCalculatorSource rewardCalculatorSource,
@@ -71,14 +72,14 @@ namespace Nethermind.JsonRpc.Modules.Trace
 
         public override ITraceRpcModule Create()
         {
-            ReadOnlyTxProcessingEnv txProcessingEnv =
+            VerkleReadOnlyTxProcessingEnv txProcessingEnv =
                 new(_dbProvider, _trieNodeResolver, _blockTree, _specProvider, _logManager);
             
             IRewardCalculator rewardCalculator = _rewardCalculatorSource.Get(txProcessingEnv.TransactionProcessor);
 
             RpcBlockTransactionsExecutor rpcBlockTransactionsExecutor = new(txProcessingEnv.TransactionProcessor, txProcessingEnv.StateProvider);
             
-            ReadOnlyChainProcessingEnv chainProcessingEnv = new(
+            VerkleReadOnlyChainProcessingEnv chainProcessingEnv = new(
                 txProcessingEnv,
                 Always.Valid,
                 _recoveryStep,
@@ -87,6 +88,7 @@ namespace Nethermind.JsonRpc.Modules.Trace
                 _dbProvider,
                 _specProvider,
                 _logManager,
+                _trieNodeResolver,
                 rpcBlockTransactionsExecutor);
             
             Tracer tracer = new(chainProcessingEnv.StateProvider, chainProcessingEnv.ChainProcessor);

@@ -57,7 +57,7 @@ namespace Nethermind.JsonRpc.Test.Modules
         public IGasPriceOracle GasPriceOracle { get; private set; }
         
         public IKeyStore KeyStore { get; } = new MemKeyStore(TestItem.PrivateKeys);
-        public IWallet TestWallet { get; } = new DevKeyStoreWallet(new MemKeyStore(TestItem.PrivateKeys), LimboLogs.Instance);
+        public IWallet TestWallet { get; } = new DevKeyStoreWallet(new MemKeyStore(TestItem.PrivateKeys), SimpleConsoleLogManager.Instance);
         public IFeeHistoryOracle FeeHistoryOracle { get; private set; }
         public static Builder<VerkleTestRpcBlockchain> ForTest(string sealEngineType) => ForTest<VerkleTestRpcBlockchain>(sealEngineType);
 
@@ -123,17 +123,17 @@ namespace Nethermind.JsonRpc.Test.Modules
             specProvider ??= new TestSpecProvider(Berlin.Instance) {ChainId = ChainId.Mainnet};
             await base.Build(specProvider, initialValues);
             IFilterStore filterStore = new FilterStore();
-            IFilterManager filterManager = new FilterManager(filterStore, BlockProcessor, TxPool, LimboLogs.Instance);
+            IFilterManager filterManager = new FilterManager(filterStore, BlockProcessor, TxPool, SimpleConsoleLogManager.Instance);
 
-            ReceiptsRecovery receiptsRecovery = new(new EthereumEcdsa(specProvider.ChainId, LimboLogs.Instance), specProvider);
-            LogFinder = new LogFinder(BlockTree, ReceiptStorage, ReceiptStorage, bloomStorage, LimboLogs.Instance, receiptsRecovery);
+            ReceiptsRecovery receiptsRecovery = new(new EthereumEcdsa(specProvider.ChainId, SimpleConsoleLogManager.Instance), specProvider);
+            LogFinder = new LogFinder(BlockTree, ReceiptStorage, ReceiptStorage, bloomStorage, SimpleConsoleLogManager.Instance, receiptsRecovery);
             
             VerkleReadOnlyTxProcessingEnv processingEnv = new(
                 new ReadOnlyDbProvider(DbProvider, false),
-                new VerkleTrieStore(DatabaseScheme.MemoryDb, LimboLogs.Instance).AsReadOnly(),
+                new VerkleTrieStore(DatabaseScheme.MemoryDb, SimpleConsoleLogManager.Instance).AsReadOnly(),
                 new ReadOnlyBlockTree(BlockTree),
                 SpecProvider,
-                LimboLogs.Instance);
+                SimpleConsoleLogManager.Instance);
             
             Bridge ??= new BlockchainBridge(processingEnv, TxPool, ReceiptStorage, filterStore, filterManager, EthereumEcdsa, Timestamper, LogFinder, SpecProvider, false);
             BlockFinder ??= BlockTree;
@@ -155,7 +155,7 @@ namespace Nethermind.JsonRpc.Test.Modules
                 TxSender,
                 TestWallet,
                 ReceiptFinder, 
-                LimboLogs.Instance, 
+                SimpleConsoleLogManager.Instance, 
                 SpecProvider, 
                 GasPriceOracle,
                 new EthSyncingInfo(BlockFinder),

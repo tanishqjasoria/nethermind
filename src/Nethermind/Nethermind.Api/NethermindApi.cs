@@ -88,9 +88,9 @@ namespace Nethermind.Api
             LazyInitializer.EnsureInitialized(ref _readOnlyDbProvider, () => new ReadOnlyDbProvider(DbProvider, false));
 
             // TODO: reuse the same trie cache here
-            ReadOnlyTxProcessingEnv readOnlyTxProcessingEnv = new(
+            VerkleReadOnlyTxProcessingEnv readOnlyTxProcessingEnv = new(
                 _readOnlyDbProvider,
-                ReadOnlyTrieStore,
+                VerkleReadOnlyTrieStore,
                 readOnlyTree,
                 SpecProvider,
                 LogManager);

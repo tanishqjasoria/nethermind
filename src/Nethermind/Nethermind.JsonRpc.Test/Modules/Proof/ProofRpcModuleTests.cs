@@ -44,6 +44,7 @@ using System.Threading.Tasks;
 using Nethermind.Evm.Tracing;
 using Nethermind.Facade;
 using Nethermind.JsonRpc.Modules;
+using Nethermind.Trie;
 using NSubstitute;
 using NSubstitute.Core.DependencyInjection;
 
@@ -79,7 +80,7 @@ namespace Nethermind.JsonRpc.Test.Modules.Proof
             ProofModuleFactory moduleFactory = new(
                 _dbProvider,
                 _blockTree,
-                new TrieStore(_dbProvider.StateDb, LimboLogs.Instance).AsReadOnly(),
+                new VerkleTrieStore(DatabaseScheme.MemoryDb, LimboLogs.Instance).AsReadOnly(),
                 new CompositeBlockPreprocessorStep(new RecoverSignatures(new EthereumEcdsa(ChainId.Mainnet, LimboLogs.Instance), NullTxPool.Instance, _specProvider, LimboLogs.Instance)),
                 receiptStorage,
                 _specProvider,
@@ -224,7 +225,7 @@ namespace Nethermind.JsonRpc.Test.Modules.Proof
             ProofModuleFactory moduleFactory = new ProofModuleFactory(
                 _dbProvider,
                 _blockTree,
-                new TrieStore(_dbProvider.StateDb, LimboLogs.Instance).AsReadOnly(),
+                new VerkleTrieStore(DatabaseScheme.MemoryDb, LimboLogs.Instance).AsReadOnly(),
                 new CompositeBlockPreprocessorStep(new RecoverSignatures(new EthereumEcdsa(ChainId.Mainnet, LimboLogs.Instance), NullTxPool.Instance, _specProvider, LimboLogs.Instance)),
                 _receiptFinder,
                 _specProvider,

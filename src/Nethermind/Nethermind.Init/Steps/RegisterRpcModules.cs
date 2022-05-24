@@ -120,7 +120,7 @@ namespace Nethermind.Init.Steps
             if (_api.BlockValidator == null) throw new StepDependencyException(nameof(_api.BlockValidator));
             if (_api.RewardCalculatorSource == null) throw new StepDependencyException(nameof(_api.RewardCalculatorSource));
             
-            ProofModuleFactory proofModuleFactory = new(_api.DbProvider, _api.BlockTree, _api.ReadOnlyTrieStore, _api.BlockPreprocessor, _api.ReceiptFinder, _api.SpecProvider, _api.LogManager);
+            ProofModuleFactory proofModuleFactory = new(_api.DbProvider, _api.BlockTree, _api.VerkleReadOnlyTrieStore, _api.BlockPreprocessor, _api.ReceiptFinder, _api.SpecProvider, _api.LogManager);
             rpcModuleProvider.RegisterBounded(proofModuleFactory, 2, rpcConfig.Timeout);
 
             DebugModuleFactory debugModuleFactory = new(
@@ -132,7 +132,7 @@ namespace Nethermind.Init.Steps
                 _api.RewardCalculatorSource, 
                 _api.ReceiptStorage,
                 new ReceiptMigration(_api),
-                _api.ReadOnlyTrieStore, 
+                _api.VerkleReadOnlyTrieStore, 
                 _api.ConfigProvider, 
                 _api.SpecProvider, 
                 _api.LogManager);
@@ -141,7 +141,7 @@ namespace Nethermind.Init.Steps
             TraceModuleFactory traceModuleFactory = new(
                 _api.DbProvider,
                 _api.BlockTree,
-                _api.ReadOnlyTrieStore,
+                _api.VerkleReadOnlyTrieStore,
                 rpcConfig,
                 _api.BlockPreprocessor,
                 _api.RewardCalculatorSource, 

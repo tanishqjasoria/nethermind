@@ -27,6 +27,7 @@ using Nethermind.Core.Specs;
 using Nethermind.Db;
 using Nethermind.Evm.TransactionProcessing;
 using Nethermind.Logging;
+using Nethermind.Trie;
 using Nethermind.Trie.Pruning;
 using Newtonsoft.Json;
 
@@ -39,7 +40,7 @@ namespace Nethermind.JsonRpc.Modules.DebugModule
         private readonly IRewardCalculatorSource _rewardCalculatorSource;
         private readonly IReceiptStorage _receiptStorage;
         private readonly IReceiptsMigration _receiptsMigration;
-        private readonly IReadOnlyTrieStore _trieStore;
+        private readonly IVerkleReadOnlyVerkleTrieStore _trieStore;
         private readonly IConfigProvider _configProvider;
         private readonly ISpecProvider _specProvider;
         private readonly ILogManager _logManager;
@@ -57,7 +58,7 @@ namespace Nethermind.JsonRpc.Modules.DebugModule
             IRewardCalculatorSource rewardCalculator,
             IReceiptStorage receiptStorage,
             IReceiptsMigration receiptsMigration,
-            IReadOnlyTrieStore trieStore,
+            IVerkleReadOnlyVerkleTrieStore trieStore,
             IConfigProvider configProvider,
             ISpecProvider specProvider,
             ILogManager logManager)
@@ -79,7 +80,7 @@ namespace Nethermind.JsonRpc.Modules.DebugModule
 
         public override IDebugRpcModule Create()
         {
-            ReadOnlyTxProcessingEnv txEnv = new(
+            VerkleReadOnlyTxProcessingEnv txEnv = new(
                 _dbProvider,
                 _trieStore,
                 _blockTree,
@@ -88,7 +89,7 @@ namespace Nethermind.JsonRpc.Modules.DebugModule
 
             ChangeableTransactionProcessorAdapter transactionProcessorAdapter = new(txEnv.TransactionProcessor);
             BlockProcessor.BlockValidationTransactionsExecutor transactionsExecutor = new(transactionProcessorAdapter, txEnv.StateProvider);
-            ReadOnlyChainProcessingEnv chainProcessingEnv = new(
+            VerkleReadOnlyChainProcessingEnv chainProcessingEnv = new(
                 txEnv,
                 _blockValidator,
                 _recoveryStep,
@@ -97,6 +98,7 @@ namespace Nethermind.JsonRpc.Modules.DebugModule
                 _dbProvider,
                 _specProvider,
                 _logManager,
+                _trieStore,
                 transactionsExecutor);
 
             GethStyleTracer tracer = new(
