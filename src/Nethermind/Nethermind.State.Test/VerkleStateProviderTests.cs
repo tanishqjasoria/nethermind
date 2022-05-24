@@ -34,6 +34,7 @@ using NUnit.Framework;
 
 namespace Nethermind.Store.Test
 {
+    [TestFixture, Parallelizable(ParallelScope.All)]
     public class VerkleStateProviderTests
     {
         private static readonly Keccak Hash1 = Keccak.Compute("1");
@@ -100,19 +101,19 @@ namespace Nethermind.Store.Test
             var stats = provider.CollectStats(_codeDb, Logger);
             stats.AccountCount.Should().Be(1);
         }
-        //
-        // [Test]
-        // public void Can_accepts_visitors()
-        // {
-        //     StateProvider provider = new(new TrieStore(new MemDb(), Logger), Substitute.For<IDb>(), Logger);
-        //     provider.CreateAccount(TestItem.AddressA, 1.Ether());
-        //     provider.Commit(MuirGlacier.Instance);
-        //     provider.CommitTree(0);
-        //
-        //     TrieStatsCollector visitor = new(new MemDb(), LimboLogs.Instance);
-        //     provider.Accept(visitor, provider.StateRoot);
-        // }
-        //
+        
+        [Test]
+        public void Can_accepts_visitors()
+        {
+            StateProvider provider = new(new TrieStore(new MemDb(), Logger), Substitute.For<IDb>(), Logger);
+            provider.CreateAccount(TestItem.AddressA, 1.Ether());
+            provider.Commit(MuirGlacier.Instance);
+            provider.CommitTree(0);
+        
+            TrieStatsCollector visitor = new(new MemDb(), LimboLogs.Instance);
+            provider.Accept(visitor, provider.StateRoot);
+        }
+        
         [Test]
         public void Empty_commit_restore()
         {
@@ -249,17 +250,17 @@ namespace Nethermind.Store.Test
             Assert.DoesNotThrow(() => provider.Commit(SpuriousDragon.Instance, tracer));
         }
         
-        // [Test]
-        // public void Does_not_require_recalculation_after_reset()
-        // {
-        //     VerkleStateProvider provider = new(Logger, _codeDb);
-        //     provider.CreateAccount(TestItem.AddressA, 5);
-        //
-        //     Action action = () => { _ = provider.StateRoot; };
-        //     action.Should().Throw<InvalidOperationException>();
-        //
-        //     provider.Reset();
-        //     action.Should().NotThrow<InvalidOperationException>();
-        // }
+        [Test]
+        public void Does_not_require_recalculation_after_reset()
+        {
+            VerkleStateProvider provider = new(Logger, _codeDb);
+            provider.CreateAccount(TestItem.AddressA, 5);
+        
+            Action action = () => { _ = provider.StateRoot; };
+            action.Should().Throw<InvalidOperationException>();
+        
+            provider.Reset();
+            action.Should().NotThrow<InvalidOperationException>();
+        }
     }
 }
