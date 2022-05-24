@@ -26,7 +26,7 @@ using Org.BouncyCastle.Crypto.Engines;
 
 namespace Nethermind.Trie.Test
 {
-    [TestFixture]
+    [TestFixture, Parallelizable(ParallelScope.All)]
     public class RustVerkleLibTest
     {
         static object[] Variants =
@@ -390,6 +390,9 @@ namespace Nethermind.Trie.Test
             RustVerkleDb db = RustVerkleLib.VerkleDbNew(databaseScheme, pathname);
             RustVerkle trie = RustVerkleLib.VerkleTrieNewFromDb(db, commitScheme);
             
+            RustVerkleDb roDb = RustVerkleLib.VerkleTrieGetReadOnlyDb(db);
+            RustVerkle roTrie = RustVerkleLib.VerkleTrieNewFromDb(roDb, commitScheme);
+            
             RustVerkleLib.VerkleTrieInsert(trie, treeKeyVersion, value0);
             RustVerkleLib.VerkleTrieInsert(trie, treeKeyBalance, value2);
             RustVerkleLib.VerkleTrieInsert(trie, treeKeyNonce, value0);
@@ -405,9 +408,6 @@ namespace Nethermind.Trie.Test
             RustVerkleLib.VerkleTrieFlush(trie);
             byte[] stateRoot1 = RustVerkleLib.VerkleTrieGetStateRoot(trie);
 
-            RustVerkleDb roDb = RustVerkleLib.VerkleTrieGetReadOnlyDb(db);
-            RustVerkle roTrie = RustVerkleLib.VerkleTrieNewFromDb(roDb, commitScheme);
-            
             RustVerkleLib.VerkleTrieInsert(roTrie, treeKeyVersion, value2);
             byte[] stateRoot2 = RustVerkleLib.VerkleTrieGetStateRoot(roTrie);
             stateRoot2.Should().NotBeEquivalentTo(stateRoot1);
