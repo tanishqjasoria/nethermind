@@ -52,7 +52,9 @@ public class VerkleTransactionsExecutorTests: TransactionsExecutorTestsBase
         
         IReleaseSpec spec = new ReleaseSpec()
         {
-            IsEip1559Enabled = testCase.Eip1559Enabled
+            IsEip1559Enabled = testCase.Eip1559Enabled,
+            IsVerkleTreeEIPEnabled = true,
+            VerkleTreeTransitionBlock = 0
         };
         specProvider.GetSpec(Arg.Any<long>()).Returns(spec);
         

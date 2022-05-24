@@ -53,7 +53,36 @@ namespace Nethermind.Blockchain.Test
         public void Prepared_block_contains_author_field()
         {
             IDb codeDb = new MemDb();
-            VerkleTrieStore trieStore = new (DatabaseScheme.MemoryDb, LimboLogs.Instance);
+            VerkleTrieStore trieStore = new (DatabaseScheme.MemoryDb, LimboLogs.Instance, "./db/verkle_db");
+            VerkleStateProvider stateProvider = new VerkleStateProvider(trieStore, LimboLogs.Instance, codeDb);
+            ITransactionProcessor transactionProcessor = Substitute.For<ITransactionProcessor>();
+            BlockProcessor processor = new(
+                RinkebySpecProvider.Instance,
+                TestBlockValidator.AlwaysValid,
+                NoBlockRewards.Instance,
+                new BlockProcessor.BlockValidationTransactionsExecutor(transactionProcessor, stateProvider),
+                stateProvider,
+                new VerkleStorageProvider(stateProvider, LimboLogs.Instance),
+                NullReceiptStorage.Instance,
+                NullWitnessCollector.Instance,
+                LimboLogs.Instance);
+
+            BlockHeader header = Build.A.BlockHeader.WithAuthor(TestItem.AddressD).TestObject;
+            Block block = Build.A.Block.WithHeader(header).TestObject;
+            Block[] processedBlocks = processor.Process(
+                Keccak.EmptyTreeHash,
+                new List<Block> {block},
+                ProcessingOptions.None,
+                NullBlockTracer.Instance);
+            Assert.AreEqual(1, processedBlocks.Length, "length");
+            Assert.AreEqual(block.Author, processedBlocks[0].Author, "author");
+        }
+        
+        [Test]
+        public void Prepare_block_with_transactions()
+        {
+            IDb codeDb = new MemDb();
+            VerkleTrieStore trieStore = new (DatabaseScheme.MemoryDb, LimboLogs.Instance, "./db/verkle_db");
             VerkleStateProvider stateProvider = new VerkleStateProvider(trieStore, LimboLogs.Instance, codeDb);
             ITransactionProcessor transactionProcessor = Substitute.For<ITransactionProcessor>();
             BlockProcessor processor = new(
@@ -83,7 +112,7 @@ namespace Nethermind.Blockchain.Test
         {
             IDb codeDb = new MemDb();
             
-            VerkleTrieStore trieStore = new (DatabaseScheme.MemoryDb, LimboLogs.Instance);
+            VerkleTrieStore trieStore = new (DatabaseScheme.MemoryDb, LimboLogs.Instance, "./db/verkle_db");
             VerkleStateProvider stateProvider = new VerkleStateProvider(trieStore, LimboLogs.Instance, codeDb);
             ITransactionProcessor transactionProcessor = Substitute.For<ITransactionProcessor>();
             IWitnessCollector witnessCollector = Substitute.For<IWitnessCollector>();
@@ -114,7 +143,7 @@ namespace Nethermind.Blockchain.Test
         public void Recovers_state_on_cancel()
         {
             IDb codeDb = new MemDb();
-            VerkleTrieStore trieStore = new (DatabaseScheme.MemoryDb, LimboLogs.Instance);
+            VerkleTrieStore trieStore = new (DatabaseScheme.MemoryDb, LimboLogs.Instance, "./db/verkle_db");
             VerkleStateProvider stateProvider = new VerkleStateProvider(trieStore, LimboLogs.Instance, codeDb);
             ITransactionProcessor transactionProcessor = Substitute.For<ITransactionProcessor>();
             BlockProcessor processor = new(
@@ -172,6 +201,27 @@ namespace Nethermind.Blockchain.Test
             ((BlockTree)testRpc.BlockTree).AddBranch(branchLength, (int)testRpc.BlockTree.BestKnownNumber);
             (await suggestedBlockResetEvent.WaitAsync(VerkleTestBlockchain.DefaultTimeout * 10)).Should().BeTrue();
             Assert.AreEqual(branchLength - 1, (int)testRpc.BlockTree.BestKnownNumber);
+        }
+        
+        [Test]
+        public async Task Process_something()
+        {
+            var address = TestItem.Addresses[0];
+            var address2 = new Address("0x368c3FBB093C385C5d2Eb50726AB7a0e212B3a77");
+            var spec = new SingleReleaseSpecProvider(ConstantinopleFix.Instance, 1);
+            var testRpc = await VerkleTestRpcBlockchain.ForTest(SealEngineType.NethDev)
+                .Build(spec);
+            testRpc.TestWallet.UnlockAccount(address, new SecureString());
+            await testRpc.AddFunds(address, 1.Ether());
+            await testRpc.AddFunds(address2, 1.Ether());
+            var txn = Build.A.Transaction.WithValue(1).WithTo(new Address("0x71d2Dc1E106384B75F35fE9CbE88363899414cAE"))
+                .WithNonce(5).SignedAndResolved(TestItem.PrivateKeyA).TestObject;
+            await testRpc.AddBlock(txn);
+            var suggestedBlockResetEvent = new SemaphoreSlim(0);
+            testRpc.BlockTree.NewHeadBlock += (s, e) =>
+            {
+                suggestedBlockResetEvent.Release(1);
+            };
         }
     }
 }
