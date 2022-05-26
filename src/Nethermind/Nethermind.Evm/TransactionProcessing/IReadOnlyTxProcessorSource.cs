@@ -31,6 +31,5 @@ namespace Nethermind.Evm.TransactionProcessing
         
         IReadOnlyTransactionProcessor Build(Keccak stateRoot);
 
-        public void Reset();
     }
 }
