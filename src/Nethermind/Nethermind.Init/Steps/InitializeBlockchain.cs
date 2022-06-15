@@ -118,40 +118,6 @@ namespace Nethermind.Init.Steps
                 .WitnessedBy(witnessCollector);
 
             VerkleTrieStore trieStore;
-            // if (pruningConfig.Mode.IsMemory())
-            // {
-            //     IPersistenceStrategy persistenceStrategy = Persist.IfBlockOlderThan(pruningConfig.PersistenceInterval); // TODO: this should be based on time
-            //     if (pruningConfig.Mode.IsFull())
-            //     {
-            //         PruningTriggerPersistenceStrategy triggerPersistenceStrategy = new((IFullPruningDb)getApi.DbProvider!.StateDb, getApi.BlockTree!, getApi.LogManager);
-            //         getApi.DisposeStack.Push(triggerPersistenceStrategy);
-            //         persistenceStrategy = persistenceStrategy.Or(triggerPersistenceStrategy);
-            //     }
-            //     
-            //     setApi.TrieStore = trieStore = new TrieStore(
-            //         stateWitnessedBy,
-            //         Prune.WhenCacheReaches(pruningConfig.CacheMb.MB()), // TODO: memory hint should define this
-            //         persistenceStrategy, 
-            //         getApi.LogManager);
-            //
-            //     if (pruningConfig.Mode.IsFull())
-            //     {
-            //         IFullPruningDb fullPruningDb = (IFullPruningDb)getApi.DbProvider!.StateDb;
-            //         fullPruningDb.PruningStarted += (_, args) =>
-            //         {
-            //             cachedStateDb.PersistCache(args.Context);
-            //             trieStore.PersistCache(args.Context, args.Context.CancellationTokenSource.Token);
-            //         };
-            //     }
-            // }
-            // else
-            // {
-            //     setApi.TrieStore = trieStore = new TrieStore(
-            //         stateWitnessedBy,
-            //         No.Pruning,
-            //         Persist.EveryBlock,
-            //         getApi.LogManager);
-            // }
             var path = "verkle".GetApplicationResourcePath(initConfig.BaseDbPath);
             setApi.TrieStore = setApi.VerkleTrieStore = trieStore = new VerkleTrieStore(DatabaseScheme.RocksDb, getApi.LogManager, path);
             getApi.DisposeStack.Push(trieStore);
@@ -283,7 +249,7 @@ namespace Nethermind.Init.Steps
             setApi.FilterManager = new FilterManager(filterStore, mainBlockProcessor, txPool, getApi.LogManager);
             setApi.HealthHintService = CreateHealthHintService();
             
-            InitializeFullPruning(pruningConfig, initConfig, _api, stateReader);
+            // InitializeFullPruning(pruningConfig, initConfig, _api, stateReader);
             
             return Task.CompletedTask;
         }
