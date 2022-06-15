@@ -94,10 +94,25 @@ namespace Nethermind.State
                 {
                     throw new InvalidOperationException();
                 }
-
+                Console.WriteLine("GetRootHash:" + _tree.RootHash);
                 return _tree.RootHash;
             }
-            set => _tree.RootHash = value;
+            set
+            {
+                if (_tree.RootHash != value)
+                {
+                    Console.WriteLine("RootHash:" + _tree.RootHash);
+                    Console.WriteLine("Value:" + value);
+                    _tree.ClearTempTree();
+                    RecalculateStateRoot();
+                    Console.WriteLine("NewRootHash:" + _tree.RootHash);
+                    if (_tree.RootHash != value)
+                    {
+                        throw new InvalidOperationException();
+                    }
+                }
+                // _tree.RootHash = value;
+            }
         }
 
         public byte[] GetWitnessProofForMultipleKeys(byte[,] keys) => _tree.GetVerkleProofForMultipleKeys(keys);
@@ -670,6 +685,7 @@ namespace Nethermind.State
 
         public void CommitTree(long blockNumber)
         {
+            _logger.Info("Commit Tree - Verkle State Provider - Block number: " + blockNumber);
             if (_needsStateRootUpdate)
             {
                 RecalculateStateRoot();

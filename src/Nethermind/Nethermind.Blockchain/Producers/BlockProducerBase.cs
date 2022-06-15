@@ -239,6 +239,7 @@ namespace Nethermind.Blockchain.Producers
 
         private bool TrySetState(Keccak? parentStateRoot)
         {
+            StateProvider.RecalculateStateRoot();
             bool HasState(Keccak stateRoot)
             {
                 RootCheckVisitor visitor = new();
