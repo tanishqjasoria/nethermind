@@ -106,6 +106,15 @@ namespace Nethermind.Core
             builder.AppendLine($"{indent}State Root: {StateRoot}");
             builder.AppendLine($"{indent}BaseFeePerGas: {BaseFeePerGas}");
             builder.AppendLine($"{indent}Verkle Proof: {VerkleProof?.ToHexString()}");
+            // builder.AppendLine($"{indent}Verkle Witness Count- {VerkleWitnesses.Count}");
+            // foreach (byte[][] witness in VerkleWitnesses)
+            // {
+            //     builder.AppendLine($"{indent}-- {witness.Length}");
+            //     var wit0 = witness[0] != null ? witness[0].ToHexString() : "";
+            //     builder.AppendLine($"{indent} {wit0}");
+            //     var wit1 = witness[1] != null ? witness[0].ToHexString() : "";
+            //     builder.AppendLine($"{indent} {wit1}");
+            // }
 
             return builder.ToString();
         }
