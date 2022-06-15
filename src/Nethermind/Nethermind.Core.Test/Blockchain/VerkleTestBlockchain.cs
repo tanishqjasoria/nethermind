@@ -121,7 +121,7 @@ namespace Nethermind.Core.Test.Blockchain
             SpecProvider = CreateSpecProvider(specProvider ?? MainnetSpecProvider.Instance);
             EthereumEcdsa = new EthereumEcdsa(ChainId.Mainnet, LogManager);
             DbProvider = await CreateDbProvider();
-            TrieStore = new VerkleTrieStore(DatabaseScheme.MemoryDb, LogManager);
+            TrieStore = new VerkleTrieStore(DatabaseScheme.RocksDb, LogManager);
             VerkleStateProvider stateProvider = new(TrieStore, LogManager, DbProvider.CodeDb);
             State = stateProvider;
             State.CreateAccount(TestItem.AddressA, (initialValues ?? InitialValue));
