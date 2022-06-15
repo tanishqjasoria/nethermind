@@ -15,7 +15,12 @@
 //  along with the Nethermind. If not, see <http://www.gnu.org/licenses/>.
 // 
 
+using System;
 using System.IO;
+using System.Threading.Tasks;
+using FluentAssertions;
+using Nethermind.Core.Crypto;
+using Nethermind.Core.Extensions;
 using Nethermind.Core.Test;
 using Nethermind.Logging;
 using NUnit.Framework;
@@ -28,6 +33,7 @@ public class VerkleTrieStoreTests
     [Test]
     public void TestVerkleTrieCreate()
     {
+        var NUM = 10000;
         byte[] one = 
         {
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
@@ -41,15 +47,31 @@ public class VerkleTrieStoreTests
         string dbname = "VerkleTrie_TestID_" + TestContext.CurrentContext.Test.ID;
         string pathname = Path.Combine(tempDir, dbname);
 
+        VerkleTree[] arr = new VerkleTree[NUM];
+        Task[] TaskArr = new Task[NUM];
+
         VerkleTrieStore ts1 = new(DatabaseScheme.RocksDb, NullLogManager.Instance, pathname);
         VerkleTree vt1 = new (ts1);
-
-        IVerkleReadOnlyVerkleTrieStore vts2 = ts1.AsReadOnly();
-        VerkleTree vt2 = new (vts2);
+        
+        for (int i = 0; i < NUM; i++)
+        {
+            arr[i] = new (ts1.AsReadOnly());
+        }
         
         vt1.SetValue(one, one32);
-
-        vt2.GetValue(one);
-
+        vt1.UpdateRootHash();
+        Keccak rootHash = vt1.RootHash;
+        vt1.Commit(1);
+        vt1.UpdateRootHash();
+        
+        for (int i = 0; i < NUM; i++)
+        {
+            TaskArr[i] =Task.Run(() =>
+            {
+                arr[i].UpdateRootHash();
+                arr[i].GetValue(one).Should().Equal(one32);
+                arr[i].RootHash.Should().BeEquivalentTo(rootHash);
+            });
+        }
     }
 }

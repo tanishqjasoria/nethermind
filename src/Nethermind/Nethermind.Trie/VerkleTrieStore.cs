@@ -32,6 +32,7 @@ public interface IVerkleTrieStore : ITrieStore
     IVerkleReadOnlyVerkleTrieStore AsReadOnly();
 
     public RustVerkle CreateTrie(CommitScheme commitScheme);
+    void ClearTempChanges();
 }
 
 public interface IVerkleReadOnlyVerkleTrieStore : IVerkleTrieStore, IReadOnlyTrieStore
@@ -98,6 +99,10 @@ public class VerkleTrieStore: IVerkleTrieStore
     public RustVerkle CreateTrie(CommitScheme commitScheme)
     {
         return RustVerkleLib.VerkleTrieNewFromDb(_verkleDb, commitScheme);
+    }
+
+    public void ClearTempChanges()
+    {
     }
 
     public TrieNode FindCachedOrUnknown(Keccak hash)

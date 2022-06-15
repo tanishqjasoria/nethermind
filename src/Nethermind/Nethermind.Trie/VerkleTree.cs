@@ -177,7 +177,12 @@ public class VerkleTree
         treeKeyPrefix[31] = subIndexBytes;
         return treeKeyPrefix;
     }
-
+    
+    public void ClearTempTree()
+    {
+        RustVerkleLib.VerkleTrieClear(_verkleTrie);
+        _verkleTrieStore.ClearTempChanges();
+    }
     // public byte[][] GetTreeKeysForAccount(Address address)
     // {
     //     byte[] treeKeyPrefix = GetTreeKeyPrefix(address, 0);
