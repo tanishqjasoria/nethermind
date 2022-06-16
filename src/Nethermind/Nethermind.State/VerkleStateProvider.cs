@@ -90,6 +90,7 @@ namespace Nethermind.State
         {
             get
             {
+                RecalculateStateRoot();
                 if (_needsStateRootUpdate)
                 {
                     throw new InvalidOperationException();

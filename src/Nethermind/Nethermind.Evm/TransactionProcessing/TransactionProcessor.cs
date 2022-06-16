@@ -290,7 +290,7 @@ namespace Nethermind.Evm.TransactionProcessing
             if (commit)
             {
                 //////////////// TODO: why commit here?
-                _stateProvider.Commit(spec, txTracer.IsTracingState ? txTracer : NullTxTracer.Instance);
+                // _stateProvider.Commit(spec, txTracer.IsTracingState ? txTracer : NullTxTracer.Instance);
             }
             // TODO: add access events here:  corresponding to the transaction
             long unspentGas = gasLimit - intrinsicGas;

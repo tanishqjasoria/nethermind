@@ -345,6 +345,7 @@ namespace Nethermind.Serialization.Rlp
 
         private static int GetWitnessLength(BlockHeader item, RlpBehaviors rlpBehaviors)
         {
+            return 0;
             int witnessCount = item.VerkleWitnesses?.Count ?? 0;
             if (witnessCount == 0)
             {
