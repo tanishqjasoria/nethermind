@@ -28,7 +28,7 @@ namespace Nethermind.Consensus.Ethash
         public const int InitialDifficultyBombBlock = 200000;
         private readonly ISpecProvider _specProvider;
         private readonly UInt256 _minimumDifficulty;
-        private const long OfGenesisBlock = 1800;
+        private const long OfGenesisBlock = 5000;
 
         public EthashDifficultyCalculator(ISpecProvider specProvider, UInt256? minimumDifficulty = null)
         {
