@@ -21,3 +21,6 @@
 	path = src/Math.Gmp.Native
 	url = https://github.com/NethermindEth/Math.Gmp.Native.git
 	branch = master
+[submodule "src/DotNetty"]
+	path = src/DotNetty
+	url = https://github.com/NethermindEth/DotNetty.git
