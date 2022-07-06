@@ -24,3 +24,4 @@
 [submodule "src/DotNetty"]
 	path = src/DotNetty
 	url = https://github.com/NethermindEth/DotNetty.git
+	branch = thread_death_watch_fix
