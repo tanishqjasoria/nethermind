@@ -1,16 +1,16 @@
 //  Copyright (c) 2021 Demerzel Solutions Limited
 //  This file is part of the Nethermind library.
-// 
+//
 //  The Nethermind library is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU Lesser General Public License as published by
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
-// 
+//
 //  The Nethermind library is distributed in the hope that it will be useful,
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 //  GNU Lesser General Public License for more details.
-// 
+//
 //  You should have received a copy of the GNU Lesser General Public License
 //  along with the Nethermind. If not, see <http://www.gnu.org/licenses/>.
 
@@ -62,16 +62,16 @@ namespace Nethermind.Specs.ChainSpecStyle
         public long? Eip2930Transition { get; set; }
         public long? Eip3198Transition { get; set; }
         public long? Eip3529Transition { get; set; }
-        
+
         public long? Eip3541Transition { get; set; }
         public long? Eip3607Transition { get; set; }
-        
+
         public UInt256 Eip1559BaseFeeInitialValue { get; set; }
 
-        public UInt256 Eip1559BaseFeeMaxChangeDenominator { get; set; }    
-            
+        public UInt256 Eip1559BaseFeeMaxChangeDenominator { get; set; }
+
         public long Eip1559ElasticityMultiplier { get; set; }
-        
+
         /// <summary>
         ///  Transaction permission managing contract address.
         /// </summary>
@@ -87,18 +87,18 @@ namespace Nethermind.Specs.ChainSpecStyle
         /// </summary>
         /// <remarks>Backward compatibility for early Kovan blocks.</remarks>
         public long? ValidateChainIdTransition { get; set; }
-        
+
         /// <summary>
         /// Optional, will be included for block 0 by default - Transition block before which the state root in transaction’s receipt can be stripped.
         /// </summary>
         /// <returns></returns>
         public long? ValidateReceiptsTransition { get; set; }
-        
+
         /// <summary>
         /// Block from which burnt EIP-1559 fees will go to <see cref="Eip1559FeeCollector"/>
         /// </summary>
         public long? Eip1559FeeCollectorTransition { get; set; }
-        
+
         /// <summary>
         /// Optional, address where burnt EIP-1559 fees will go
         /// </summary>
@@ -108,7 +108,7 @@ namespace Nethermind.Specs.ChainSpecStyle
         /// Block from which EIP1559 base fee cannot drop below <see cref="Eip1559BaseFeeMinValue"/>
         /// </summary>
         public long? Eip1559BaseFeeMinValueTransition { get; set; }
-        
+
         /// <summary>
         /// Optional, minimal value of EIP1559 base fee
         /// </summary>
@@ -121,5 +121,6 @@ namespace Nethermind.Specs.ChainSpecStyle
         public UInt256? TerminalTotalDifficulty { get; set; }
 
         public long? Eip1153Transition { get; set; }
+        public long? VerkleTreeTransition { get; set; }
     }
 }

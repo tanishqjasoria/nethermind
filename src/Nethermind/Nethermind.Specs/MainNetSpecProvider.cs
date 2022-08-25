@@ -53,7 +53,8 @@ namespace Nethermind.Specs
                 < ArrowGlacierBlockNumber => London.Instance,
                 < GrayGlacierBlockNumber => ArrowGlacier.Instance,
                 < ShanghaiBlockNumber => GrayGlacier.Instance,
-                _ => Shanghai.Instance
+                < CancunBlockNumber => Shanghai.Instance,
+                _ => Cancun.Instance
             };
 
         public const long HomesteadBlockNumber = 1_150_000;
@@ -80,7 +81,8 @@ namespace Nethermind.Specs
         {
             HomesteadBlockNumber, DaoBlockNumberConst, TangerineWhistleBlockNumber, SpuriousDragonBlockNumber,
             ByzantiumBlockNumber, ConstantinopleFixBlockNumber, IstanbulBlockNumber, MuirGlacierBlockNumber,
-            BerlinBlockNumber, LondonBlockNumber, ArrowGlacierBlockNumber, GrayGlacierBlockNumber, ShanghaiBlockNumber
+            BerlinBlockNumber, LondonBlockNumber, ArrowGlacierBlockNumber, GrayGlacierBlockNumber, ShanghaiBlockNumber,
+            CancunBlockNumber
         };
 
         private MainnetSpecProvider() { }

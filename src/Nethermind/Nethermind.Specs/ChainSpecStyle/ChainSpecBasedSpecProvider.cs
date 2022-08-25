@@ -1,16 +1,16 @@
 //  Copyright (c) 2021 Demerzel Solutions Limited
 //  This file is part of the Nethermind library.
-// 
+//
 //  The Nethermind library is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU Lesser General Public License as published by
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
-// 
+//
 //  The Nethermind library is distributed in the hope that it will be useful,
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 //  GNU Lesser General Public License for more details.
-// 
+//
 //  You should have received a copy of the GNU Lesser General Public License
 //  along with the Nethermind. If not, see <http://www.gnu.org/licenses/>.
 
@@ -52,7 +52,7 @@ namespace Nethermind.Specs.ChainSpecStyle
             var forks = _chainSpec.GetType()
                 .GetProperties(BindingFlags.Public | BindingFlags.Instance)
                 .Where(p => p.Name.Contains("BlockNumber") && p.Name != "TerminalPoWBlockNumber");
-            
+
             var baseTransitions = _chainSpec.Parameters.GetType()
                 .GetProperties(BindingFlags.Public | BindingFlags.Instance)
                 .Where(p => p.Name.Contains("Transition"));
@@ -92,7 +92,7 @@ namespace Nethermind.Specs.ChainSpecStyle
             foreach (long releaseStartBlock in transitionBlocks)
             {
                 ReleaseSpec releaseSpec = new();
-                releaseSpec.MaximumUncleCount = (int) (releaseStartBlock >= (_chainSpec.AuRa?.MaximumUncleCountTransition ?? long.MaxValue) ? _chainSpec.AuRa?.MaximumUncleCount ?? 2 : 2); 
+                releaseSpec.MaximumUncleCount = (int) (releaseStartBlock >= (_chainSpec.AuRa?.MaximumUncleCountTransition ?? long.MaxValue) ? _chainSpec.AuRa?.MaximumUncleCount ?? 2 : 2);
                 releaseSpec.IsTimeAdjustmentPostOlympic = true; // TODO: this is Duration, review
                 releaseSpec.MaximumExtraDataSize = _chainSpec.Parameters.MaximumExtraDataSize;
                 releaseSpec.MinGasLimit = _chainSpec.Parameters.MinGasLimit;
@@ -140,7 +140,8 @@ namespace Nethermind.Specs.ChainSpecStyle
                 releaseSpec.IsEip3529Enabled = (_chainSpec.Parameters.Eip3529Transition ?? long.MaxValue) <= releaseStartBlock;
                 releaseSpec.IsEip3607Enabled = (_chainSpec.Parameters.Eip3607Transition ?? long.MaxValue) <= releaseStartBlock;
                 releaseSpec.IsEip1153Enabled = (_chainSpec.Parameters.Eip1153Transition ?? long.MaxValue) <= releaseStartBlock;
-                releaseSpec.ValidateChainId = (_chainSpec.Parameters.ValidateChainIdTransition ?? 0) <= releaseStartBlock; 
+                releaseSpec.IsVerkleTreeEipEnabled = (_chainSpec.Parameters.VerkleTreeTransition ?? long.MaxValue) <= releaseStartBlock;
+                releaseSpec.ValidateChainId = (_chainSpec.Parameters.ValidateChainIdTransition ?? 0) <= releaseStartBlock;
                 releaseSpec.ValidateReceipts = ((_chainSpec.Parameters.ValidateReceiptsTransition > 0) ? Math.Max(_chainSpec.Parameters.ValidateReceiptsTransition ?? 0, _chainSpec.Parameters.Eip658Transition ?? 0) : 0) <= releaseStartBlock;
                 releaseSpec.Eip1559FeeCollector = releaseSpec.IsEip1559Enabled && (_chainSpec.Parameters.Eip1559FeeCollectorTransition ?? long.MaxValue) <= releaseStartBlock ? _chainSpec.Parameters.Eip1559FeeCollector : null;
                 releaseSpec.Eip1559BaseFeeMinValue = releaseSpec.IsEip1559Enabled && (_chainSpec.Parameters.Eip1559BaseFeeMinValueTransition ?? long.MaxValue) <= releaseStartBlock ? _chainSpec.Parameters.Eip1559BaseFeeMinValue : null;
@@ -167,7 +168,7 @@ namespace Nethermind.Specs.ChainSpecStyle
                 _transitions[index] = (releaseStartBlock, releaseSpec);
                 index++;
             }
-            
+
             MergeBlockNumber = _chainSpec.Parameters.TerminalPowBlockNumber + 1;
             TerminalTotalDifficulty = _chainSpec.Parameters.TerminalTotalDifficulty;
         }
@@ -193,7 +194,7 @@ namespace Nethermind.Specs.ChainSpecStyle
                     ? transition.Release
                     : null;
 
-        private static int CompareTransitionOnBlock(long blockNumber, (long BlockNumber, ReleaseSpec Release) transition) => 
+        private static int CompareTransitionOnBlock(long blockNumber, (long BlockNumber, ReleaseSpec Release) transition) =>
             blockNumber.CompareTo(transition.BlockNumber);
 
         public long? DaoBlockNumber => _chainSpec.DaoForkBlockNumber;
