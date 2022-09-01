@@ -1,16 +1,16 @@
 //  Copyright (c) 2021 Demerzel Solutions Limited
 //  This file is part of the Nethermind library.
-// 
+//
 //  The Nethermind library is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU Lesser General Public License as published by
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
-// 
+//
 //  The Nethermind library is distributed in the hope that it will be useful,
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 //  GNU Lesser General Public License for more details.
-// 
+//
 //  You should have received a copy of the GNU Lesser General Public License
 //  along with the Nethermind. If not, see <http://www.gnu.org/licenses/>.
 
@@ -44,10 +44,10 @@ namespace Nethermind.Synchronization.StateSync
 
         protected override async Task Dispatch(PeerInfo peerInfo, StateSyncBatch batch, CancellationToken cancellationToken)
         {
-            if (batch == null || batch.RequestedNodes == null || batch.RequestedNodes.Length == 0)
-            {
-                return;
-            }
+            // if (batch == null || batch.RequestedNodes == null || batch.RequestedNodes.Length == 0)
+            // {
+            //     return;
+            // }
 
             //string printByteArray(byte[] bytes)
             //{
@@ -58,38 +58,38 @@ namespace Nethermind.Synchronization.StateSync
 
             ISyncPeer peer = peerInfo.SyncPeer;
 
-            Task<byte[][]> task = null;
+            // Task<byte[][]> task = null;
 
-            if (_snapSyncEnabled)
-            {
-                if (peer.TryGetSatelliteProtocol<ISnapSyncPeer>("snap", out var handler))
-                {
-                    if (batch.NodeDataType == NodeDataType.Code)
-                    {
-                        var a = batch.RequestedNodes.Select(n => n.Hash).ToArray();
-                        Logger.Warn($"GETBYTECODES count:{a.Length}");
-                        task = handler.GetByteCodes(a, cancellationToken);
-                    }
-                    else
-                    {
-                        GetTrieNodesRequest request = GetRequest(batch);
+            // if (_snapSyncEnabled)
+            // {
+            //     if (peer.TryGetSatelliteProtocol<ISnapSyncPeer>("snap", out var handler))
+            //     {
+            //         if (batch.NodeDataType == NodeDataType.Code)
+            //         {
+            //             var a = batch.RequestedNodes.Select(n => n.Hash).ToArray();
+            //             Logger.Warn($"GETBYTECODES count:{a.Length}");
+            //             task = handler.GetByteCodes(a, cancellationToken);
+            //         }
+            //         else
+            //         {
+            //             GetTrieNodesRequest request = GetRequest(batch);
+            //
+            //             Logger.Warn($"GETTRIENODES count:{request.AccountAndStoragePaths.Length}");
+            //
+            //             task = handler.GetTrieNodes(request, cancellationToken);
+            //         }
+            //     }
+            // }
 
-                        Logger.Warn($"GETTRIENODES count:{request.AccountAndStoragePaths.Length}");
-
-                        task = handler.GetTrieNodes(request, cancellationToken);
-                    }
-                }
-            }
-
-            if (task is null)
-            {
-                var a = batch.RequestedNodes.Select(n => n.Hash).ToArray();
-                Logger.Warn($"GETNODEDATA count:{a.Length}");
-
-                task = peer.GetNodeData(a, cancellationToken);
-            }
-
-            await task.ContinueWith(
+            // if (task is null)
+            // {
+            //     var a = batch.RequestedNodes.Select(n => n.Hash).ToArray();
+            //     Logger.Warn($"GETNODEDATA count:{a.Length}");
+            //
+            //     task = peer.GetNodeData(a, cancellationToken);
+            // }
+            var getNodeDataTask = peer.GetNodeData(batch.RequestedNodes.Select(n => n.Hash).ToArray(), cancellationToken);
+            await getNodeDataTask.ContinueWith(
                 (t, state) =>
                 {
                     if (t.IsFaulted)
@@ -105,57 +105,57 @@ namespace Nethermind.Synchronization.StateSync
                 }, batch);
         }
 
-        private GetTrieNodesRequest GetRequest(StateSyncBatch batch)
-        {
-            GetTrieNodesRequest request = new();
-            request.RootHash = batch.StateRoot;
+        // private GetTrieNodesRequest GetRequest(StateSyncBatch batch)
+        // {
+        //     GetTrieNodesRequest request = new();
+        //     request.RootHash = batch.StateRoot;
+        //
+        //     Dictionary<byte[], List<byte[]>> dict = new(Bytes.EqualityComparer);
+        //     List<byte[]> accountTreePaths = new();
+        //
+        //     foreach (var item in batch.RequestedNodes)
+        //     {
+        //         if (item.AccountPathNibbles == null || item.AccountPathNibbles.Length == 0)
+        //         {
+        //             accountTreePaths.Add(item.PathNibbles);
+        //         }
+        //         else
+        //         {
+        //             if (!dict.TryGetValue(item.AccountPathNibbles, out var storagePaths))
+        //             {
+        //                 storagePaths = new List<byte[]>();
+        //                 dict[item.AccountPathNibbles] = storagePaths;
+        //             }
+        //
+        //             storagePaths.Add(item.PathNibbles);
+        //         }
+        //     }
+        //
+        //     request.AccountAndStoragePaths = new PathGroup[accountTreePaths.Count + dict.Count];
+        //
+        //     int i = 0;
+        //     for (; i < accountTreePaths.Count; i++)
+        //     {
+        //         request.AccountAndStoragePaths[i] = new PathGroup() { Group = new[] { EncodePath(accountTreePaths[i]) } };
+        //     }
+        //
+        //     foreach (var kvp in dict)
+        //     {
+        //         byte[][] group = new byte[kvp.Value.Count + 1][];
+        //         group[0] = EncodePath(kvp.Key);
+        //
+        //         for (int groupIndex = 1; groupIndex < group.Length; groupIndex++)
+        //         {
+        //             group[groupIndex] = EncodePath(kvp.Value[groupIndex - 1]);
+        //         }
+        //
+        //         request.AccountAndStoragePaths[i] = new PathGroup() { Group = group };
+        //         i++;
+        //     }
+        //
+        //     return request;
+        // }
 
-            Dictionary<byte[], List<byte[]>> dict = new(Bytes.EqualityComparer);
-            List<byte[]> accountTreePaths = new();
-
-            foreach (var item in batch.RequestedNodes)
-            {
-                if (item.AccountPathNibbles == null || item.AccountPathNibbles.Length == 0)
-                {
-                    accountTreePaths.Add(item.PathNibbles);
-                }
-                else
-                {
-                    if (!dict.TryGetValue(item.AccountPathNibbles, out var storagePaths))
-                    {
-                        storagePaths = new List<byte[]>();
-                        dict[item.AccountPathNibbles] = storagePaths;
-                    }
-
-                    storagePaths.Add(item.PathNibbles);
-                }
-            }
-
-            request.AccountAndStoragePaths = new PathGroup[accountTreePaths.Count + dict.Count];
-
-            int i = 0;
-            for (; i < accountTreePaths.Count; i++)
-            {
-                request.AccountAndStoragePaths[i] = new PathGroup() { Group = new[] { EncodePath(accountTreePaths[i]) } };
-            }
-
-            foreach (var kvp in dict)
-            {
-                byte[][] group = new byte[kvp.Value.Count + 1][];
-                group[0] = EncodePath(kvp.Key);
-
-                for (int groupIndex = 1; groupIndex < group.Length; groupIndex++)
-                {
-                    group[groupIndex] = EncodePath(kvp.Value[groupIndex - 1]);
-                }
-
-                request.AccountAndStoragePaths[i] = new PathGroup() { Group = group };
-                i++;
-            }
-
-            return request;
-        }
-
-        private byte[] EncodePath(byte[] input) => input.Length == 64 ? Nibbles.ToBytes(input) : Nibbles.ToCompactHexEncoding(input);
+        // private byte[] EncodePath(byte[] input) => input.Length == 64 ? Nibbles.ToBytes(input) : Nibbles.ToCompactHexEncoding(input);
     }
 }
