@@ -291,7 +291,7 @@ namespace Nethermind.Synchronization.FastSync
 
         public (bool continueProcessing, bool finishSyncRound) ValidatePrepareRequest(SyncMode currentSyncMode)
         {
-            if (_rootSaved == 1)    
+            if (_rootSaved == 1)
             {
                 VerifyPostSyncCleanUp();
                 return (false, true);
@@ -672,7 +672,9 @@ namespace Nethermind.Synchronization.FastSync
                             branchChildPath[currentStateSyncItem.PathNibbles.Length] = (byte)childIndex;
 
                             AddNodeResult addChildResult = AddNodeToPending(
-                                new StateSyncItem(childHash, currentStateSyncItem.AccountPathNibbles, branchChildPath.ToArray(), nodeDataType, currentStateSyncItem.Level + 1, CalculateRightness(trieNode.NodeType, currentStateSyncItem, childIndex))
+                                new StateSyncItem(childHash, currentStateSyncItem.AccountPathNibbles,
+                                    branchChildPath.ToArray(), nodeDataType, currentStateSyncItem.Level + 1,
+                                    CalculateRightness(trieNode.NodeType, currentStateSyncItem, childIndex))
                                 {
                                     BranchChildIndex = (short)childIndex,
                                     ParentBranchChildIndex = currentStateSyncItem.BranchChildIndex
@@ -762,11 +764,7 @@ namespace Nethermind.Synchronization.FastSync
 
                         if (storageRoot != Keccak.EmptyTreeHash)
                         {
-                            Span<byte> childPath = stackalloc byte[currentStateSyncItem.PathNibbles.Length + trieNode.Path!.Length];
-                            currentStateSyncItem.PathNibbles.CopyTo(childPath.Slice(0, currentStateSyncItem.PathNibbles.Length));
-                            trieNode.Path!.CopyTo(childPath.Slice(currentStateSyncItem.PathNibbles.Length));
-
-                            AddNodeResult addStorageNodeResult = AddNodeToPending(new StateSyncItem(storageRoot, childPath.ToArray(), null, NodeDataType.Storage, 0, currentStateSyncItem.Rightness), dependentItem, "storage");
+                            AddNodeResult addStorageNodeResult = AddNodeToPending(new StateSyncItem(storageRoot, currentStateSyncItem.PathNibbles, null, NodeDataType.Storage, 0, currentStateSyncItem.Rightness), dependentItem, "storage");
                             if (addStorageNodeResult != AddNodeResult.AlreadySaved) dependentItem.Counter++;
                         }
 
