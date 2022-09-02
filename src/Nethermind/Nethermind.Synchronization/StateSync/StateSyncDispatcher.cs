@@ -81,13 +81,13 @@ namespace Nethermind.Synchronization.StateSync
                 }
             }
 
-            if (task is null)
-            {
-                var a = batch.RequestedNodes.Select(n => n.Hash).ToArray();
-                Logger.Warn($"GETNODEDATA count:{a.Length}");
+            //if (task is null)
+            //{
+            //    var a = batch.RequestedNodes.Select(n => n.Hash).ToArray();
+            //    Logger.Warn($"GETNODEDATA count:{a.Length}");
 
-                task = peer.GetNodeData(a, cancellationToken);
-            }
+            //    task = peer.GetNodeData(a, cancellationToken);
+            //}
 
             await task.ContinueWith(
                 (t, state) =>
