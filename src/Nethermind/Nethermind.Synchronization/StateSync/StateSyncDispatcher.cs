@@ -81,6 +81,11 @@ namespace Nethermind.Synchronization.StateSync
                 }
             }
 
+            if(task == null)
+            {
+                return;
+            }
+
             //if (task is null)
             //{
             //    var a = batch.RequestedNodes.Select(n => n.Hash).ToArray();
