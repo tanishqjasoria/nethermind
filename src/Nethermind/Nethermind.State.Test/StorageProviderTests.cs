@@ -1,16 +1,16 @@
 //  Copyright (c) 2021 Demerzel Solutions Limited
 //  This file is part of the Nethermind library.
-// 
+//
 //  The Nethermind library is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU Lesser General Public License as published by
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
-// 
+//
 //  The Nethermind library is distributed in the hope that it will be useful,
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 //  GNU Lesser General Public License for more details.
-// 
+//
 //  You should have received a copy of the GNU Lesser General Public License
 //  along with the Nethermind. If not, see <http://www.gnu.org/licenses/>.
 
@@ -80,7 +80,7 @@ namespace Nethermind.Store.Test
             provider.Set(new StorageCell(ctx.Address1, 1), _values[3]);
             provider.Restore(snapshot);
 
-            Assert.AreEqual(_values[snapshot + 1], provider.Get(new StorageCell(ctx.Address1, 1)));
+            Assert.AreEqual(_values[snapshot + 1].PadLeft(32), provider.Get(new StorageCell(ctx.Address1, 1)));
         }
 
         [Test]
@@ -97,7 +97,7 @@ namespace Nethermind.Store.Test
             provider.Restore(-1);
             provider.Set(new StorageCell(ctx.Address1, 1), _values[2]);
             provider.Restore(-1);
-            Assert.AreEqual(_values[1], provider.Get(new StorageCell(ctx.Address1, 1)));
+            Assert.AreEqual(_values[1].PadLeft(32), provider.Get(new StorageCell(ctx.Address1, 1)));
         }
 
         [TestCase(-1)]
@@ -113,7 +113,7 @@ namespace Nethermind.Store.Test
             provider.Set(new StorageCell(ctx.Address1, 3), _values[3]);
             provider.Restore(snapshot);
 
-            Assert.AreEqual(_values[Math.Min(snapshot + 1, 1)], provider.Get(new StorageCell(ctx.Address1, 1)));
+            Assert.AreEqual(_values[Math.Min(snapshot + 1, 1)].PadLeft(32), provider.Get(new StorageCell(ctx.Address1, 1)));
         }
 
         [Test]
@@ -139,12 +139,12 @@ namespace Nethermind.Store.Test
             provider.Commit();
             provider.Restore(-1);
 
-            Assert.AreEqual(_values[7], provider.Get(new StorageCell(ctx.Address1, 1)));
-            Assert.AreEqual(_values[8], provider.Get(new StorageCell(ctx.Address1, 2)));
-            Assert.AreEqual(_values[9], provider.Get(new StorageCell(ctx.Address1, 3)));
-            Assert.AreEqual(_values[10], provider.Get(new StorageCell(ctx.Address2, 1)));
-            Assert.AreEqual(_values[11], provider.Get(new StorageCell(ctx.Address2, 2)));
-            Assert.AreEqual(_values[12], provider.Get(new StorageCell(ctx.Address2, 3)));
+            Assert.AreEqual(_values[7].PadLeft(32), provider.Get(new StorageCell(ctx.Address1, 1)));
+            Assert.AreEqual(_values[8].PadLeft(32), provider.Get(new StorageCell(ctx.Address1, 2)));
+            Assert.AreEqual(_values[9].PadLeft(32), provider.Get(new StorageCell(ctx.Address1, 3)));
+            Assert.AreEqual(_values[10].PadLeft(32), provider.Get(new StorageCell(ctx.Address2, 1)));
+            Assert.AreEqual(_values[11].PadLeft(32), provider.Get(new StorageCell(ctx.Address2, 2)));
+            Assert.AreEqual(_values[12].PadLeft(32), provider.Get(new StorageCell(ctx.Address2, 3)));
         }
 
         [Test]
@@ -216,7 +216,7 @@ namespace Nethermind.Store.Test
 
             byte[] valueAfter = storageProvider.Get(new StorageCell(ctx.Address1, 1));
 
-            Assert.AreEqual(_values[1], valueAfter);
+            Assert.AreEqual(_values[1].PadLeft(32), valueAfter);
         }
 
         [Test]
@@ -234,7 +234,7 @@ namespace Nethermind.Store.Test
             ctx.StateProvider.Commit(Frontier.Instance);
 
             byte[] valueAfter = storageProvider.Get(new StorageCell(ctx.Address1, 1));
-            Assert.AreEqual(_values[(Resettable.StartCapacity + 1) % 2], valueAfter);
+            Assert.AreEqual(_values[(Resettable.StartCapacity + 1) % 2].PadLeft(32), valueAfter);
         }
 
         /// <summary>
@@ -266,7 +266,7 @@ namespace Nethermind.Store.Test
             StorageProvider provider = BuildStorageProvider(ctx);
 
             provider.SetTransientState(new StorageCell(ctx.Address1, 2), _values[1]);
-            Assert.AreEqual(_values[1], provider.GetTransientState(new StorageCell(ctx.Address1, 2)));
+            Assert.AreEqual(_values[1].PadLeft(32), provider.GetTransientState(new StorageCell(ctx.Address1, 2)));
         }
 
         /// <summary>
@@ -295,7 +295,7 @@ namespace Nethermind.Store.Test
             Assert.AreEqual(snapshots[snapshot + 1].PersistentStorageSnapshot, -1);
             provider.Restore(snapshots[snapshot + 1]);
 
-            Assert.AreEqual(_values[snapshot + 1], provider.GetTransientState(new StorageCell(ctx.Address1, 1)));
+            Assert.AreEqual(_values[snapshot + 1].PadLeft(32), provider.GetTransientState(new StorageCell(ctx.Address1, 1)));
         }
 
         /// <summary>
@@ -308,7 +308,7 @@ namespace Nethermind.Store.Test
             StorageProvider provider = BuildStorageProvider(ctx);
 
             provider.SetTransientState(new StorageCell(ctx.Address1, 2), _values[1]);
-            Assert.AreEqual(_values[1], provider.GetTransientState(new StorageCell(ctx.Address1, 2)));
+            Assert.AreEqual(_values[1].PadLeft(32), provider.GetTransientState(new StorageCell(ctx.Address1, 2)));
 
             provider.Commit();
             Assert.True(provider.GetTransientState(new StorageCell(ctx.Address1, 2)).IsZero());
@@ -324,7 +324,7 @@ namespace Nethermind.Store.Test
             StorageProvider provider = BuildStorageProvider(ctx);
 
             provider.SetTransientState(new StorageCell(ctx.Address1, 2), _values[1]);
-            Assert.AreEqual(_values[1], provider.GetTransientState(new StorageCell(ctx.Address1, 2)));
+            Assert.AreEqual(_values[1].PadLeft(32), provider.GetTransientState(new StorageCell(ctx.Address1, 2)));
 
             provider.Reset();
             Assert.True(provider.GetTransientState(new StorageCell(ctx.Address1, 2)).IsZero());
@@ -374,7 +374,7 @@ namespace Nethermind.Store.Test
                 new Snapshot.Storage(0, 1),
                 new Snapshot.Storage(1, 1));
 
-            _values[snapshot + 1].Should().BeEquivalentTo(provider.GetTransientState(new StorageCell(ctx.Address1, 1)));
+            _values[snapshot + 1].PadLeft(32).Should().BeEquivalentTo(provider.GetTransientState(new StorageCell(ctx.Address1, 1)));
         }
 
         /// <summary>
@@ -421,7 +421,7 @@ namespace Nethermind.Store.Test
                 new Snapshot.Storage(1, 0),
                 new Snapshot.Storage(1, 1));
 
-            _values[snapshot + 1].Should().BeEquivalentTo(provider.Get(new StorageCell(ctx.Address1, 1)));
+            _values[snapshot + 1].PadLeft(32).Should().BeEquivalentTo(provider.Get(new StorageCell(ctx.Address1, 1)));
         }
 
         private class Context

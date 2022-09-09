@@ -110,7 +110,7 @@ namespace Nethermind.State
             }
             else
             {
-                newValue = new byte[] {0};
+                newValue = new byte[] { 0 };
             }
 
             return newValue;

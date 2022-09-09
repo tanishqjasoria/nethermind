@@ -167,7 +167,7 @@ namespace Nethermind.Evm.Test
                 0,
                 (byte)Instruction.SSTORE);
             Assert.AreEqual(GasCostOf.Transaction + 4 * GasCostOf.VeryLow + GasCostOf.SReset, receipt.GasSpent, "gas");
-            Assert.AreEqual(new byte[] {0}, Storage.Get(new StorageCell(Recipient, 0)).WithoutLeadingZeros().ToArray(), "storage");
+            Assert.AreEqual(new byte[] { 0 }, Storage.Get(new StorageCell(Recipient, 0)).WithoutLeadingZeros().ToArray(), "storage");
         }
 
         [Test]
@@ -183,7 +183,7 @@ namespace Nethermind.Evm.Test
                 0,
                 (byte)Instruction.SSTORE);
             Assert.AreEqual(GasCostOf.Transaction + 4 * GasCostOf.VeryLow + GasCostOf.SSet, receipt.GasSpent, "gas");
-            Assert.AreEqual(new byte[] {1}, Storage.Get(new StorageCell(Recipient, 0)).WithoutLeadingZeros().ToArray(), "storage");
+            Assert.AreEqual(new byte[] { 1 }, Storage.Get(new StorageCell(Recipient, 0)).WithoutLeadingZeros().ToArray(), "storage");
         }
 
         [Test]
@@ -199,7 +199,7 @@ namespace Nethermind.Evm.Test
                 0,
                 (byte)Instruction.SSTORE);
             Assert.AreEqual(GasCostOf.Transaction + 4 * GasCostOf.VeryLow + GasCostOf.SSet, receipt.GasSpent, "gas");
-            Assert.AreEqual(new byte[] {1}, Storage.Get(new StorageCell(Recipient, 0)).WithoutLeadingZeros().ToArray(), "storage");
+            Assert.AreEqual(new byte[] { 1 }, Storage.Get(new StorageCell(Recipient, 0)).WithoutLeadingZeros().ToArray(), "storage");
         }
 
         [Test]
@@ -379,7 +379,7 @@ namespace Nethermind.Evm.Test
                 0,
                 (byte)Instruction.SSTORE);
             Assert.AreEqual(GasCostOf.Transaction + GasCostOf.VeryLow * 4 + GasCostOf.SReset, receipt.GasSpent, "gas");
-            Assert.AreEqual(new byte[] {0}, Storage.Get(new StorageCell(Recipient, 0)).WithoutLeadingZeros().ToArray(), "storage");
+            Assert.AreEqual(new byte[] { 0 }, Storage.Get(new StorageCell(Recipient, 0)).WithoutLeadingZeros().ToArray(), "storage");
         }
 
         [Test]
