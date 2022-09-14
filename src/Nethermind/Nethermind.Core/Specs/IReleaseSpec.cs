@@ -1,16 +1,16 @@
 //  Copyright (c) 2021 Demerzel Solutions Limited
 //  This file is part of the Nethermind library.
-// 
+//
 //  The Nethermind library is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU Lesser General Public License as published by
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
-// 
+//
 //  The Nethermind library is distributed in the hope that it will be useful,
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 //  GNU Lesser General Public License for more details.
-// 
+//
 //  You should have received a copy of the GNU Lesser General Public License
 //  along with the Nethermind. If not, see <http://www.gnu.org/licenses/>.
 
@@ -33,7 +33,7 @@ namespace Nethermind.Core.Specs
         long DifficultyBoundDivisor { get; }
         long? FixedDifficulty { get; }
         int MaximumUncleCount { get; }
-        
+
         /// <summary>
         /// ---
         /// In chainspec - Ethash.Duration
@@ -166,7 +166,7 @@ namespace Nethermind.Core.Specs
         /// Istanbul ChainID opcode
         /// </summary>
         bool IsEip1344Enabled { get; }
-        
+
         /// <summary>
         /// Istanbul transaction data gas cost reduction
         /// </summary>
@@ -176,32 +176,32 @@ namespace Nethermind.Core.Specs
         /// Istanbul Blake2F precompile
         /// </summary>
         bool IsEip152Enabled { get; }
-        
+
         /// <summary>
         /// Istanbul alt_bn128 gas cost reduction
         /// </summary>
         bool IsEip1108Enabled { get; }
-        
+
         /// <summary>
         /// Istanbul state opcodes gas cost increase
         /// </summary>
         bool IsEip1884Enabled { get; }
-        
+
         /// <summary>
         /// Istanbul net-metered SSTORE
         /// </summary>
         bool IsEip2200Enabled { get; }
-        
+
         /// <summary>
         /// Berlin subroutines -> https://github.com/ethereum/EIPs/issues/2315
         /// </summary>
         bool IsEip2315Enabled { get; }
-        
+
         /// <summary>
         /// Berlin BLS crypto precompiles
         /// </summary>
         bool IsEip2537Enabled { get; }
-        
+
         /// <summary>
         /// Berlin MODEXP precompiles
         /// </summary>
@@ -211,12 +211,12 @@ namespace Nethermind.Core.Specs
         /// Berlin gas cost increases for state reading opcodes
         /// </summary>
         bool IsEip2929Enabled { get; }
-        
+
         /// <summary>
         /// Berlin access lists
         /// </summary>
         bool IsEip2930Enabled { get; }
-        
+
         /// <summary>
         /// Should EIP158 be ignored for this account.
         /// </summary>
@@ -229,7 +229,7 @@ namespace Nethermind.Core.Specs
         /// Gas target and base fee, and fee burning.
         /// </summary>
         bool IsEip1559Enabled { get; }
-        
+
         /// <summary>
         /// BaseFee opcode
         /// </summary>
@@ -239,9 +239,9 @@ namespace Nethermind.Core.Specs
         /// Reduction in refunds
         /// </summary>
         bool IsEip3529Enabled { get; }
-        
+
         /// <summary>
-        /// Reject new contracts starting with the 0xEF byte 
+        /// Reject new contracts starting with the 0xEF byte
         /// </summary>
         bool IsEip3541Enabled { get; }
 
@@ -256,27 +256,32 @@ namespace Nethermind.Core.Specs
         bool IsEip1153Enabled { get; }
 
         /// <summary>
+        /// Transient storage
+        /// </summary>
+        bool IsVerkleTreeEipEnabled { get; }
+
+        /// <summary>
         /// Should transactions be validated against chainId.
         /// </summary>
         /// <remarks>Backward compatibility for early Kovan blocks.</remarks>
         bool ValidateChainId => true;
-        
+
         /// <summary>
         /// Should validate ReceiptsRoot.
         /// </summary>
         /// <remarks>Backward compatibility for early Kovan blocks.</remarks>
         bool ValidateReceipts => true;
-        
+
         public long Eip1559TransitionBlock { get; }
 
-        // STATE related 
+        // STATE related
         public bool ClearEmptyAccountWhenTouched => IsEip158Enabled;
-        
+
         // VM
         public bool LimitCodeSize => IsEip170Enabled;
 
         public bool UseHotAndColdStorage => IsEip2929Enabled;
-        
+
         public bool UseTxAccessLists => IsEip2930Enabled;
 
         public bool ModExpEnabled => IsEip198Enabled;
@@ -288,45 +293,45 @@ namespace Nethermind.Core.Specs
         public bool Bls381Enabled => IsEip2537Enabled;
 
         public bool ChargeForTopLevelCreate => IsEip2Enabled;
-        
+
         public bool FailOnOutOfGasCodeDeposit => IsEip2Enabled;
 
         public bool UseShanghaiDDosProtection => IsEip150Enabled;
-        
+
         public bool UseExpDDosProtection => IsEip160Enabled;
-        
+
         public bool UseLargeStateDDosProtection => IsEip1884Enabled;
-        
+
         public bool ReturnDataOpcodesEnabled => IsEip211Enabled;
-        
+
         public bool ChainIdOpcodeEnabled => IsEip1344Enabled;
-        
+
         public bool Create2OpcodeEnabled => IsEip1014Enabled;
-        
+
         public bool DelegateCallEnabled => IsEip7Enabled;
-        
+
         public bool StaticCallEnabled => IsEip214Enabled;
-        
+
         public bool ShiftOpcodesEnabled => IsEip145Enabled;
-        
+
         public bool SubroutinesEnabled => IsEip2315Enabled;
-        
+
         public bool RevertOpcodeEnabled => IsEip140Enabled;
-        
+
         public bool ExtCodeHashOpcodeEnabled => IsEip1052Enabled;
-        
+
         public bool SelfBalanceOpcodeEnabled => IsEip1884Enabled;
-        
+
         public bool UseConstantinopleNetGasMetering => IsEip1283Enabled;
-        
+
         public bool UseIstanbulNetGasMetering => IsEip2200Enabled;
-        
+
         public bool UseNetGasMetering => UseConstantinopleNetGasMetering | UseIstanbulNetGasMetering;
 
         public bool UseNetGasMeteringWithAStipendFix => UseIstanbulNetGasMetering;
-        
+
         public bool Use63Over64Rule => UseShanghaiDDosProtection;
-        
+
         public bool BaseFeeEnabled => IsEip3198Enabled;
 
         public Address? Eip1559FeeCollector => null;
@@ -334,5 +339,6 @@ namespace Nethermind.Core.Specs
         public UInt256? Eip1559BaseFeeMinValue => null;
 
         public bool TransientStorageEnabled => IsEip1153Enabled;
+        public bool VerkleTreeEnabled => IsVerkleTreeEipEnabled;
     }
 }

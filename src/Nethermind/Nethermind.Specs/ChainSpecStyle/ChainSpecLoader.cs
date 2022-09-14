@@ -1,16 +1,16 @@
 //  Copyright (c) 2021 Demerzel Solutions Limited
 //  This file is part of the Nethermind library.
-// 
+//
 //  The Nethermind library is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU Lesser General Public License as published by
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
-// 
+//
 //  The Nethermind library is distributed in the hope that it will be useful,
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 //  GNU Lesser General Public License for more details.
-// 
+//
 //  You should have received a copy of the GNU Lesser General Public License
 //  along with the Nethermind. If not, see <http://www.gnu.org/licenses/>.
 
@@ -32,7 +32,7 @@ using Newtonsoft.Json.Linq;
 namespace Nethermind.Specs.ChainSpecStyle
 {
     /// <summary>
-    /// This class can load a Parity-style chain spec file and build a <see cref="ChainSpec"/> out of it. 
+    /// This class can load a Parity-style chain spec file and build a <see cref="ChainSpec"/> out of it.
     /// </summary>
     public class ChainSpecLoader : IChainSpecLoader
     {
@@ -87,13 +87,13 @@ namespace Nethermind.Specs.ChainSpecStyle
 
                 return null;
             }
-            
+
             long? GetTransitionForExpectedPricing(string builtInName, string innerPath, long expectedValue)
             {
                 bool GetForExpectedPricing(KeyValuePair<string, JObject> o) => o.Value.SelectToken(innerPath)?.Value<long>() == expectedValue;
                 return GetTransitions(builtInName, GetForExpectedPricing);
             }
-            
+
             long? GetTransitionIfInnerPathExists(string builtInName, string innerPath)
             {
                 bool GetForInnerPathExistence(KeyValuePair<string, JObject> o) => o.Value.SelectToken(innerPath) != null;
@@ -147,6 +147,7 @@ namespace Nethermind.Specs.ChainSpecStyle
                 Eip3529Transition = chainSpecJson.Params.Eip3529Transition,
                 Eip3607Transition = chainSpecJson.Params.Eip3607Transition,
                 Eip1153Transition = chainSpecJson.Params.Eip1153Transition,
+                VerkleTreeTransition = chainSpecJson.Params.VerkleTreeTransition,
                 TransactionPermissionContract = chainSpecJson.Params.TransactionPermissionContract,
                 TransactionPermissionContractTransition = chainSpecJson.Params.TransactionPermissionContractTransition,
                 ValidateChainIdTransition = chainSpecJson.Params.ValidateChainIdTransition,
@@ -224,6 +225,7 @@ namespace Nethermind.Specs.ChainSpecStyle
                 chainSpec.Ethash?.DifficultyBombDelays.Keys.ToArray()[5]
                 : null;
             chainSpec.ShanghaiBlockNumber = chainSpec.Parameters.Eip1153Transition ?? (long.MaxValue - 1);
+            chainSpec.CancunBlockNumber = chainSpec.Parameters.VerkleTreeTransition ?? (long.MaxValue - 1);
 
             // TheMerge parameters
             chainSpec.MergeForkIdBlockNumber = chainSpec.Parameters.MergeForkIdTransition;
@@ -325,12 +327,12 @@ namespace Nethermind.Specs.ChainSpecStyle
             }
 
             var customEngineType = chainSpecJson.Engine?.CustomEngineData?.FirstOrDefault().Key;
-            
+
             if (!string.IsNullOrEmpty(customEngineType))
             {
                 chainSpec.SealEngineType = customEngineType;
             }
-            
+
             if (string.IsNullOrEmpty(chainSpec.SealEngineType))
             {
                 throw new NotSupportedException("unknown seal engine in chainspec");
@@ -362,7 +364,7 @@ namespace Nethermind.Specs.ChainSpecStyle
                     ? (chainSpecJson.Genesis.BaseFeePerGas ?? Eip1559Constants.DefaultForkBaseFee)
                     : UInt256.Zero;
 
-            
+
             BlockHeader genesisHeader = new(
                 parentHash,
                 Keccak.OfAnEmptySequenceRlp,
@@ -382,7 +384,7 @@ namespace Nethermind.Specs.ChainSpecStyle
             genesisHeader.StateRoot = Keccak.EmptyTreeHash;
             genesisHeader.TxRoot = Keccak.EmptyTreeHash;
             genesisHeader.BaseFeePerGas = baseFee;
-            
+
             genesisHeader.AuRaStep = step;
             genesisHeader.AuRaSignature = auRaSignature;
 
@@ -404,7 +406,7 @@ namespace Nethermind.Specs.ChainSpecStyle
                 {
                     continue;
                 }
-                
+
                 chainSpec.Allocations[new Address(account.Key)] = new ChainSpecAllocation(
                     account.Value.Balance ?? UInt256.Zero,
                     account.Value.Nonce,
