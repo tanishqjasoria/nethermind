@@ -1,16 +1,16 @@
 //  Copyright (c) 2021 Demerzel Solutions Limited
 //  This file is part of the Nethermind library.
-// 
+//
 //  The Nethermind library is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU Lesser General Public License as published by
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
-// 
+//
 //  The Nethermind library is distributed in the hope that it will be useful,
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 //  GNU Lesser General Public License for more details.
-// 
+//
 //  You should have received a copy of the GNU Lesser General Public License
 //  along with the Nethermind. If not, see <http://www.gnu.org/licenses/>.
 
@@ -58,7 +58,7 @@ namespace Nethermind.Evm.TransactionProcessing
             /// Restore state after execution
             /// </summary>
             Restore = 2,
-            
+
             /// <summary>
             /// Skip potential fail checks
             /// </summary>
@@ -110,7 +110,7 @@ namespace Nethermind.Evm.TransactionProcessing
         {
             Execute(transaction, block, txTracer, ExecutionOptions.Commit);
         }
-        
+
         public void Trace(Transaction transaction, BlockHeader block, ITxTracer txTracer)
         {
             Execute(transaction, block, txTracer, ExecutionOptions.NoValidation);
@@ -146,10 +146,10 @@ namespace Nethermind.Evm.TransactionProcessing
             // restore is CallAndRestore - previous call, we will restore state after the execution
             bool restore = (executionOptions & ExecutionOptions.Restore) == ExecutionOptions.Restore;
             bool noValidation = (executionOptions & ExecutionOptions.NoValidation) == ExecutionOptions.NoValidation;
-            // commit - is for standard execute, we will commit thee state after execution 
+            // commit - is for standard execute, we will commit thee state after execution
             bool commit = (executionOptions & ExecutionOptions.Commit) == ExecutionOptions.Commit || eip658NotEnabled;
             //!commit - is for build up during block production, we won't commit state after each transaction to support rollbacks
-            //we commit only after all block is constructed 
+            //we commit only after all block is constructed
             bool notSystemTransaction = !transaction.IsSystem();
             bool deleteCallerAccount = false;
 
@@ -281,10 +281,6 @@ namespace Nethermind.Evm.TransactionProcessing
             }
 
             _stateProvider.SubtractFromBalance(caller, senderReservedGasPayment, spec);
-            if (commit)
-            {
-                _stateProvider.Commit(spec, txTracer.IsTracingState ? txTracer : NullTxTracer.Instance);
-            }
 
             long unspentGas = gasLimit - intrinsicGas;
             long spentGas = gasLimit;
@@ -341,7 +337,7 @@ namespace Nethermind.Evm.TransactionProcessing
                         state.WarmUp(caller); // eip-2929
                         state.WarmUp(recipient); // eip-2929
                     }
-                    
+
                     substate = _virtualMachine.Run(state, _worldState, txTracer);
                     unspentGas = state.GasAvailable;
 
@@ -447,12 +443,6 @@ namespace Nethermind.Evm.TransactionProcessing
                 }
                 else
                 {
-                    _stateProvider.AddToBalance(caller, senderReservedGasPayment, spec);
-                    if (notSystemTransaction)
-                    {
-                        _stateProvider.DecrementNonce(caller);
-                    }
-
                     _stateProvider.Commit(spec);
                 }
             }
