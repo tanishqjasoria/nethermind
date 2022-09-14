@@ -21,7 +21,6 @@ using Nethermind.Int256;
 
 namespace Nethermind.Trie;
 
-
 public static class VerkleUtils
 {
     public const int VersionLeafKey = 0;
