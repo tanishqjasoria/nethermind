@@ -47,7 +47,8 @@ public class RustVerkleLibTest
         StringToByteArray(
             "6fc5ac021ff2468685885ad7fdb31a0c58d1ee93254a58c9e9e0809187c53e71");
 
-    public static byte[] StringToByteArray(string hex) {
+    public static byte[] StringToByteArray(string hex)
+    {
         return Enumerable.Range(0, hex.Length)
             .Where(x => x % 2 == 0)
             .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))

@@ -15,30 +15,21 @@
 //  along with the Nethermind. If not, see <http://www.gnu.org/licenses/>.
 //
 
+
 using System;
-using System.Runtime.InteropServices;
+using FluentAssertions;
+using FluentAssertions.Collections;
 
-namespace Nethermind.Trie;
+namespace Nethermind.Trie.Test;
 
-public static class RustVerkleLib
+public static class SpanGenericsExtension
 {
-    static RustVerkleLib()
-    {
-        LibResolver.Setup();
-    }
+    public static GenericCollectionAssertions<T> Should<T>(this Span<T> value) => value.ToArray().Should();
+    public static GenericCollectionAssertions<T> Should<T>(this ReadOnlySpan<T> value) => value.ToArray().Should();
 
-    [DllImport("rust_verkle")]
-    private static extern unsafe IntPtr calculate_pedersan_hash(byte* value);
-
-    public static unsafe byte[] CalculatePedersenHash(Span<byte> value)
-    {
-        fixed (byte* p = &MemoryMarshal.GetReference(value))
-        {
-            IntPtr hash = calculate_pedersan_hash(p);
-            byte[] managedValue = new byte[32];
-            Marshal.Copy(hash, managedValue, 0, 32);
-            return managedValue;
-        }
-    }
+    public static AndConstraint<GenericCollectionAssertions<T>> BeEquivalentTo<T>(this GenericCollectionAssertions<T> value, Span<byte> expectedValue) =>
+        value.BeEquivalentTo(expectedValue.ToArray());
+    public static AndConstraint<GenericCollectionAssertions<T>> BeEquivalentTo<T>(this GenericCollectionAssertions<T> value, ReadOnlySpan<byte> expectedValue) =>
+        value.BeEquivalentTo(expectedValue.ToArray());
 
 }
