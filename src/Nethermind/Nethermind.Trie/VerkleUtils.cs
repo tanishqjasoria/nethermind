@@ -22,32 +22,22 @@ using Nethermind.Int256;
 namespace Nethermind.Trie;
 
 
-public static class AccountTreeIndexes
-{
-    public const int Version = 0;
-    public const int Balance = 1;
-    public const int Nonce = 2;
-    public const int CodeHash = 3;
-    public const int CodeSize = 4;
-}
-
-
 public static class VerkleUtils
 {
-    const int VersionLeafKey = 0;
-    const int BalanceLeafKey = 1;
-    const int NonceLeafKey = 2;
-    const int CodeKeccakLeafKey = 3;
-    const int CodeSizeLeafKey = 4;
+    public const int VersionLeafKey = 0;
+    public const int BalanceLeafKey = 1;
+    public const int NonceLeafKey = 2;
+    public const int CodeKeccakLeafKey = 3;
+    public const int CodeSizeLeafKey = 4;
 
     const int MainStorageOffsetExponent = 31;
 
-    static UInt256 HeaderStorageOffset = 64;
-    static UInt256 CodeOffset = 128;
-    static UInt256 VerkleNodeWidth = 256;
+    static readonly UInt256 HeaderStorageOffset = 64;
+    static readonly UInt256 CodeOffset = 128;
+    static readonly UInt256 VerkleNodeWidth = 256;
 
-    static UInt256 MainStorageOffsetBase = 256;
-    static UInt256 MainStorageOffset = MainStorageOffsetBase << MainStorageOffsetExponent;
+    static readonly UInt256 MainStorageOffsetBase = 256;
+    static readonly UInt256 MainStorageOffset = MainStorageOffsetBase << MainStorageOffsetExponent;
 
     public static byte[] GetTreeKeyPrefix(Address address, UInt256 treeIndex)
     {

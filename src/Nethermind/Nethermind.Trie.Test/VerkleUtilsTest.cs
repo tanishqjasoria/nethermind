@@ -70,15 +70,15 @@ public class VerkleUtilsTest
     {
         byte[] keyPrefix = VerkleUtils.GetTreeKeyPrefixAccount(TestItem.AddressA);
 
-        keyPrefix[31] = AccountTreeIndexes.Version;
+        keyPrefix[31] = VerkleUtils.VersionLeafKey;
         Assert.AreEqual(keyPrefix, treeKeyVersion);
-        keyPrefix[31] = AccountTreeIndexes.Balance;
+        keyPrefix[31] = VerkleUtils.BalanceLeafKey;
         Assert.AreEqual(keyPrefix, treeKeyBalance);
-        keyPrefix[31] = AccountTreeIndexes.Nonce;
+        keyPrefix[31] = VerkleUtils.NonceLeafKey;
         Assert.AreEqual(keyPrefix, treeKeyNonce);
-        keyPrefix[31] = AccountTreeIndexes.CodeHash;
+        keyPrefix[31] = VerkleUtils.CodeKeccakLeafKey;
         Assert.AreEqual(keyPrefix, treeKeyCodeKeccak);
-        keyPrefix[31] = AccountTreeIndexes.CodeSize;
+        keyPrefix[31] = VerkleUtils.CodeSizeLeafKey;
         Assert.AreEqual(keyPrefix, treeKeyCodeSize);
     }
 
