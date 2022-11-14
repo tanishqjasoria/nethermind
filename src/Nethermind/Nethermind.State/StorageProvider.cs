@@ -1,20 +1,22 @@
 //  Copyright (c) 2021 Demerzel Solutions Limited
 //  This file is part of the Nethermind library.
-// 
+//
 //  The Nethermind library is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU Lesser General Public License as published by
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
-// 
+//
 //  The Nethermind library is distributed in the hope that it will be useful,
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 //  GNU Lesser General Public License for more details.
-// 
+//
 //  You should have received a copy of the GNU Lesser General Public License
 //  along with the Nethermind. If not, see <http://www.gnu.org/licenses/>.
 
+using System;
 using Nethermind.Core;
+using Nethermind.Core.Extensions;
 using Nethermind.Logging;
 using Nethermind.Trie.Pruning;
 
@@ -56,17 +58,17 @@ namespace Nethermind.State
 
         public byte[] Get(StorageCell storageCell)
         {
-            return _persistentStorageProvider.Get(storageCell);
+            return _persistentStorageProvider.Get(storageCell).PadLeft(32);
         }
 
         public byte[] GetOriginal(StorageCell storageCell)
         {
-            return _persistentStorageProvider.GetOriginal(storageCell);
+            return _persistentStorageProvider.GetOriginal(storageCell).PadLeft(32);
         }
 
         public byte[] GetTransientState(StorageCell storageCell)
         {
-            return _transientStorageProvider.Get(storageCell);
+            return _transientStorageProvider.Get(storageCell).PadLeft(32);
         }
 
         public void Reset()
@@ -92,12 +94,26 @@ namespace Nethermind.State
 
         public void Set(StorageCell storageCell, byte[] newValue)
         {
-            _persistentStorageProvider.Set(storageCell, newValue);
+            _persistentStorageProvider.Set(storageCell, ProcessSetValue(newValue));
         }
 
         public void SetTransientState(StorageCell storageCell, byte[] newValue)
         {
-            _transientStorageProvider.Set(storageCell, newValue);
+            _transientStorageProvider.Set(storageCell, ProcessSetValue(newValue));
+        }
+
+        private byte[] ProcessSetValue(byte[] newValue)
+        {
+            if (!newValue.IsZero())
+            {
+                newValue = newValue.WithoutLeadingZeros().ToArray();
+            }
+            else
+            {
+                newValue = new byte[] { 0 };
+            }
+
+            return newValue;
         }
 
         Snapshot.Storage IStorageProvider.TakeSnapshot(bool newTransactionStart)
