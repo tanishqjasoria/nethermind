@@ -1,22 +1,23 @@
 //  Copyright (c) 2021 Demerzel Solutions Limited
 //  This file is part of the Nethermind library.
-// 
+//
 //  The Nethermind library is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU Lesser General Public License as published by
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
-// 
+//
 //  The Nethermind library is distributed in the hope that it will be useful,
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 //  GNU Lesser General Public License for more details.
-// 
+//
 //  You should have received a copy of the GNU Lesser General Public License
 //  along with the Nethermind. If not, see <http://www.gnu.org/licenses/>.
 
 using System;
 using Nethermind.Core;
 using Nethermind.Core.Crypto;
+using Nethermind.Core.Extensions;
 using Nethermind.Int256;
 
 namespace Nethermind.Serialization.Rlp
@@ -27,6 +28,7 @@ namespace Nethermind.Serialization.Rlp
         // This would help with EIP1559 as well and could generally setup proper coders automatically, hmm
         // but then RLP would have to be passed into so many places
         public static long Eip1559TransitionBlock = long.MaxValue;
+        public static ulong? VerkleTreeTransitionTimestamp = ulong.MaxValue;
 
         public BlockHeader? Decode(ref Rlp.ValueDecoderContext decoderContext,
             RlpBehaviors rlpBehaviors = RlpBehaviors.None)
@@ -86,6 +88,31 @@ namespace Nethermind.Serialization.Rlp
             if (blockHeader.Number >= Eip1559TransitionBlock)
             {
                 blockHeader.BaseFeePerGas = decoderContext.DecodeUInt256();
+            }
+
+            if (blockHeader.Timestamp >= VerkleTreeTransitionTimestamp)
+            {
+                blockHeader.VerkleProof = decoderContext.DecodeByteArray();
+                if (blockHeader.VerkleProof.IsZero())
+                {
+                    blockHeader.VerkleProof = null;
+                }
+
+                int verkleWitnessSequenceLength = decoderContext.ReadSequenceLength();
+                int verkleWitnessCheck = decoderContext.Position + verkleWitnessSequenceLength;
+                blockHeader.VerkleWitnesses = new();
+                while (decoderContext.Position < verkleWitnessCheck)
+                {
+                    int witnessSequenceLength = decoderContext.ReadSequenceLength();
+                    int witnessCheck = decoderContext.Position + witnessSequenceLength;
+                    blockHeader.VerkleWitnesses.Add(new[] { decoderContext.DecodeByteArray(), decoderContext.DecodeByteArray() });
+                    decoderContext.Check(witnessCheck);
+                }
+                decoderContext.Check(verkleWitnessCheck);
+                if (blockHeader.VerkleWitnesses.Capacity == 0)
+                {
+                    blockHeader.VerkleWitnesses = null;
+                }
             }
 
             if ((rlpBehaviors & RlpBehaviors.AllowExtraData) != RlpBehaviors.AllowExtraData)
@@ -156,6 +183,31 @@ namespace Nethermind.Serialization.Rlp
                 blockHeader.BaseFeePerGas = rlpStream.DecodeUInt256();
             }
 
+            if (blockHeader.Timestamp >= VerkleTreeTransitionTimestamp)
+            {
+                blockHeader.VerkleProof = rlpStream.DecodeByteArray();
+                if (blockHeader.VerkleProof.IsZero())
+                {
+                    blockHeader.VerkleProof = null;
+                }
+
+                int verkleWitnessSequenceLength = rlpStream.ReadSequenceLength();
+                int verkleWitnessCheck = rlpStream.Position + verkleWitnessSequenceLength;
+                blockHeader.VerkleWitnesses = new();
+                while (rlpStream.Position < verkleWitnessCheck)
+                {
+                    int witnessSequenceLength = rlpStream.ReadSequenceLength();
+                    int witnessCheck = rlpStream.Position + witnessSequenceLength;
+                    blockHeader.VerkleWitnesses.Add(new[] { rlpStream.DecodeByteArray(), rlpStream.DecodeByteArray() });
+                    rlpStream.Check(witnessCheck);
+                }
+                rlpStream.Check(verkleWitnessCheck);
+                if (blockHeader.VerkleWitnesses.Capacity == 0)
+                {
+                    blockHeader.VerkleWitnesses = null;
+                }
+            }
+
             if ((rlpBehaviors & RlpBehaviors.AllowExtraData) != RlpBehaviors.AllowExtraData)
             {
                 rlpStream.Check(headerCheck);
@@ -207,6 +259,29 @@ namespace Nethermind.Serialization.Rlp
             {
                 rlpStream.Encode(header.BaseFeePerGas);
             }
+
+            if (header.Timestamp >= VerkleTreeTransitionTimestamp)
+            {
+                // do i need to check here if the verkle witness exists? and if no witness, then does the proof exist?
+                // ANS: yes, add a null proof maybe?
+                if (header.VerkleProof == null)
+                {
+                    rlpStream.EncodeEmptyByteArray();
+                    rlpStream.EncodeNullObject();
+                }
+                else
+                {
+                    rlpStream.Encode(header.VerkleProof);
+                    // assumption here that if proof is not null then the witness is not null
+                    rlpStream.StartSequence(GetWitnessLength(header, rlpBehaviors));
+                    foreach (var witness in header.VerkleWitnesses)
+                    {
+                        rlpStream.StartSequence(Rlp.LengthOf(witness[0]) + Rlp.LengthOf(witness[1]));
+                        rlpStream.Encode(witness[0]);
+                        rlpStream.Encode(witness[1]);
+                    }
+                }
+            }
         }
 
         public Rlp Encode(BlockHeader? item, RlpBehaviors rlpBehaviors = RlpBehaviors.None)
@@ -244,7 +319,9 @@ namespace Nethermind.Serialization.Rlp
                                 + Rlp.LengthOf(item.GasUsed)
                                 + Rlp.LengthOf(item.Timestamp)
                                 + Rlp.LengthOf(item.ExtraData)
-                                + (item.Number < Eip1559TransitionBlock ? 0 : Rlp.LengthOf(item.BaseFeePerGas));
+                                + (item.Number < Eip1559TransitionBlock ? 0 : Rlp.LengthOf(item.BaseFeePerGas))
+                                + (item.Timestamp < VerkleTreeTransitionTimestamp ? 0 : Rlp.LengthOf(item.VerkleProof))
+                                + (item.Timestamp < VerkleTreeTransitionTimestamp ? 0 : Rlp.LengthOfSequence(GetWitnessLength(item, rlpBehaviors)));
 
             if (notForSealing)
             {
@@ -262,6 +339,27 @@ namespace Nethermind.Serialization.Rlp
             }
 
             return contentLength;
+        }
+
+        private static int GetWitnessLength(BlockHeader item, RlpBehaviors rlpBehaviors)
+        {
+            int witnessCount = item.VerkleWitnesses?.Count ?? 0;
+            if (witnessCount == 0)
+            {
+                return 0;
+            }
+
+            int wintessLength = 0;
+
+            foreach (var witness in item.VerkleWitnesses)
+            {
+                int thisWitnessLength = 0;
+                thisWitnessLength += Rlp.LengthOf(witness[0]);
+                thisWitnessLength += Rlp.LengthOf(witness[1]);
+                wintessLength += Rlp.LengthOfSequence(thisWitnessLength);
+            }
+
+            return wintessLength;
         }
 
         public int GetLength(BlockHeader? item, RlpBehaviors rlpBehaviors)
