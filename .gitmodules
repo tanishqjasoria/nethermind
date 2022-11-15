@@ -7,3 +7,6 @@
 [submodule "gitbook/docs"]
 	path = gitbook/docs
 	url = https://github.com/NethermindEth/docs.git
+[submodule "src/bandersnatch-sharp"]
+	path = src/bandersnatch-sharp
+	url = https://github.com/tanishqjasoria/bandersnatch-sharp.git

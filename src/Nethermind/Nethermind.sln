@@ -232,6 +232,18 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UPnP", "UPnP", "{2EDE2554-5
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nethermind.UPnP.Plugin", "Nethermind.UPnP.Plugin\Nethermind.UPnP.Plugin.csproj", "{48E50409-26FE-4FD8-AF6E-2A0E79F794CE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nethermind.Field", "..\bandersnatch-sharp\src\Bandersnatch\Nethermind.Field\Nethermind.Field.csproj", "{036B2B2A-D541-4104-8B5E-3818C770296A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nethermind.Verkle.Curve", "..\bandersnatch-sharp\src\Bandersnatch\Nethermind.Verkle.Curve\Nethermind.Verkle.Curve.csproj", "{E5044D50-59C7-44FB-90F6-4F9078B97967}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nethermind.Verkle.Polynomial", "..\bandersnatch-sharp\src\Bandersnatch\Nethermind.Verkle.Polynomial\Nethermind.Verkle.Polynomial.csproj", "{BD81E317-5E77-4EE3-9473-3BD634166422}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nethermind.Verkle.Proofs", "..\bandersnatch-sharp\src\Bandersnatch\Nethermind.Verkle.Proofs\Nethermind.Verkle.Proofs.csproj", "{F4A36B0F-B72C-4909-B32C-E53E29FB6ACE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nethermind.Verkle.Tree", "..\bandersnatch-sharp\src\Bandersnatch\Nethermind.Verkle.Tree\Nethermind.Verkle.Tree.csproj", "{57D7A47D-DF53-4796-A92E-5FE31B82E878}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nethermind.Verkle.Utils", "..\bandersnatch-sharp\src\Bandersnatch\Nethermind.Verkle.Utils\Nethermind.Verkle.Utils.csproj", "{102DB494-9729-4DFF-AB19-5073F3B07AC4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -602,6 +614,30 @@ Global
 		{48E50409-26FE-4FD8-AF6E-2A0E79F794CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{48E50409-26FE-4FD8-AF6E-2A0E79F794CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{48E50409-26FE-4FD8-AF6E-2A0E79F794CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{036B2B2A-D541-4104-8B5E-3818C770296A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{036B2B2A-D541-4104-8B5E-3818C770296A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{036B2B2A-D541-4104-8B5E-3818C770296A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{036B2B2A-D541-4104-8B5E-3818C770296A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E5044D50-59C7-44FB-90F6-4F9078B97967}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E5044D50-59C7-44FB-90F6-4F9078B97967}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E5044D50-59C7-44FB-90F6-4F9078B97967}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E5044D50-59C7-44FB-90F6-4F9078B97967}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BD81E317-5E77-4EE3-9473-3BD634166422}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BD81E317-5E77-4EE3-9473-3BD634166422}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BD81E317-5E77-4EE3-9473-3BD634166422}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BD81E317-5E77-4EE3-9473-3BD634166422}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F4A36B0F-B72C-4909-B32C-E53E29FB6ACE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F4A36B0F-B72C-4909-B32C-E53E29FB6ACE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F4A36B0F-B72C-4909-B32C-E53E29FB6ACE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F4A36B0F-B72C-4909-B32C-E53E29FB6ACE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{57D7A47D-DF53-4796-A92E-5FE31B82E878}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57D7A47D-DF53-4796-A92E-5FE31B82E878}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57D7A47D-DF53-4796-A92E-5FE31B82E878}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57D7A47D-DF53-4796-A92E-5FE31B82E878}.Release|Any CPU.Build.0 = Release|Any CPU
+		{102DB494-9729-4DFF-AB19-5073F3B07AC4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{102DB494-9729-4DFF-AB19-5073F3B07AC4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{102DB494-9729-4DFF-AB19-5073F3B07AC4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{102DB494-9729-4DFF-AB19-5073F3B07AC4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
