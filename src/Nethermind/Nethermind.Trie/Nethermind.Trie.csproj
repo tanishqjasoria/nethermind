@@ -9,6 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\bandersnatch-sharp\src\Bandersnatch\Nethermind.Verkle.Tree\Nethermind.Verkle.Tree.csproj" />
       <ProjectReference Include="..\Nethermind.Core\Nethermind.Core.csproj" />
       <ProjectReference Include="..\Nethermind.Serialization.Rlp\Nethermind.Serialization.Rlp.csproj" />
     </ItemGroup>

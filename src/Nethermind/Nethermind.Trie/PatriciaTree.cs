@@ -1,16 +1,16 @@
 //  Copyright (c) 2021 Demerzel Solutions Limited
 //  This file is part of the Nethermind library.
-// 
+//
 //  The Nethermind library is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU Lesser General Public License as published by
 //  the Free Software Foundation, either version 3 of the License, or
 //  (at your option) any later version.
-// 
+//
 //  The Nethermind library is distributed in the hope that it will be useful,
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 //  GNU Lesser General Public License for more details.
-// 
+//
 //  You should have received a copy of the GNU Lesser General Public License
 //  along with the Nethermind. If not, see <http://www.gnu.org/licenses/>.
 
@@ -33,7 +33,7 @@ using Nethermind.Trie.Pruning;
 namespace Nethermind.Trie
 {
     [DebuggerDisplay("{RootHash}")]
-    public class PatriciaTree
+    public class PatriciaTree : ITree
     {
         private readonly ILogger _logger;
 
@@ -77,6 +77,8 @@ namespace Nethermind.Trie
                 return RootRef;
             }
         }
+
+        public TreeType TreeType => TreeType.Merkle;
 
         public Keccak RootHash
         {
@@ -479,7 +481,7 @@ namespace Nethermind.Trie
                                as a result of deleting one of the last two children */
                             /* case 1) - extension from branch
                                this is particularly interesting - we create an extension from
-                               the implicit path in the branch children positions (marked as P) 
+                               the implicit path in the branch children positions (marked as P)
                                P B B B B B B B B B B B B B B B
                                B X - - - - - - - - - - - - - -
                                case 2) - extended extension
