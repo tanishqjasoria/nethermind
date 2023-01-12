@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2022 Demerzel Solutions Limited
 // SPDX-License-Identifier: LGPL-3.0-only
 
+using System.Collections.Generic;
 using Nethermind.Core.Crypto;
 using Nethermind.Int256;
 
@@ -130,6 +131,20 @@ namespace Nethermind.Core
         {
             // TODO: does the code and codeHash match?
             return new(Nonce, Balance, StorageRoot, newCodeHash, IsTotallyEmpty && newCodeHash == Keccak.OfAnEmptyString);
+        }
+
+        public  Dictionary<byte, byte[]> ToVerkleDict()
+        {
+            Dictionary<byte, byte[]> dict = new Dictionary<byte, byte[]>();
+
+            dict[0] = Version.ToBigEndian();
+            dict[1] = Balance.ToBigEndian();
+            dict[2] = Nonce.ToBigEndian();
+            dict[3] = CodeHash.Bytes;
+            dict[4] = CodeSize.ToBigEndian();
+
+            return dict;
+
         }
     }
 }

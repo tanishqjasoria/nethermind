@@ -32,6 +32,10 @@ namespace Nethermind.Db
 
         public IDb MetadataDb => GetDb<IDb>(DbNames.Metadata);
 
+        public IDb LeafDb => GetDb<IDb>(DbNames.Leaf);
+        public IDb StemDb => GetDb<IDb>(DbNames.Stem);
+        public IDb BranchDb => GetDb<IDb>(DbNames.Branch);
+
         T GetDb<T>(string dbName) where T : class, IDb;
 
         void RegisterDb<T>(string dbName, T db) where T : class, IDb;

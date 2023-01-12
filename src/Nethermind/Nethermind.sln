@@ -231,6 +231,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UPnP", "UPnP", "{2EDE2554-5
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nethermind.UPnP.Plugin", "Nethermind.UPnP.Plugin\Nethermind.UPnP.Plugin.csproj", "{48E50409-26FE-4FD8-AF6E-2A0E79F794CE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nethermind.Verkle", "Nethermind.Verkle\Nethermind.Verkle.csproj", "{EC7B137C-3265-467C-86C2-76C82B55D41C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nethermind.Verkle.Test", "Nethermind.Verkle.Test\Nethermind.Verkle.Test.csproj", "{0CF32B00-73D8-462E-96F0-7460BC132A88}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -609,6 +613,14 @@ Global
 		{48E50409-26FE-4FD8-AF6E-2A0E79F794CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{48E50409-26FE-4FD8-AF6E-2A0E79F794CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{48E50409-26FE-4FD8-AF6E-2A0E79F794CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EC7B137C-3265-467C-86C2-76C82B55D41C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EC7B137C-3265-467C-86C2-76C82B55D41C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EC7B137C-3265-467C-86C2-76C82B55D41C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EC7B137C-3265-467C-86C2-76C82B55D41C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0CF32B00-73D8-462E-96F0-7460BC132A88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0CF32B00-73D8-462E-96F0-7460BC132A88}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0CF32B00-73D8-462E-96F0-7460BC132A88}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0CF32B00-73D8-462E-96F0-7460BC132A88}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -673,6 +685,7 @@ Global
 		{2EDE2554-59C0-4E78-92F7-EB8077AA597D} = {78BED57D-720E-4E6C-ABA2-397B73B494F9}
 		{48E50409-26FE-4FD8-AF6E-2A0E79F794CE} = {2EDE2554-59C0-4E78-92F7-EB8077AA597D}
 		{B5BE357D-69B3-4354-BC6C-F39182BE937E} = {4019B82F-1104-4D2C-9F96-05FD7D3575E8}
+		{0CF32B00-73D8-462E-96F0-7460BC132A88} = {4019B82F-1104-4D2C-9F96-05FD7D3575E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {092CA5E3-6180-4ED7-A3CB-9B57FAC2AA85}
