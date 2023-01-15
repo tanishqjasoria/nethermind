@@ -51,7 +51,6 @@ namespace Nethermind.Blockchain.Test
             ISpecProvider specProvider = Substitute.For<ISpecProvider>();
             specProvider.GetSpec(Arg.Any<BlockHeader>()).Returns(Berlin.Instance);
             specProvider.GetSpec(Arg.Any<ForkActivation>()).Returns(Berlin.Instance);
-            StorageProvider storageProvider = new(trieStore, stateProvider, LimboLogs.Instance);
             ITransactionProcessor transactionProcessor = Substitute.For<ITransactionProcessor>();
             GenesisLoader genesisLoader = new(chainSpec, specProvider, stateProvider, transactionProcessor);
             Block block = genesisLoader.Load();

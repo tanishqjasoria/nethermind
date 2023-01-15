@@ -122,7 +122,6 @@ namespace Nethermind.Clique.Test
                 _genesis.Header.Hash = _genesis.Header.CalculateHash();
                 _genesis3Validators.Header.Hash = _genesis3Validators.Header.CalculateHash();
 
-                StorageProvider storageProvider = new(trieStore, stateProvider, nodeLogManager);
                 IWorldState worldState = new WorldState(trieStore, codeDb, LimboLogs.Instance);
                 TransactionProcessor transactionProcessor = new(goerliSpecProvider, worldState, new VirtualMachine(blockhashProvider, specProvider, nodeLogManager), nodeLogManager);
                 BlockProcessor blockProcessor = new(

@@ -71,7 +71,6 @@ namespace Nethermind.Blockchain.Test
             var trieStore = new TrieStore(stateDb, LimboLogs.Instance);
 
             IWorldState stateProvider = new WorldState(trieStore, codeDb, LimboLogs.Instance);
-            IStorageProvider storageProvider = new StorageProvider(trieStore, stateProvider, LimboLogs.Instance);
             ITransactionProcessor transactionProcessor = Substitute.For<ITransactionProcessor>();
             IWitnessCollector witnessCollector = Substitute.For<IWitnessCollector>();
             BlockProcessor processor = new(
