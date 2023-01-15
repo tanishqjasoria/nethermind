@@ -20,19 +20,17 @@ namespace Nethermind.Consensus.Processing
         public class BlockProductionTransactionsExecutor : IBlockProductionTransactionsExecutor
         {
             private readonly ITransactionProcessorAdapter _transactionProcessor;
-            private readonly IStateProvider _stateProvider;
-            private readonly IStorageProvider _storageProvider;
+            private readonly IWorldState _worldState;
             private readonly BlockProductionTransactionPicker _blockProductionTransactionPicker;
             private readonly ILogger _logger;
 
             public BlockProductionTransactionsExecutor(
-                ReadOnlyTxProcessingEnv readOnlyTxProcessingEnv,
+                IReadOnlyTxProcessorSource readOnlyTxProcessingEnv,
                 ISpecProvider specProvider,
                 ILogManager logManager)
                 : this(
                     readOnlyTxProcessingEnv.TransactionProcessor,
-                    readOnlyTxProcessingEnv.StateProvider,
-                    readOnlyTxProcessingEnv.StorageProvider,
+                    readOnlyTxProcessingEnv.WorldState,
                     specProvider,
                     logManager)
             {
@@ -40,14 +38,12 @@ namespace Nethermind.Consensus.Processing
 
             public BlockProductionTransactionsExecutor(
                 ITransactionProcessor transactionProcessor,
-                IStateProvider stateProvider,
-                IStorageProvider storageProvider,
+                IWorldState worldState,
                 ISpecProvider specProvider,
                 ILogManager logManager)
             {
                 _transactionProcessor = new BuildUpTransactionProcessorAdapter(transactionProcessor);
-                _stateProvider = stateProvider;
-                _storageProvider = storageProvider;
+                _worldState = worldState;
                 _blockProductionTransactionPicker = new BlockProductionTransactionPicker(specProvider);
                 _logger = logManager.GetClassLogger();
             }
@@ -77,8 +73,7 @@ namespace Nethermind.Consensus.Processing
                     if (action == TxAction.Stop) break;
                 }
 
-                _stateProvider.Commit(spec, receiptsTracer);
-                _storageProvider.Commit(receiptsTracer);
+                _worldState.Commit(spec, receiptsTracer);
 
                 SetTransactions(block, transactionsInBlock);
                 return receiptsTracer.TxReceipts.ToArray();
@@ -93,7 +88,7 @@ namespace Nethermind.Consensus.Processing
                 LinkedHashSet<Transaction> transactionsInBlock,
                 bool addToBlock = true)
             {
-                AddingTxEventArgs args = _blockProductionTransactionPicker.CanAddTransaction(block, currentTx, transactionsInBlock, _stateProvider);
+                AddingTxEventArgs args = _blockProductionTransactionPicker.CanAddTransaction(block, currentTx, transactionsInBlock, _worldState);
 
                 if (args.Action != TxAction.Add)
                 {
@@ -101,7 +96,7 @@ namespace Nethermind.Consensus.Processing
                 }
                 else
                 {
-                    _transactionProcessor.ProcessTransaction(block, currentTx, receiptsTracer, processingOptions, _stateProvider);
+                    _transactionProcessor.ProcessTransaction(block, currentTx, receiptsTracer, processingOptions, _worldState);
 
                     if (addToBlock)
                     {

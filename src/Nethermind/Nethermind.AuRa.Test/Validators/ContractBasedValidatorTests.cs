@@ -36,7 +36,7 @@ namespace Nethermind.AuRa.Test.Validators
 {
     public class ContractBasedValidatorTests
     {
-        private IStateProvider _stateProvider;
+        private IWorldState _stateProvider;
         private IAbiEncoder _abiEncoder;
         private ILogManager _logManager;
         private AuRaParameters.Validator _validator;
@@ -60,7 +60,7 @@ namespace Nethermind.AuRa.Test.Validators
         {
             _validatorStore = new ValidatorStore(new MemDb());
             _validSealerStrategy = new ValidSealerStrategy();
-            _stateProvider = Substitute.For<IStateProvider>();
+            _stateProvider = Substitute.For<IWorldState>();
             _abiEncoder = Substitute.For<IAbiEncoder>();
             _logManager = LimboLogs.Instance;
             _blockTree = Substitute.For<IBlockTree>();
@@ -333,7 +333,7 @@ namespace Nethermind.AuRa.Test.Validators
                                         InitializeBlock = 3,
                                         FinalizeBlock = 3
                                     },
-                                    new() 
+                                    new()
                                         // this will not get finalized because of reorganisation
                                     {
                                         Addresses = GenerateValidators(2),
@@ -346,7 +346,7 @@ namespace Nethermind.AuRa.Test.Validators
                         {
                             7, new ConsecutiveInitiateChangeTestParameters.ChainInfo()
                             {
-                                BlockNumber = 5, //reorganisation to block 5 in order to invalidate last initiate change 
+                                BlockNumber = 5, //reorganisation to block 5 in order to invalidate last initiate change
                                 ExpectedFinalizationCount = 0,
                                 NumberOfSteps = 10,
                             }
@@ -447,7 +447,7 @@ namespace Nethermind.AuRa.Test.Validators
                         {
                             7, new ConsecutiveInitiateChangeTestParameters.ChainInfo()
                             {
-                                BlockNumber = 6, //reorganisation to block 6 in order to keep last initiate change 
+                                BlockNumber = 6, //reorganisation to block 6 in order to keep last initiate change
                                 ExpectedFinalizationCount = 2,
                                 NumberOfSteps = 10,
                                 Validators = new List<ConsecutiveInitiateChangeTestParameters.ValidatorsInfo>()

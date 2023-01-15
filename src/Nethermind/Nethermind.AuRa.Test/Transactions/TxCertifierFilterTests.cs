@@ -16,7 +16,9 @@ using Nethermind.Consensus.Validators;
 using Nethermind.Core;
 using Nethermind.Core.Specs;
 using Nethermind.Core.Test.Builders;
+using Nethermind.Evm.TransactionProcessing;
 using Nethermind.Logging;
+using Nethermind.State;
 using Nethermind.Trie.Pruning;
 using Nethermind.TxPool;
 using NSubstitute;
@@ -128,7 +130,7 @@ namespace Nethermind.AuRa.Test.Transactions
 
         public class TestTxPermissionsBlockchain : TestContractBlockchain
         {
-            public ReadOnlyTxProcessingEnv ReadOnlyTransactionProcessorSource { get; private set; }
+            public IReadOnlyTxProcessorSource ReadOnlyTransactionProcessorSource { get; private set; }
             public RegisterContract RegisterContract { get; private set; }
             public CertifierContract CertifierContract { get; private set; }
 
@@ -150,9 +152,8 @@ namespace Nethermind.AuRa.Test.Transactions
                     SpecProvider,
                     Always.Valid,
                     new RewardCalculator(SpecProvider),
-                    new BlockProcessor.BlockValidationTransactionsExecutor(TxProcessor, State),
-                    State,
-                    Storage,
+                    new BlockProcessor.BlockValidationTransactionsExecutor(TxProcessor, new WorldState(TrieStore, CodeDb, LogManager)),
+                    new WorldState(TrieStore, CodeDb, LogManager),
                     ReceiptStorage,
                     LimboLogs.Instance,
                     BlockTree);

@@ -15,6 +15,7 @@ using Nethermind.Consensus.Rewards;
 using Nethermind.Consensus.Transactions;
 using Nethermind.Core.Attributes;
 using Nethermind.Db;
+using Nethermind.Evm.TransactionProcessing;
 using Nethermind.JsonRpc.Modules;
 using Nethermind.State;
 
@@ -59,7 +60,7 @@ namespace Nethermind.Consensus.Clique
                 _snapshotManager,
                 getFromApi.LogManager);
 
-            // both Clique and the merge provide no block rewards 
+            // both Clique and the merge provide no block rewards
             setInApi.RewardCalculatorSource = NoBlockRewards.Instance;
             setInApi.BlockPreprocessor.AddLast(new AuthorRecoveryStep(_snapshotManager!));
 
@@ -93,20 +94,14 @@ namespace Nethermind.Consensus.Clique
             ReadOnlyBlockTree readOnlyBlockTree = getFromApi.BlockTree!.AsReadOnly();
             ITransactionComparerProvider transactionComparerProvider = getFromApi.TransactionComparerProvider;
 
-            ReadOnlyTxProcessingEnv producerEnv = new(
-                readOnlyDbProvider,
-                getFromApi.ReadOnlyTrieStore,
-                readOnlyBlockTree,
-                getFromApi.SpecProvider,
-                getFromApi.LogManager);
+            IReadOnlyTxProcessorSource producerEnv = new ReadOnlyTxProcessingEnv(readOnlyDbProvider, getFromApi.ReadOnlyTrieStore, readOnlyBlockTree, getFromApi.SpecProvider, getFromApi.LogManager);
 
             BlockProcessor producerProcessor = new(
                 getFromApi!.SpecProvider,
                 getFromApi!.BlockValidator,
                 NoBlockRewards.Instance,
                 getFromApi.BlockProducerEnvFactory.TransactionsExecutorFactory.Create(producerEnv),
-                producerEnv.StateProvider,
-                producerEnv.StorageProvider, // do not remove transactions from the pool when preprocessing
+                producerEnv.WorldState, // do not remove transactions from the pool when preprocessing
                 NullReceiptStorage.Instance,
                 NullWitnessCollector.Instance,
                 getFromApi.LogManager);
@@ -141,7 +136,7 @@ namespace Nethermind.Consensus.Clique
             IBlockProducer blockProducer = new CliqueBlockProducer(
                 additionalTxSource.Then(txPoolTxSource),
                 chainProcessor,
-                producerEnv.StateProvider,
+                producerEnv.WorldState,
                 getFromApi.BlockTree!,
                 getFromApi.Timestamper,
                 getFromApi.CryptoRandom,

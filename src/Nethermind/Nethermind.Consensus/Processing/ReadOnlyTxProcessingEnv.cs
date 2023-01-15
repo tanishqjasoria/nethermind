@@ -3,6 +3,7 @@
 
 using System;
 using Nethermind.Blockchain;
+using Nethermind.Blockchain.Processing;
 using Nethermind.Core.Crypto;
 using Nethermind.Core.Specs;
 using Nethermind.Db;
@@ -16,15 +17,12 @@ using Nethermind.Trie.Pruning;
 // ReSharper disable UnusedAutoPropertyAccessor.Global
 namespace Nethermind.Consensus.Processing
 {
-    public class ReadOnlyTxProcessingEnv : IReadOnlyTxProcessorSource
+    public class ReadOnlyTxProcessingEnv : IReadOnlyTxProcessorSourceExt
     {
-        private readonly ReadOnlyDb _codeDb;
         public IStateReader StateReader { get; }
-        public IStateProvider StateProvider { get; }
-        public IStorageProvider StorageProvider { get; }
+        public IWorldState WorldState { get; }
         public ITransactionProcessor TransactionProcessor { get; set; }
         public IBlockTree BlockTree { get; }
-        public IReadOnlyDbProvider DbProvider { get; }
         public IBlockhashProvider BlockhashProvider { get; }
         public IVirtualMachine Machine { get; }
 
@@ -47,21 +45,18 @@ namespace Nethermind.Consensus.Processing
         {
             if (specProvider is null) throw new ArgumentNullException(nameof(specProvider));
 
-            DbProvider = readOnlyDbProvider ?? throw new ArgumentNullException(nameof(readOnlyDbProvider));
-            _codeDb = readOnlyDbProvider.CodeDb.AsReadOnly(true);
+            ReadOnlyDb codeDb = readOnlyDbProvider.CodeDb.AsReadOnly(true);
 
-            StateReader = new StateReader(readOnlyTrieStore, _codeDb, logManager);
-            StateProvider = new StateProvider(readOnlyTrieStore, _codeDb, logManager);
-            StorageProvider = new StorageProvider(readOnlyTrieStore, StateProvider, logManager);
-            IWorldState worldState = new WorldState(StateProvider, StorageProvider);
+            StateReader = new StateReader(readOnlyTrieStore, codeDb, logManager);
+            WorldState = new WorldState(readOnlyTrieStore, codeDb, logManager);
 
             BlockTree = readOnlyBlockTree ?? throw new ArgumentNullException(nameof(readOnlyBlockTree));
             BlockhashProvider = new BlockhashProvider(BlockTree, logManager);
 
             Machine = new VirtualMachine(BlockhashProvider, specProvider, logManager);
-            TransactionProcessor = new TransactionProcessor(specProvider, worldState, Machine, logManager);
+            TransactionProcessor = new TransactionProcessor(specProvider, WorldState, Machine, logManager);
         }
 
-        public IReadOnlyTransactionProcessor Build(Keccak stateRoot) => new ReadOnlyTransactionProcessor(TransactionProcessor, StateProvider, StorageProvider, _codeDb, stateRoot);
+        public IReadOnlyTransactionProcessor Build(Keccak stateRoot) => new ReadOnlyTransactionProcessor(TransactionProcessor, WorldState, stateRoot);
     }
 }

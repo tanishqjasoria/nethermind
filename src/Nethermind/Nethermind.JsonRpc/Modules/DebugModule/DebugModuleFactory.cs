@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using Nethermind.Blockchain;
+using Nethermind.Blockchain.Processing;
 using Nethermind.Blockchain.Receipts;
 using Nethermind.Config;
 using Nethermind.Consensus.Processing;
@@ -14,6 +15,7 @@ using Nethermind.Core.Specs;
 using Nethermind.Db;
 using Nethermind.Evm.TransactionProcessing;
 using Nethermind.Logging;
+using Nethermind.State;
 using Nethermind.Synchronization.ParallelSync;
 using Nethermind.Trie.Pruning;
 using Newtonsoft.Json;
@@ -70,15 +72,10 @@ namespace Nethermind.JsonRpc.Modules.DebugModule
 
         public override IDebugRpcModule Create()
         {
-            ReadOnlyTxProcessingEnv txEnv = new(
-                _dbProvider,
-                _trieStore,
-                _blockTree,
-                _specProvider,
-                _logManager);
+            IReadOnlyTxProcessorSourceExt txEnv = new ReadOnlyTxProcessingEnv(_dbProvider, _trieStore, _blockTree, _specProvider, _logManager);
 
             ChangeableTransactionProcessorAdapter transactionProcessorAdapter = new(txEnv.TransactionProcessor);
-            BlockProcessor.BlockValidationTransactionsExecutor transactionsExecutor = new(transactionProcessorAdapter, txEnv.StateProvider);
+            BlockProcessor.BlockValidationTransactionsExecutor transactionsExecutor = new(transactionProcessorAdapter, txEnv.WorldState);
             ReadOnlyChainProcessingEnv chainProcessingEnv = new(
                 txEnv,
                 _blockValidator,

@@ -24,7 +24,7 @@ namespace Nethermind.Evm.Test
         [Test]
         public void Account_without_code_returns_empty_data_hash()
         {
-            TestState.CreateAccount(TestItem.AddressC, 100.Ether());
+            WorldState.CreateAccount(TestItem.AddressC, 100.Ether());
 
             byte[] code = Prepare.EvmCode
                 .PushData(TestItem.AddressC)
@@ -77,7 +77,7 @@ namespace Nethermind.Evm.Test
             Address precompileAddress = Sha256Precompile.Instance.Address;
             Assert.True(precompileAddress.IsPrecompile(Spec));
 
-            TestState.CreateAccount(precompileAddress, 1.Wei());
+            WorldState.CreateAccount(precompileAddress, 1.Wei());
 
             byte[] code = Prepare.EvmCode
                 .PushData(precompileAddress)
@@ -110,9 +110,9 @@ namespace Nethermind.Evm.Test
             byte[] addressWithGarbage = TestItem.AddressC.Bytes.PadLeft(32);
             addressWithGarbage[11] = 88;
 
-            TestState.CreateAccount(TestItem.AddressC, 1.Ether());
+            WorldState.CreateAccount(TestItem.AddressC, 1.Ether());
             Keccak codehash = Keccak.Compute("some code");
-            TestState.UpdateCodeHash(TestItem.AddressC, codehash, Spec);
+            WorldState.InsertCode(TestItem.AddressC, "some code"u8.ToArray(), Spec);
 
             byte[] code = Prepare.EvmCode
                 .PushData(TestItem.AddressC)
@@ -137,9 +137,8 @@ namespace Nethermind.Evm.Test
                 .PushData(Recipient)
                 .Op(Instruction.SELFDESTRUCT).Done;
 
-            TestState.CreateAccount(TestItem.AddressC, 1.Ether());
-            Keccak selfDestructCodeHash = TestState.UpdateCode(selfDestructCode);
-            TestState.UpdateCodeHash(TestItem.AddressC, selfDestructCodeHash, Spec);
+            WorldState.CreateAccount(TestItem.AddressC, 1.Ether());
+            WorldState.InsertCode(TestItem.AddressC, selfDestructCode, Spec);
 
             byte[] code = Prepare.EvmCode
                 .Call(TestItem.AddressC, 50000)
@@ -150,7 +149,7 @@ namespace Nethermind.Evm.Test
                 .Done;
 
             Execute(code);
-            AssertStorage(0, selfDestructCodeHash);
+            AssertStorage(0, Keccak.Compute(selfDestructCode));
         }
 
         [Test]
@@ -164,13 +163,11 @@ namespace Nethermind.Evm.Test
                 .PushData(Recipient)
                 .Op(Instruction.SELFDESTRUCT).Done;
 
-            TestState.CreateAccount(TestItem.AddressD, 1.Ether());
-            Keccak selfDestructCodeHash = TestState.UpdateCode(selfDestructCode);
-            TestState.UpdateCodeHash(TestItem.AddressD, selfDestructCodeHash, Spec);
+            WorldState.CreateAccount(TestItem.AddressD, 1.Ether());
+            WorldState.InsertCode(TestItem.AddressD, selfDestructCode, Spec);
 
-            TestState.CreateAccount(TestItem.AddressC, 1.Ether());
-            Keccak revertCodeHash = TestState.UpdateCode(callAndRevertCode);
-            TestState.UpdateCodeHash(TestItem.AddressC, revertCodeHash, Spec);
+            WorldState.CreateAccount(TestItem.AddressC, 1.Ether());
+            WorldState.InsertCode(TestItem.AddressC, callAndRevertCode, Spec);
 
             byte[] code = Prepare.EvmCode
                 .Call(TestItem.AddressC, 50000)
@@ -181,13 +178,13 @@ namespace Nethermind.Evm.Test
                 .Done;
 
             Execute(code);
-            AssertStorage(0, selfDestructCodeHash);
+            AssertStorage(0, Keccak.Compute(selfDestructCode));
         }
 
         [Test]
         public void Empty_account_that_would_be_cleared_returns_zero()
         {
-            TestState.CreateAccount(TestItem.AddressC, 0.Ether());
+            WorldState.CreateAccount(TestItem.AddressC, 0.Ether());
 
             byte[] code = Prepare.EvmCode
                 .Call(TestItem.AddressC, 0)
@@ -200,7 +197,7 @@ namespace Nethermind.Evm.Test
             Execute(code);
 
             AssertStorage(UInt256.Zero, UInt256.Zero);
-            Assert.False(TestState.AccountExists(TestItem.AddressC), "did not test the right thing - it was not an empty account + touch scenario");
+            Assert.False(WorldState.AccountExists(TestItem.AddressC), "did not test the right thing - it was not an empty account + touch scenario");
         }
 
         [Test]
@@ -218,7 +215,7 @@ namespace Nethermind.Evm.Test
 
             // todo: so far EIP does not define whether it should be zero or empty data
             AssertStorage(0, Keccak.OfAnEmptyString);
-            Assert.True(TestState.AccountExists(ContractAddress.From(Recipient, 0)),
+            Assert.True(WorldState.AccountExists(ContractAddress.From(Recipient, 0)),
                 "did not test the right thing - it was not a newly created empty account scenario");
         }
 
@@ -240,9 +237,8 @@ namespace Nethermind.Evm.Test
                 .Create(initCode, 0)
                 .Op(Instruction.REVERT).Done;
 
-            TestState.CreateAccount(TestItem.AddressC, 1.Ether());
-            Keccak createCodeHash = TestState.UpdateCode(createCode);
-            TestState.UpdateCodeHash(TestItem.AddressC, createCodeHash, Spec);
+            WorldState.CreateAccount(TestItem.AddressC, 1.Ether());
+            WorldState.InsertCode(TestItem.AddressC, createCode, Spec);
 
             byte[] code = Prepare.EvmCode
                 .Call(TestItem.AddressC, 50000)
@@ -268,9 +264,8 @@ namespace Nethermind.Evm.Test
             byte[] createCode = Prepare.EvmCode
                 .Create(initCode, 0).Done;
 
-            TestState.CreateAccount(TestItem.AddressC, 1.Ether());
-            Keccak createCodeHash = TestState.UpdateCode(createCode);
-            TestState.UpdateCodeHash(TestItem.AddressC, createCodeHash, Spec);
+            WorldState.CreateAccount(TestItem.AddressC, 1.Ether());
+            WorldState.InsertCode(TestItem.AddressC, createCode, Spec);
 
             byte[] code = Prepare.EvmCode
                 .Call(TestItem.AddressC, 50000)

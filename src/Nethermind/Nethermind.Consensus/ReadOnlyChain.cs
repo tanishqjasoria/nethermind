@@ -4,6 +4,7 @@
 using Nethermind.Blockchain;
 using Nethermind.Consensus.Processing;
 using Nethermind.Consensus.Transactions;
+using Nethermind.Evm.TransactionProcessing;
 using Nethermind.State;
 
 namespace Nethermind.Consensus
@@ -12,8 +13,8 @@ namespace Nethermind.Consensus
     {
         public IBlockTree BlockTree { get; set; }
         public IBlockchainProcessor ChainProcessor { get; set; }
-        public IStateProvider ReadOnlyStateProvider { get; set; }
+        public IWorldState ReadOnlyWorldState { get; set; }
         public ITxSource TxSource { get; set; }
-        public ReadOnlyTxProcessingEnv ReadOnlyTxProcessingEnv { get; set; }
+        public IReadOnlyTxProcessorSource ReadOnlyTxProcessingEnv { get; set; }
     }
 }

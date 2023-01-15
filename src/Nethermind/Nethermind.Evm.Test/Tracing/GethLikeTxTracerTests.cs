@@ -126,9 +126,8 @@ namespace Nethermind.Evm.Test.Tracing
                 .Op(Instruction.STOP)
                 .Done;
 
-            TestState.CreateAccount(TestItem.AddressC, 1.Ether());
-            Keccak createCodeHash = TestState.UpdateCode(createCode);
-            TestState.UpdateCodeHash(TestItem.AddressC, createCodeHash, Spec);
+            WorldState.CreateAccount(TestItem.AddressC, 1.Ether());
+            WorldState.InsertCode(TestItem.AddressC, createCode, Spec);
 
             byte[] code = Prepare.EvmCode
                 .Call(TestItem.AddressC, 50000)
@@ -141,7 +140,7 @@ namespace Nethermind.Evm.Test.Tracing
                 1, 1, 1, 1, 1, 1, 1, 1, // STACK FOR CALL
                   2, 2, 2, 2, 2, 2, 2, 2, 2, 2, // CALL
                     3, 3, 3, 3, 3, 3, // CREATE
-                  2, // STOP 
+                  2, // STOP
                 1, // STOP
             };
 
@@ -167,9 +166,8 @@ namespace Nethermind.Evm.Test.Tracing
                 .Op(Instruction.STOP)
                 .Done;
 
-            TestState.CreateAccount(TestItem.AddressC, 1.Ether());
-            Keccak createCodeHash = TestState.UpdateCode(createCode);
-            TestState.UpdateCodeHash(TestItem.AddressC, createCodeHash, Spec);
+            WorldState.CreateAccount(TestItem.AddressC, 1.Ether());
+            WorldState.InsertCode(TestItem.AddressC, createCode, Spec);
 
             byte[] code = Prepare.EvmCode
                 .PushData(SampleHexData1) // just to test if stack is restored
@@ -178,7 +176,7 @@ namespace Nethermind.Evm.Test.Tracing
                 .Done;
 
             GethLikeTxTrace trace = ExecuteAndTrace(code);
-            /* depths 
+            /* depths
             {
                 1, 1, 1, 1, 1, 1, 1, 1, 1, // SAMPLE STACK + STACK FOR CALL [0..8]
                 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 // SAMPLE STACK + CALL [9..19]
@@ -212,9 +210,8 @@ namespace Nethermind.Evm.Test.Tracing
                 .Op(Instruction.STOP)
                 .Done;
 
-            TestState.CreateAccount(TestItem.AddressC, 1.Ether());
-            Keccak createCodeHash = TestState.UpdateCode(createCode);
-            TestState.UpdateCodeHash(TestItem.AddressC, createCodeHash, Spec);
+            WorldState.CreateAccount(TestItem.AddressC, 1.Ether());
+            WorldState.InsertCode(TestItem.AddressC, createCode, Spec);
 
             byte[] code = Prepare.EvmCode
                 .StoreDataInMemory(64, SampleHexData2.PadLeft(64, '0')) // just to test if memory is restored
@@ -223,7 +220,7 @@ namespace Nethermind.Evm.Test.Tracing
                 .Done;
 
             GethLikeTxTrace trace = ExecuteAndTrace(code);
-            /* depths 
+            /* depths
             {
                 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 // MEMORY + STACK FOR CALL [0..10]
                 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 // MEMORY + CALL [11..23]
@@ -257,9 +254,8 @@ namespace Nethermind.Evm.Test.Tracing
                 .Op(Instruction.STOP)
                 .Done;
 
-            TestState.CreateAccount(TestItem.AddressC, 1.Ether());
-            Keccak createCodeHash = TestState.UpdateCode(createCode);
-            TestState.UpdateCodeHash(TestItem.AddressC, createCodeHash, Spec);
+            WorldState.CreateAccount(TestItem.AddressC, 1.Ether());
+            WorldState.InsertCode(TestItem.AddressC, createCode, Spec);
 
             byte[] code = Prepare.EvmCode
                 .PersistData("0x2", HexZero) // just to test if storage is restored
@@ -269,7 +265,7 @@ namespace Nethermind.Evm.Test.Tracing
                 .Done;
 
             GethLikeTxTrace trace = ExecuteAndTrace(code);
-            /* depths 
+            /* depths
             {
                 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 // 2x SSTORE + STACK FOR CALL [0..13]
                 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 // SSTORE + CALL [14..26]

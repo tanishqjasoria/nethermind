@@ -132,9 +132,20 @@ namespace Nethermind.State
             return account?.Balance ?? UInt256.Zero;
         }
 
-        public void UpdateCodeHash(Address address, Keccak codeHash, IReleaseSpec releaseSpec, bool isGenesis = false)
+        public void InsertCode(Address address, ReadOnlyMemory<byte> code, IReleaseSpec releaseSpec, bool isGenesis = false)
         {
             _needsStateRootUpdate = true;
+            Keccak codeHash;
+            if (code.Length == 0)
+            {
+                codeHash = Keccak.OfAnEmptyString;
+            }
+            else
+            {
+                codeHash = Keccak.Compute(code.Span);
+                _codeDb[codeHash.Bytes] = code.ToArray();
+            }
+
             Account? account = GetThroughCache(address);
             if (account is null)
             {
@@ -274,21 +285,6 @@ namespace Nethermind.State
             }
         }
 
-        public Keccak UpdateCode(ReadOnlyMemory<byte> code)
-        {
-            _needsStateRootUpdate = true;
-            if (code.Length == 0)
-            {
-                return Keccak.OfAnEmptyString;
-            }
-
-            Keccak codeHash = Keccak.Compute(code.Span);
-
-            _codeDb[codeHash.Bytes] = code.ToArray();
-
-            return codeHash;
-        }
-
         public Keccak GetCodeHash(Address address)
         {
             Account account = GetThroughCache(address);
@@ -323,7 +319,7 @@ namespace Nethermind.State
             PushDelete(address);
         }
 
-        int IJournal<int>.TakeSnapshot()
+        int IStateProvider.TakeSnapshot(bool newTransactionStart)
         {
             if (_logger.IsTrace) _logger.Trace($"State snapshot {_currentPosition}");
             return _currentPosition;

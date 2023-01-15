@@ -52,21 +52,19 @@ namespace Nethermind.JsonRpc.Test.Modules.Trace
             MemDb stateDb = new();
             MemDb codeDb = new();
             ITrieStore trieStore = new TrieStore(stateDb, LimboLogs.Instance).AsReadOnly();
-            StateProvider stateProvider = new(trieStore, codeDb, LimboLogs.Instance);
-            StorageProvider storageProvider = new(trieStore, stateProvider, LimboLogs.Instance);
+            WorldState worldState = new WorldState(trieStore, codeDb, LimboLogs.Instance);
             StateReader stateReader = new StateReader(trieStore, codeDb, LimboLogs.Instance);
 
             BlockhashProvider blockhashProvider = new(_blockTree, LimboLogs.Instance);
             VirtualMachine virtualMachine = new(blockhashProvider, specProvider, LimboLogs.Instance);
-            TransactionProcessor transactionProcessor = new(specProvider, stateProvider, storageProvider, virtualMachine, LimboLogs.Instance);
+            TransactionProcessor transactionProcessor = new TransactionProcessor(specProvider, worldState, virtualMachine, LimboLogs.Instance);
 
             BlockProcessor blockProcessor = new(
                 specProvider,
                 Always.Valid,
                 NoBlockRewards.Instance,
-                new BlockProcessor.BlockValidationTransactionsExecutor(transactionProcessor, stateProvider),
-                stateProvider,
-                storageProvider,
+                new BlockProcessor.BlockValidationTransactionsExecutor(transactionProcessor, worldState),
+                worldState,
                 NullReceiptStorage.Instance,
                 NullWitnessCollector.Instance,
                 LimboLogs.Instance);
@@ -78,7 +76,7 @@ namespace Nethermind.JsonRpc.Test.Modules.Trace
             _blockTree.SuggestBlock(genesis);
             _processor.Process(genesis, ProcessingOptions.None, NullBlockTracer.Instance);
 
-            _tracer = new Tracer(stateProvider, _processor);
+            _tracer = new Tracer(worldState, _processor);
         }
 
         [Test]

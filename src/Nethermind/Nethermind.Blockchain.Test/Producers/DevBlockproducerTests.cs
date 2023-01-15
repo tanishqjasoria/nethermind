@@ -52,12 +52,8 @@ namespace Nethermind.Blockchain.Test.Producers
                 NoPruning.Instance,
                 Archive.Instance,
                 LimboLogs.Instance);
-            StateProvider stateProvider = new(
-                trieStore,
-                dbProvider.RegisteredDbs[DbNames.Code],
-                LimboLogs.Instance);
             StateReader stateReader = new(trieStore, dbProvider.GetDb<IDb>(DbNames.State), LimboLogs.Instance);
-            StorageProvider storageProvider = new(trieStore, stateProvider, LimboLogs.Instance);
+            WorldState worldState = new WorldState(trieStore, dbProvider.RegisteredDbs[DbNames.Code], LimboLogs.Instance);
             BlockhashProvider blockhashProvider = new(blockTree, LimboLogs.Instance);
             VirtualMachine virtualMachine = new(
                 blockhashProvider,
@@ -65,17 +61,15 @@ namespace Nethermind.Blockchain.Test.Producers
                 LimboLogs.Instance);
             TransactionProcessor txProcessor = new(
                 specProvider,
-                stateProvider,
-                storageProvider,
+                worldState,
                 virtualMachine,
                 LimboLogs.Instance);
             BlockProcessor blockProcessor = new(
                 specProvider,
                 Always.Valid,
                 NoBlockRewards.Instance,
-                new BlockProcessor.BlockValidationTransactionsExecutor(txProcessor, stateProvider),
-                stateProvider,
-                storageProvider,
+                new BlockProcessor.BlockValidationTransactionsExecutor(txProcessor, new WorldState(trieStore, dbProvider.RegisteredDbs[DbNames.Code], LimboLogs.Instance)),
+                worldState,
                 NullReceiptStorage.Instance,
                 NullWitnessCollector.Instance,
                 LimboLogs.Instance);
@@ -91,7 +85,7 @@ namespace Nethermind.Blockchain.Test.Producers
             DevBlockProducer devBlockProducer = new(
                 EmptyTxSource.Instance,
                 blockchainProcessor,
-                stateProvider,
+                worldState,
                 blockTree,
                 trigger,
                 timestamper,

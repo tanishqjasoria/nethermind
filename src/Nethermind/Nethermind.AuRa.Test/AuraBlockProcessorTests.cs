@@ -121,7 +121,7 @@ namespace Nethermind.AuRa.Test
                 },
             };
 
-            (AuRaBlockProcessor processor, IStateProvider stateProvider) =
+            (AuRaBlockProcessor processor, IWorldState stateProvider) =
                 CreateProcessor(contractRewriter: new ContractRewriter(contractOverrides));
 
             stateProvider.CreateAccount(TestItem.AddressA, UInt256.One);
@@ -143,27 +143,27 @@ namespace Nethermind.AuRa.Test
             stateProvider.GetCode(TestItem.AddressB).Should().BeEquivalentTo(Bytes.FromHexString("0x654"));
         }
 
-        private (AuRaBlockProcessor Processor, IStateProvider StateProvider) CreateProcessor(ITxFilter? txFilter = null, ContractRewriter? contractRewriter = null)
+        private (AuRaBlockProcessor Processor, IWorldState StateProvider) CreateProcessor(ITxFilter? txFilter = null, ContractRewriter? contractRewriter = null)
         {
             IDb stateDb = new MemDb();
             IDb codeDb = new MemDb();
             TrieStore trieStore = new(stateDb, LimboLogs.Instance);
-            IStateProvider stateProvider = new StateProvider(trieStore, codeDb, LimboLogs.Instance);
+            IWorldState worldState = new WorldState(trieStore, codeDb, LimboLogs.Instance);
+
             ITransactionProcessor transactionProcessor = Substitute.For<ITransactionProcessor>();
             AuRaBlockProcessor processor = new AuRaBlockProcessor(
                 RinkebySpecProvider.Instance,
                 TestBlockValidator.AlwaysValid,
                 NoBlockRewards.Instance,
-                new BlockProcessor.BlockValidationTransactionsExecutor(transactionProcessor, stateProvider),
-                stateProvider,
-                new StorageProvider(trieStore, stateProvider, LimboLogs.Instance),
+                new BlockProcessor.BlockValidationTransactionsExecutor(transactionProcessor, worldState),
+                worldState,
                 NullReceiptStorage.Instance,
                 LimboLogs.Instance,
                 Substitute.For<IBlockTree>(),
                 txFilter,
                 contractRewriter: contractRewriter);
 
-            return (processor, stateProvider);
+            return (processor, worldState);
         }
     }
 }

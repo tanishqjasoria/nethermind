@@ -19,12 +19,14 @@ using Nethermind.JsonRpc.Modules.Trace;
 using Nethermind.Logging;
 using NUnit.Framework;
 using Nethermind.Blockchain.Find;
+using Nethermind.Blockchain.Processing;
 using Nethermind.Consensus.Processing;
 using Nethermind.Consensus.Rewards;
 using Nethermind.Consensus.Tracing;
 using Nethermind.Consensus.Validators;
 using Nethermind.Db;
 using Nethermind.Evm;
+using Nethermind.Evm.TransactionProcessing;
 using Nethermind.Serialization.Json;
 using Nethermind.Specs.Forks;
 using Nethermind.Specs.Test;
@@ -50,13 +52,13 @@ namespace Nethermind.JsonRpc.Test.Modules
                 ReceiptsRecovery receiptsRecovery =
                     new(Blockchain.EthereumEcdsa, Blockchain.SpecProvider);
                 IReceiptFinder receiptFinder = new FullInfoReceiptFinder(Blockchain.ReceiptStorage, receiptsRecovery, Blockchain.BlockFinder);
-                ReadOnlyTxProcessingEnv txProcessingEnv =
-                    new(dbProvider, Blockchain.ReadOnlyTrieStore, Blockchain.BlockTree.AsReadOnly(), Blockchain.SpecProvider, Blockchain.LogManager);
+                IReadOnlyTxProcessorSourceExt txProcessingEnv =
+                    new ReadOnlyTxProcessingEnv(dbProvider, Blockchain.ReadOnlyTrieStore, Blockchain.BlockTree.AsReadOnly(), Blockchain.SpecProvider, Blockchain.LogManager);
                 RewardCalculator rewardCalculatorSource = new(Blockchain.SpecProvider);
 
                 IRewardCalculator rewardCalculator = rewardCalculatorSource.Get(txProcessingEnv.TransactionProcessor);
 
-                RpcBlockTransactionsExecutor rpcBlockTransactionsExecutor = new(txProcessingEnv.TransactionProcessor, txProcessingEnv.StateProvider);
+                RpcBlockTransactionsExecutor rpcBlockTransactionsExecutor = new(txProcessingEnv.TransactionProcessor, txProcessingEnv.WorldState);
                 ReadOnlyChainProcessingEnv chainProcessingEnv = new(
                     txProcessingEnv,
                     Always.Valid,
@@ -68,7 +70,7 @@ namespace Nethermind.JsonRpc.Test.Modules
                     Blockchain.LogManager,
                     rpcBlockTransactionsExecutor);
 
-                Tracer tracer = new(chainProcessingEnv.StateProvider, chainProcessingEnv.ChainProcessor);
+                Tracer tracer = new(chainProcessingEnv.WorldState, chainProcessingEnv.ChainProcessor);
                 TraceRpcModule = new TraceRpcModule(receiptFinder, tracer, Blockchain.BlockFinder, JsonRpcConfig, MainnetSpecProvider.Instance, LimboLogs.Instance);
 
                 for (int i = 1; i < 10; i++)
