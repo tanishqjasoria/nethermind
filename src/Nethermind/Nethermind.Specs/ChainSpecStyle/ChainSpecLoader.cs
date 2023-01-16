@@ -19,7 +19,7 @@ using Newtonsoft.Json.Linq;
 namespace Nethermind.Specs.ChainSpecStyle
 {
     /// <summary>
-    /// This class can load a Parity-style chain spec file and build a <see cref="ChainSpec"/> out of it. 
+    /// This class can load a Parity-style chain spec file and build a <see cref="ChainSpec"/> out of it.
     /// </summary>
     public class ChainSpecLoader : IChainSpecLoader
     {
@@ -137,6 +137,7 @@ namespace Nethermind.Specs.ChainSpecStyle
                 Eip3651TransitionTimestamp = chainSpecJson.Params.Eip3651TransitionTimestamp,
                 Eip3855TransitionTimestamp = chainSpecJson.Params.Eip3855TransitionTimestamp,
                 Eip3860TransitionTimestamp = chainSpecJson.Params.Eip3860TransitionTimestamp,
+                VerkleTreeTransitionTimestamp = chainSpecJson.Params.VerkleTreeTransitionTimestamp,
                 TransactionPermissionContract = chainSpecJson.Params.TransactionPermissionContract,
                 TransactionPermissionContractTransition = chainSpecJson.Params.TransactionPermissionContractTransition,
                 ValidateChainIdTransition = chainSpecJson.Params.ValidateChainIdTransition,
@@ -214,6 +215,7 @@ namespace Nethermind.Specs.ChainSpecStyle
                 chainSpec.Ethash?.DifficultyBombDelays.Keys.ToArray()[5]
                 : null;
             chainSpec.ShanghaiTimestamp = chainSpec.Parameters.Eip3651TransitionTimestamp ?? (long.MaxValue - 1);
+            chainSpec.CancunTimestamp = chainSpec.Parameters.VerkleTreeTransitionTimestamp ?? (long.MaxValue - 1);
 
             // TheMerge parameters
             chainSpec.MergeForkIdBlockNumber = chainSpec.Parameters.MergeForkIdTransition;

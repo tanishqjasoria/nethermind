@@ -228,6 +228,8 @@ namespace Nethermind.Specs.ChainSpecStyle
             releaseSpec.IsEip3651Enabled = (chainSpec.Parameters.Eip3651TransitionTimestamp ?? ulong.MaxValue) <= releaseStartTimestamp;
             releaseSpec.IsEip3855Enabled = (chainSpec.Parameters.Eip3855TransitionTimestamp ?? ulong.MaxValue) <= releaseStartTimestamp;
             releaseSpec.IsEip3860Enabled = (chainSpec.Parameters.Eip3860TransitionTimestamp ?? ulong.MaxValue) <= releaseStartTimestamp;
+            releaseSpec.IsVerkleTreeEipEnabled = (chainSpec.Parameters.VerkleTreeTransitionTimestamp ?? ulong.MaxValue) <= releaseStartTimestamp;
+            releaseSpec.VerkleTreeTransitionTimeStamp = chainSpec.Parameters.VerkleTreeTransitionTimestamp ?? ulong.MaxValue;
 
             return releaseSpec;
         }
