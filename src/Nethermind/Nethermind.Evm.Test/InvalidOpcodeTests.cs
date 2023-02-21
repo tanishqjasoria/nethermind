@@ -12,8 +12,9 @@ using NUnit.Framework;
 
 namespace Nethermind.Evm.Test
 {
-    [TestFixture]
     [Parallelizable(ParallelScope.Self)]
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class InvalidOpcodeTests : VirtualMachineTestsBase
     {
         protected override long BlockNumber => MainnetSpecProvider.ConstantinopleFixBlockNumber;
@@ -174,6 +175,9 @@ namespace Nethermind.Evm.Test
                     result.StatusCode.Should().Be(0, ((Instruction)i).ToString());
                 }
             }
+        }
+        public InvalidOpcodeTests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

@@ -7,6 +7,8 @@ using NUnit.Framework;
 
 namespace Nethermind.Evm.Test
 {
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class SignExtTests : VirtualMachineTestsBase
     {
         [Test]
@@ -49,6 +51,9 @@ namespace Nethermind.Evm.Test
 
             TestAllTracerWithOutput res = Execute(code);
             res.Error.Should().Be(EvmExceptionType.StackUnderflow.ToString());
+        }
+        public SignExtTests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

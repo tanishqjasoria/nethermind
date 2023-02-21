@@ -8,6 +8,8 @@ using NUnit.Framework;
 
 namespace Nethermind.Evm.Test
 {
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class SDivTests : VirtualMachineTestsBase
     {
         [Test]
@@ -36,6 +38,9 @@ namespace Nethermind.Evm.Test
             byte[] b = BigInteger.Parse("57896044618658097711785492504343953926634992332820282019728792003956564819968").ToBigEndianByteArray(32);
 
             Assert.AreEqual(a, b);
+        }
+        public SDivTests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

@@ -6,13 +6,14 @@ using System.Collections.Generic;
 using System.Linq;
 using Nethermind.Core;
 using Nethermind.Core.Crypto;
+using Nethermind.Core.Extensions;
 using Nethermind.Core.Resettables;
 using Nethermind.Core.Specs;
 using Nethermind.Int256;
 using Nethermind.Logging;
 using Nethermind.State.Witnesses;
 using Nethermind.Trie;
-using Nethermind.Verkle;
+using Nethermind.Verkle.Tree;
 
 namespace Nethermind.State;
 
@@ -30,10 +31,10 @@ public class VerkleWorldState: IWorldState
     private Change?[] _changes = new Change?[StartCapacity];
     private int _currentPosition = Resettable.EmptyPosition;
 
-    private readonly VerkleTree _tree;
+    private readonly VerkleStateTree _tree;
     private readonly IStorageProvider _storageProvider;
 
-    public VerkleWorldState(VerkleTree verkleTree, IKeyValueStore? codeDb, ILogManager? logManager)
+    public VerkleWorldState(VerkleStateTree verkleTree, IKeyValueStore? codeDb, ILogManager? logManager)
     {
         _logger = logManager?.GetClassLogger<WorldState>() ?? throw new ArgumentNullException(nameof(logManager));
         _codeDb = codeDb ?? throw new ArgumentNullException(nameof(codeDb));
@@ -43,7 +44,7 @@ public class VerkleWorldState: IWorldState
 
     public void Accept(ITreeVisitor? visitor, Keccak? stateRoot, VisitingOptions? visitingOptions = null)
     {
-        throw new NotImplementedException();
+        _tree.Accept(visitor, stateRoot, visitingOptions);
     }
 
     public void RecalculateStateRoot()
@@ -55,7 +56,7 @@ public class VerkleWorldState: IWorldState
     public Keccak StateRoot
     {
         get => new Keccak(_tree.RootHash);
-        set => throw new InvalidOperationException();
+        set => _tree.RootHash = value.Bytes;
     }
 
 
@@ -131,7 +132,7 @@ public class VerkleWorldState: IWorldState
         if (account.CodeHash != codeHash)
         {
             if (_logger.IsTrace) _logger.Trace($"  Update {address} C {account.CodeHash} -> {codeHash}");
-            Account changedAccount = account.WithChangedCodeHash(codeHash);
+            Account changedAccount = account.WithChangedCodeHash(codeHash, _codeDb[codeHash.Bytes]);
             PushUpdate(address, changedAccount);
         }
         else if (releaseSpec.IsEip158Enabled && !isGenesis)
@@ -382,7 +383,9 @@ public class VerkleWorldState: IWorldState
         Db.Metrics.StateTreeReads++;
         byte[]? headerTreeKey = AccountHeader.GetTreeKeyPrefixAccount(address.Bytes);
         headerTreeKey[31] = AccountHeader.Version;
-        UInt256 version = new UInt256((_tree.Get(headerTreeKey) ?? Array.Empty<byte>()).ToArray());
+        IEnumerable<byte>? versionVal = _tree.Get(headerTreeKey);
+        if (versionVal is null)  return null;
+        UInt256 version = new UInt256((versionVal ?? Array.Empty<byte>()).ToArray());
         headerTreeKey[31] = AccountHeader.Balance;
         UInt256 balance = new UInt256((_tree.Get(headerTreeKey) ?? Array.Empty<byte>()).ToArray());
         headerTreeKey[31] = AccountHeader.Nonce;
@@ -400,7 +403,20 @@ public class VerkleWorldState: IWorldState
         Db.Metrics.StateTreeWrites++;
 
         byte[]? headerTreeKey = AccountHeader.GetTreeKeyPrefixAccount(address.Bytes);
-        if (account != null) _tree.InsertStemBatch(headerTreeKey, account.ToVerkleDict());
+        if (account != null) _tree.InsertStemBatch(headerTreeKey.AsSpan()[..31], account.ToVerkleDict());
+        if (account!.Code is null) return;
+        UInt256 chunkId = 0;
+        CodeChunkEnumerator codeEnumerator = new CodeChunkEnumerator(account.Code);
+        while (codeEnumerator.TryGetNextChunk(out byte[] chunk))
+        {
+            byte[]? key = AccountHeader.GetTreeKeyForCodeChunk(address.Bytes, chunkId);
+#if DEBUG
+            Console.WriteLine("K: " + EnumerableExtensions.ToString(key));
+            Console.WriteLine("V: " + EnumerableExtensions.ToString(chunk));
+#endif
+            _tree.Insert(key, chunk);
+            chunkId += 1;
+        }
     }
 
     private readonly HashSet<Address> _readsForTracing = new HashSet<Address>();
@@ -489,19 +505,19 @@ public class VerkleWorldState: IWorldState
     }
     public byte[] Get(StorageCell storageCell)
     {
-        return _storageProvider.Get(storageCell);
+        return _storageProvider.Get(storageCell).WithoutLeadingZeros().ToArray();
     }
     public void Set(StorageCell storageCell, byte[] newValue)
     {
-        _storageProvider.Set(storageCell, newValue);
+        _storageProvider.Set(storageCell, newValue.PadLeft(32));
     }
     public byte[] GetTransientState(StorageCell storageCell)
     {
-        return _storageProvider.GetTransientState(storageCell);
+        return _storageProvider.GetTransientState(storageCell).WithoutLeadingZeros().ToArray();
     }
     public void SetTransientState(StorageCell storageCell, byte[] newValue)
     {
-        _storageProvider.SetTransientState(storageCell, newValue);
+        _storageProvider.SetTransientState(storageCell, newValue.PadLeft(32));
     }
     public void Reset()
     {

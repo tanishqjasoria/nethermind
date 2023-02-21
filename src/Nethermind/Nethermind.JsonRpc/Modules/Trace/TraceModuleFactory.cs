@@ -15,6 +15,8 @@ using Nethermind.Db;
 using Nethermind.Logging;
 using Nethermind.State;
 using Nethermind.Trie.Pruning;
+using Nethermind.Verkle;
+using Nethermind.Verkle.Tree;
 using Newtonsoft.Json;
 
 namespace Nethermind.JsonRpc.Modules.Trace
@@ -24,12 +26,14 @@ namespace Nethermind.JsonRpc.Modules.Trace
         private readonly ReadOnlyDbProvider _dbProvider;
         private readonly IReadOnlyBlockTree _blockTree;
         private readonly IReadOnlyTrieStore _trieNodeResolver;
+        private readonly ReadOnlyVerkleStateStore _verkleTrieStore;
         private readonly IJsonRpcConfig _jsonRpcConfig;
         private readonly IReceiptStorage _receiptStorage;
         private readonly ISpecProvider _specProvider;
         private readonly ILogManager _logManager;
         private readonly IBlockPreprocessorStep _recoveryStep;
         private readonly IRewardCalculatorSource _rewardCalculatorSource;
+        protected readonly TreeType _treeType;
 
         public TraceModuleFactory(
             IDbProvider dbProvider,
@@ -52,11 +56,42 @@ namespace Nethermind.JsonRpc.Modules.Trace
             _specProvider = specProvider ?? throw new ArgumentNullException(nameof(specProvider));
             _logManager = logManager ?? throw new ArgumentNullException(nameof(logManager));
             logManager.GetClassLogger();
+            _treeType = TreeType.MerkleTree;
+        }
+
+        public TraceModuleFactory(
+            IDbProvider dbProvider,
+            IBlockTree blockTree,
+            ReadOnlyVerkleStateStore trieNodeResolver,
+            IJsonRpcConfig jsonRpcConfig,
+            IBlockPreprocessorStep recoveryStep,
+            IRewardCalculatorSource rewardCalculatorSource,
+            IReceiptStorage receiptFinder,
+            ISpecProvider specProvider,
+            ILogManager logManager)
+        {
+            _dbProvider = dbProvider.AsReadOnly(false);
+            _blockTree = blockTree.AsReadOnly();
+            _verkleTrieStore = trieNodeResolver;
+            _jsonRpcConfig = jsonRpcConfig ?? throw new ArgumentNullException(nameof(jsonRpcConfig));
+            _recoveryStep = recoveryStep ?? throw new ArgumentNullException(nameof(recoveryStep));
+            _rewardCalculatorSource = rewardCalculatorSource ?? throw new ArgumentNullException(nameof(rewardCalculatorSource));
+            _receiptStorage = receiptFinder ?? throw new ArgumentNullException(nameof(receiptFinder));
+            _specProvider = specProvider ?? throw new ArgumentNullException(nameof(specProvider));
+            _logManager = logManager ?? throw new ArgumentNullException(nameof(logManager));
+            logManager.GetClassLogger();
+            _treeType = TreeType.VerkleTree;
         }
 
         public override ITraceRpcModule Create()
         {
-            IReadOnlyTxProcessorSourceExt txProcessingEnv = new ReadOnlyTxProcessingEnv(_dbProvider, _trieNodeResolver, _blockTree, _specProvider, _logManager);
+
+            IReadOnlyTxProcessorSourceExt txProcessingEnv = _treeType switch
+            {
+                TreeType.MerkleTree => new ReadOnlyTxProcessingEnv(_dbProvider, _trieNodeResolver, _blockTree, _specProvider, _logManager),
+                TreeType.VerkleTree => new ReadOnlyTxProcessingEnv(_dbProvider, _verkleTrieStore, _blockTree, _specProvider, _logManager),
+                _ => throw new ArgumentOutOfRangeException()
+            };
 
             IRewardCalculator rewardCalculator = _rewardCalculatorSource.Get(txProcessingEnv.TransactionProcessor);
 

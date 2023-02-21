@@ -18,12 +18,21 @@ using Nethermind.Evm.TransactionProcessing;
 using Nethermind.Logging;
 using Nethermind.State;
 using Nethermind.Trie.Pruning;
+using Nethermind.Verkle;
 using NUnit.Framework;
 
 namespace Nethermind.Evm.Test
 {
     public class VirtualMachineTestsBase
     {
+        protected readonly VirtualMachineTestsStateProvider _stateProvider;
+
+        public enum VirtualMachineTestsStateProvider
+        {
+            MerkleTrie,
+            VerkleTrie
+        }
+
         protected const string SampleHexData1 = "a01234";
         protected const string SampleHexData2 = "b15678";
         protected const string HexZero = "00";
@@ -31,7 +40,6 @@ namespace Nethermind.Evm.Test
 
         private IEthereumEcdsa _ethereumEcdsa;
         protected ITransactionProcessor _processor;
-        private IDb _stateDb;
 
         protected VirtualMachine Machine { get; private set; }
         protected IWorldState WorldState { get; private set; }
@@ -55,14 +63,28 @@ namespace Nethermind.Evm.Test
             return LimboLogs.Instance;
         }
 
+        public VirtualMachineTestsBase(VirtualMachineTestsStateProvider stateProvider)
+        {
+            _stateProvider = stateProvider;
+        }
+
         [SetUp]
         public virtual void Setup()
         {
             ILogManager logManager = GetLogManager();
 
             IDb codeDb = new MemDb();
-            _stateDb = new MemDb();
-            WorldState = new WorldState(new TrieStore(_stateDb, logManager), codeDb, logManager);
+            MemDb stateDb = new MemDb();
+            if (_stateProvider == VirtualMachineTestsStateProvider.MerkleTrie)
+            {
+                WorldState = new WorldState(new TrieStore(stateDb, logManager), codeDb, logManager);
+            }
+            else
+            {
+                IDbProvider provider = VerkleDbFactory.InitDatabase(DbMode.MemDb, null);
+                WorldState = new VerkleWorldState(new VerkleStateTree(provider), codeDb, logManager);
+            }
+
             _ethereumEcdsa = new EthereumEcdsa(SpecProvider.ChainId, logManager);
             IBlockhashProvider blockhashProvider = TestBlockhashProvider.Instance;
             Machine = new VirtualMachine(blockhashProvider, SpecProvider, logManager);

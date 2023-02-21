@@ -13,6 +13,8 @@ namespace Nethermind.Evm.Test
     /// <summary>
     /// https://gist.github.com/holiman/174548cad102096858583c6fbbb0649a
     /// </summary>
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class Eip2929Tests : VirtualMachineTestsBase
     {
         protected override long BlockNumber => MainnetSpecProvider.BerlinBlockNumber;
@@ -79,6 +81,9 @@ namespace Nethermind.Evm.Test
             TestAllTracerWithOutput tracer = base.CreateTracer();
             tracer.IsTracingAccess = false;
             return tracer;
+        }
+        public Eip2929Tests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

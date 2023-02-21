@@ -13,8 +13,14 @@ namespace Nethermind.Evm.Test
 {
     [TestFixture]
     [Parallelizable(ParallelScope.Self)]
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class VmCodeDepositTests : VirtualMachineTestsBase
     {
+        public VmCodeDepositTests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
+        }
+
         private long _blockNumber = MainnetSpecProvider.ByzantiumBlockNumber;
 
         protected override long BlockNumber => _blockNumber;

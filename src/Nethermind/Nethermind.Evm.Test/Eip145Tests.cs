@@ -9,7 +9,8 @@ using NUnit.Framework;
 
 namespace Nethermind.Evm.Test
 {
-    [TestFixture]
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class Eip145Tests : VirtualMachineTestsBase
     {
         protected override long BlockNumber => RopstenSpecProvider.ConstantinopleBlockNumber;
@@ -113,6 +114,9 @@ namespace Nethermind.Evm.Test
 
             TestAllTracerWithOutput receipt = Execute(code);
             AssertEip145(receipt, result);
+        }
+        public Eip145Tests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

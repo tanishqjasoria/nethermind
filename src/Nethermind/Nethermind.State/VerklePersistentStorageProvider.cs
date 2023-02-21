@@ -9,13 +9,13 @@ using Nethermind.Core.Collections;
 using Nethermind.Core.Extensions;
 using Nethermind.Core.Resettables;
 using Nethermind.Logging;
-using Nethermind.Verkle;
+using Nethermind.Verkle.Tree;
 
 namespace Nethermind.State;
 
 public class VerklePersistentStorageProvider: PartialStorageProviderBase
 {
-    private readonly VerkleTree _verkleTree;
+    private readonly VerkleStateTree _verkleTree;
     private readonly ILogManager? _logManager;
     /// <summary>
     /// EIP-1283
@@ -23,7 +23,7 @@ public class VerklePersistentStorageProvider: PartialStorageProviderBase
     private readonly ResettableDictionary<StorageCell, byte[]> _originalValues = new ResettableDictionary<StorageCell, byte[]>();
     private readonly ResettableHashSet<StorageCell> _committedThisRound = new ResettableHashSet<StorageCell>();
 
-    public VerklePersistentStorageProvider(VerkleTree tree, ILogManager? logManager)
+    public VerklePersistentStorageProvider(VerkleStateTree tree, ILogManager? logManager)
         : base(logManager)
     {
         _verkleTree = tree;
@@ -151,6 +151,10 @@ public class VerklePersistentStorageProvider: PartialStorageProviderBase
 
                     Db.Metrics.StorageTreeWrites++;
                     byte[]? key = AccountHeader.GetTreeKeyForStorageSlot(change.StorageCell.Address.Bytes, change.StorageCell.Index);
+#if DEBUG
+                    Console.WriteLine("K: " + EnumerableExtensions.ToString(key));
+                    Console.WriteLine("V: " + EnumerableExtensions.ToString(change.Value));
+#endif
                     _verkleTree.Insert(key, change.Value);
                     if (isTracing)
                     {

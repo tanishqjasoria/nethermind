@@ -231,7 +231,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UPnP", "UPnP", "{2EDE2554-5
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nethermind.UPnP.Plugin", "Nethermind.UPnP.Plugin\Nethermind.UPnP.Plugin.csproj", "{48E50409-26FE-4FD8-AF6E-2A0E79F794CE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nethermind.Verkle", "Nethermind.Verkle\Nethermind.Verkle.csproj", "{EC7B137C-3265-467C-86C2-76C82B55D41C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nethermind.Verkle.Tree", "Nethermind.Verkle.Tree\Nethermind.Verkle.Tree.csproj", "{EC7B137C-3265-467C-86C2-76C82B55D41C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nethermind.Verkle.Test", "Nethermind.Verkle.Test\Nethermind.Verkle.Test.csproj", "{0CF32B00-73D8-462E-96F0-7460BC132A88}"
 EndProject

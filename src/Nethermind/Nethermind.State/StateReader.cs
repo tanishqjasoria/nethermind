@@ -43,6 +43,11 @@ namespace Nethermind.State
             Metrics.StorageTreeReads++;
             return _storage.Get(index, storageRoot);
         }
+        public byte[]? GetStorage(Address address, in UInt256 index)
+        {
+            Account account = _state.Get(address);
+            return GetStorage(account.StorageRoot, index);
+        }
 
         public UInt256 GetBalance(Keccak stateRoot, Address address)
         {

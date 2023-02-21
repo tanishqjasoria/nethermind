@@ -945,7 +945,6 @@ namespace Nethermind.Synchronization.Test
                 new SyncProgressResolver(
                     BlockTree,
                     ReceiptStorage,
-                    _stateDb,
                     new TrieStore(_stateDb, LimboLogs.Instance),
                     ProgressTracker,
                     syncConfig,

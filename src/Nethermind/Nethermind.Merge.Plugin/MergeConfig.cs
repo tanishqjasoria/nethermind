@@ -7,7 +7,7 @@ namespace Nethermind.Merge.Plugin
 {
     public class MergeConfig : IMergeConfig
     {
-        public bool Enabled { get; set; } = true;
+        public bool Enabled { get; set; } = false;
 
         public string? FinalTotalDifficulty { get; set; }
 

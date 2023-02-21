@@ -14,6 +14,8 @@ namespace Nethermind.Evm.Test
     /// <summary>
     /// https://gist.github.com/holiman/174548cad102096858583c6fbbb0649a
     /// </summary>
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class Eip3651Tests : VirtualMachineTestsBase
     {
         protected override long BlockNumber => MainnetSpecProvider.GrayGlacierBlockNumber;
@@ -53,5 +55,8 @@ namespace Nethermind.Evm.Test
             return tracer;
         }
 
+        public Eip3651Tests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
+        }
     }
 }

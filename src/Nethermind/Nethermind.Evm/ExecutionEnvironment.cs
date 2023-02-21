@@ -52,6 +52,11 @@ namespace Nethermind.Evm
         /// </summary>
         public CodeInfo CodeInfo { get; set; }
 
+        /// <summary>
+        /// Parsed bytecode for the current call.
+        /// </summary>
+        public IVerkleWitness VerkleWitness { get; set; }
+
         /// <example>If we call TX -> DELEGATECALL -> CALL -> STATICCALL then the call depth would be 3.</example>
         public int CallDepth { get; set; }
     }

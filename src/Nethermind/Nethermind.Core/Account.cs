@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System.Collections.Generic;
+using System.Linq;
 using Nethermind.Core.Crypto;
 using Nethermind.Int256;
 
@@ -104,7 +105,7 @@ namespace Nethermind.Core
 
         public UInt256 Nonce { get; }
         public UInt256 Balance { get; }
-        public UInt256 CodeSize { get; }
+        public UInt256 CodeSize { get; set; }
         public UInt256 Version { get; }
         public Keccak StorageRoot { get; }
         public Keccak CodeHash { get; }
@@ -127,24 +128,28 @@ namespace Nethermind.Core
             return new(Nonce, Balance, newStorageRoot, CodeHash, IsTotallyEmpty && newStorageRoot == Keccak.EmptyTreeHash);
         }
 
-        public Account WithChangedCodeHash(Keccak newCodeHash)
+        public Account WithChangedCodeHash(Keccak newCodeHash, byte[]? code = null)
         {
             // TODO: does the code and codeHash match?
-            return new(Nonce, Balance, StorageRoot, newCodeHash, IsTotallyEmpty && newCodeHash == Keccak.OfAnEmptyString);
+            return new(Nonce, Balance, StorageRoot, newCodeHash, IsTotallyEmpty && newCodeHash == Keccak.OfAnEmptyString)
+            {
+                Code = code,
+                CodeSize = new UInt256((ulong) (code?.Length ?? 0))
+            };
         }
 
         public  Dictionary<byte, byte[]> ToVerkleDict()
         {
             Dictionary<byte, byte[]> dict = new Dictionary<byte, byte[]>();
 
-            dict[0] = Version.ToBigEndian();
-            dict[1] = Balance.ToBigEndian();
-            dict[2] = Nonce.ToBigEndian();
+            dict[0] = Version.ToLittleEndian();
+            dict[1] = Balance.ToLittleEndian();
+            dict[2] = Nonce.ToLittleEndian();
             dict[3] = CodeHash.Bytes;
-            dict[4] = CodeSize.ToBigEndian();
+            if(!CodeHash.Bytes.SequenceEqual(Keccak.OfAnEmptyString.Bytes))
+                dict[4] = CodeSize.ToLittleEndian();
 
             return dict;
-
         }
     }
 }

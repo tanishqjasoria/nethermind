@@ -8,8 +8,9 @@ using NUnit.Framework;
 
 namespace Nethermind.Evm.Test
 {
-    [TestFixture]
     [Parallelizable(ParallelScope.All)]
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class Sha3Tests : VirtualMachineTestsBase
     {
         protected override long BlockNumber => RinkebySpecProvider.ConstantinopleFixBlockNumber;
@@ -42,6 +43,9 @@ namespace Nethermind.Evm.Test
             TestAllTracerWithOutput receipt = Execute(8000000, 8000000, code);
 
             AssertGas(receipt, 8000000);
+        }
+        public Sha3Tests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

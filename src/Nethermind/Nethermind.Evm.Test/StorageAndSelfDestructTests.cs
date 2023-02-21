@@ -18,6 +18,8 @@ using NUnit.Framework;
 namespace Nethermind.Evm.Test
 {
     [TestFixture]
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class StorageAndSelfDestructTests : VirtualMachineTestsBase
     {
         protected override long BlockNumber => MainnetSpecProvider.MuirGlacierBlockNumber;
@@ -396,6 +398,9 @@ namespace Nethermind.Evm.Test
             tracer = new ParityLikeTxTracer(block, tx4, ParityTraceTypes.Trace | ParityTraceTypes.StateDiff);
             _processor.Execute(tx4, block.Header, tracer);
             AssertStorage(new StorageCell(deploymentAddress, 7), 0);
+        }
+        public StorageAndSelfDestructTests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

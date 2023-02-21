@@ -14,6 +14,8 @@ namespace Nethermind.Evm.Test
     /// <summary>
     /// Tests functionality of Transient Storage
     /// </summary>
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     internal class Eip1153Tests : VirtualMachineTestsBase
     {
         protected override long BlockNumber => MainnetSpecProvider.GrayGlacierBlockNumber;
@@ -819,6 +821,9 @@ namespace Nethermind.Evm.Test
             TestAllTracerWithOutput result = Execute(code);
 
             Assert.AreEqual(expectedResult, (int)result.ReturnValue.ToUInt256());
+        }
+        public Eip1153Tests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

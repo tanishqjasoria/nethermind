@@ -23,6 +23,8 @@ using NUnit.Framework;
 namespace Nethermind.Evm.Test
 {
     // Vitalik Buterin, Martin Swende, "EIP-3529: Reduction in refunds [DRAFT]," Ethereum Improvement Proposals, no. 3529, April 2021. [Online serial]. Available: https://eips.ethereum.org/EIPS/eip-3529.
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class Eip3529Tests : VirtualMachineTestsBase
     {
 
@@ -177,6 +179,9 @@ namespace Nethermind.Evm.Test
 
             Assert.AreEqual(expectedRefund, tracer.Refund);
             AssertGas(tracer, gasUsedByTx3 + GasCostOf.Transaction - Math.Min((gasUsedByTx3 + GasCostOf.Transaction) / (eip3529Enabled ? RefundHelper.MaxRefundQuotientEIP3529 : RefundHelper.MaxRefundQuotient), expectedRefund));
+        }
+        public Eip3529Tests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

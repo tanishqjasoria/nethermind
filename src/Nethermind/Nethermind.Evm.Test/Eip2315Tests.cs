@@ -10,6 +10,8 @@ using NUnit.Framework;
 
 namespace Nethermind.Evm.Test
 {
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class Eip2315Tests : VirtualMachineTestsBase
     {
         protected override long BlockNumber => MainnetSpecProvider.BerlinBlockNumber;
@@ -100,6 +102,9 @@ namespace Nethermind.Evm.Test
             TestAllTracerWithOutput result = Execute(code);
             result.StatusCode.Should().Be(0);
             result.Error.Should().Be(EvmExceptionType.BadInstruction.ToString());
+        }
+        public Eip2315Tests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

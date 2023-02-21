@@ -6,6 +6,8 @@ using NUnit.Framework;
 
 namespace Nethermind.Evm.Test
 {
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class ExtCodeCopyTests : VirtualMachineTestsBase
     {
         [Test]
@@ -21,6 +23,9 @@ namespace Nethermind.Evm.Test
 
             TestAllTracerWithOutput result = Execute(code);
             result.Error.Should().BeNull();
+        }
+        public ExtCodeCopyTests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

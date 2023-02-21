@@ -14,7 +14,8 @@ using NUnit.Framework;
 
 namespace Nethermind.Evm.Test
 {
-    [TestFixture]
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class Eip1052Tests : VirtualMachineTestsBase
     {
         protected override long BlockNumber => RopstenSpecProvider.ConstantinopleBlockNumber;
@@ -133,6 +134,8 @@ namespace Nethermind.Evm.Test
         [Test]
         public void Self_destructed_returns_zero()
         {
+            // verkle trees does not support deletions
+            if(_stateProvider is VirtualMachineTestsStateProvider.VerkleTrie) return;
             byte[] selfDestructCode = Prepare.EvmCode
                 .PushData(Recipient)
                 .Op(Instruction.SELFDESTRUCT).Done;
@@ -155,6 +158,8 @@ namespace Nethermind.Evm.Test
         [Test]
         public void Self_destructed_and_reverted_returns_code_hash()
         {
+            // verkle trees does not support deletions
+            if(_stateProvider is VirtualMachineTestsStateProvider.VerkleTrie) return;
             byte[] callAndRevertCode = Prepare.EvmCode
                 .Call(TestItem.AddressD, 50000)
                 .Op(Instruction.REVERT).Done;
@@ -184,6 +189,8 @@ namespace Nethermind.Evm.Test
         [Test]
         public void Empty_account_that_would_be_cleared_returns_zero()
         {
+            // verkle trees does not support deletions
+            if(_stateProvider is VirtualMachineTestsStateProvider.VerkleTrie) return;
             WorldState.CreateAccount(TestItem.AddressC, 0.Ether());
 
             byte[] code = Prepare.EvmCode
@@ -277,6 +284,9 @@ namespace Nethermind.Evm.Test
 
             Execute(code);
             AssertStorage(0, deployedCodeHash);
+        }
+        public Eip1052Tests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

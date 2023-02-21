@@ -16,7 +16,8 @@ using NUnit.Framework;
 
 namespace Nethermind.Evm.Test.Tracing
 {
-    [TestFixture]
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class ParityLikeTxTracerTests : VirtualMachineTestsBase
     {
         [Test]
@@ -180,14 +181,10 @@ namespace Nethermind.Evm.Test.Tracing
         [Test]
         public void Action_value_is_set()
         {
-            byte[] code = Prepare.EvmCode
-                .PushData(SampleHexData1)
-                .Done;
-
-            byte[] input = Bytes.FromHexString(SampleHexData2);
+            byte[] input = Bytes.FromHexString("0xf66000603a55fe7f71d2cd8574f77ac1416d9809fdb706b0993ca14719aea4af2791bfe60a5f6b2c6040527f18d12bfc602492b3bb48802356dc8744afade08d17777ab745be005aae2021286060527f46270cafa421d1e9c7e7237fdd348252ca0b8d7ba185bf6c1a1e0eaab4619e3d6080527f676c98d6bb8a61a243f04ad3");
             UInt256 value = 1.Ether();
 
-            (ParityLikeTxTrace trace, Block block, Transaction tx) = ExecuteAndTraceParityCall(input, value, code);
+            (ParityLikeTxTrace trace, Block block, Transaction tx) = ExecuteAndTraceParityCall(input, value, Array.Empty<byte>());
             Assert.AreEqual(value, trace.Action.Value);
         }
 
@@ -854,6 +851,9 @@ namespace Nethermind.Evm.Test.Tracing
             ParityLikeTxTracer tracer = new(block, transaction, ParityTraceTypes.Trace | ParityTraceTypes.StateDiff);
             _processor.Execute(transaction, block.Header, tracer);
             return (tracer.BuildResult(), block, transaction);
+        }
+        public ParityLikeTxTracerTests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

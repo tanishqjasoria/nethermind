@@ -19,7 +19,8 @@ using Nethermind.Specs.Forks;
 
 namespace Nethermind.Evm.Test
 {
-    [TestFixture]
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class Eip3855Tests : VirtualMachineTestsBase
     {
         protected override long BlockNumber => MainnetSpecProvider.GrayGlacierBlockNumber;
@@ -71,6 +72,9 @@ namespace Nethermind.Evm.Test
             {
                 receipt.Error.Should().Be(EvmExceptionType.BadInstruction.ToString());
             }
+        }
+        public Eip3855Tests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

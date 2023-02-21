@@ -15,6 +15,8 @@ using NUnit.Framework;
 
 namespace Nethermind.Evm.Test
 {
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class Eip3198BaseFeeTests : VirtualMachineTestsBase
     {
 
@@ -62,6 +64,9 @@ namespace Nethermind.Evm.Test
                 tracer.Error.Should().Be(EvmExceptionType.BadInstruction.ToString());
                 AssertStorage((UInt256)0, (UInt256)0);
             }
+        }
+        public Eip3198BaseFeeTests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

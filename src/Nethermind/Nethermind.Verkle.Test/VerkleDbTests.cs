@@ -1,5 +1,4 @@
 using Nethermind.Core.Extensions;
-using Nethermind.Verkle.VerkleStateDb;
 using NUnit.Framework;
 
 namespace Nethermind.Verkle.Test;
@@ -25,15 +24,15 @@ public class VerkleDbTests
         Assert.IsTrue(table.TryGetValue(b, out byte[] _));
     }
 
-    [Test]
-    public void TestDiffLayer()
-    {
-        DiffLayer forwardDiff = new DiffLayer(DiffType.Forward);
-        DiffLayer reverseDiff = new DiffLayer(DiffType.Reverse);
-
-        MemoryStateDb currentState = new MemoryStateDb();
-        MemoryStateDb changes = new MemoryStateDb();
-
-
-    }
+    // [Test]
+    // public void TestDiffLayer()
+    // {
+    //     DiffLayer forwardDiff = new DiffLayer(DiffType.Forward);
+    //     DiffLayer reverseDiff = new DiffLayer(DiffType.Reverse);
+    //
+    //     MemoryStateDb currentState = new MemoryStateDb();
+    //     MemoryStateDb changes = new MemoryStateDb();
+    //
+    //
+    // }
 }

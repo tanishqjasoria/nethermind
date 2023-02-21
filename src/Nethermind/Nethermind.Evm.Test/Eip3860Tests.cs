@@ -12,6 +12,8 @@ using Nethermind.Int256;
 
 namespace Nethermind.Evm.Test
 {
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class Eip3860Tests : VirtualMachineTestsBase
     {
         protected override long BlockNumber => MainnetSpecProvider.GrayGlacierBlockNumber;
@@ -113,6 +115,9 @@ namespace Nethermind.Evm.Test
             _processor.Execute(transaction, block.Header, tracer);
 
             return tracer;
+        }
+        public Eip3860Tests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

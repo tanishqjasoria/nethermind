@@ -6,6 +6,8 @@ using NUnit.Framework;
 
 namespace Nethermind.Evm.Test
 {
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class SModTests : VirtualMachineTestsBase
     {
         [TestCase(1, 1, 0)]
@@ -50,6 +52,9 @@ namespace Nethermind.Evm.Test
             _ = Execute(code);
             AssertStorage(UInt256.Zero, res);
 
+        }
+        public SModTests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

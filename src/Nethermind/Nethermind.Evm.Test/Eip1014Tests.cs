@@ -15,7 +15,8 @@ using NUnit.Framework;
 
 namespace Nethermind.Evm.Test
 {
-    [TestFixture]
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class Eip1014Tests : VirtualMachineTestsBase
     {
         protected override long BlockNumber => MainnetSpecProvider.ConstantinopleFixBlockNumber;
@@ -110,8 +111,14 @@ namespace Nethermind.Evm.Test
             WorldState.Commit(Spec);
             WorldState.CommitTree(0);
 
-            Keccak storageRoot = WorldState.GetAccount(expectedAddress).StorageRoot;
-            storageRoot.Should().NotBe(PatriciaTree.EmptyTreeHash);
+            WorldState.Get(new StorageCell(expectedAddress, 1)).Should().BeEquivalentTo(new byte[] { 1, 2, 3, 4, 5 });
+
+            Keccak storageRoot = Keccak.EmptyTreeHash;
+            if (_stateProvider == VirtualMachineTestsStateProvider.MerkleTrie)
+            {
+                storageRoot = WorldState.GetAccount(expectedAddress).StorageRoot;
+                storageRoot.Should().NotBe(PatriciaTree.EmptyTreeHash);
+            }
 
             WorldState.CreateAccount(TestItem.AddressC, 1.Ether());
 
@@ -125,7 +132,7 @@ namespace Nethermind.Evm.Test
 
             WorldState.GetAccount(expectedAddress).Should().NotBeNull();
             WorldState.GetAccount(expectedAddress).Balance.Should().Be(1.Ether());
-            WorldState.GetAccount(expectedAddress).StorageRoot.Should().Be(storageRoot);
+            if(_stateProvider == VirtualMachineTestsStateProvider.MerkleTrie) WorldState.GetAccount(expectedAddress).StorageRoot.Should().Be(storageRoot);
             AssertEip1014(expectedAddress, Array.Empty<byte>());
         }
 
@@ -190,6 +197,9 @@ namespace Nethermind.Evm.Test
             Address expectedAddress = new(resultHex);
             AssertEip1014(expectedAddress, deployedCode);
             //            Assert.AreEqual(gas, trace.Entries.Single(e => e.Operation == Instruction.CREATE2.ToString()).GasCost);
+        }
+        public Eip1014Tests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

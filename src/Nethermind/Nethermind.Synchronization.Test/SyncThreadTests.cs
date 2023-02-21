@@ -348,7 +348,7 @@ namespace Nethermind.Synchronization.Test
             SnapProvider snapProvider = new(progressTracker, dbProvider, LimboLogs.Instance);
 
             SyncProgressResolver resolver = new(
-                tree, receiptStorage, stateDb, NullTrieNodeResolver.Instance, progressTracker, syncConfig, logManager);
+                tree, receiptStorage, NullTrieStore.Instance, progressTracker, syncConfig, logManager);
             TotalDifficultyBetterPeerStrategy bestPeerStrategy = new(LimboLogs.Instance);
             MultiSyncModeSelector selector = new(resolver, syncPeerPool, syncConfig, No.BeaconSync, bestPeerStrategy, logManager);
             Pivot pivot = new(syncConfig);

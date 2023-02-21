@@ -61,7 +61,7 @@ namespace Nethermind.Crypto
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="tx"></param>
@@ -73,7 +73,7 @@ namespace Nethermind.Crypto
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="tx"></param>
         /// <param name="useSignatureChainId"></param>

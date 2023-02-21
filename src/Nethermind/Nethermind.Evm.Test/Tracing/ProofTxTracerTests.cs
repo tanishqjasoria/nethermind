@@ -9,14 +9,16 @@ using NUnit.Framework;
 
 namespace Nethermind.Evm.Test.Tracing
 {
-    [TestFixture(true)]
-    [TestFixture(false)]
+    [TestFixture(true, VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(true, VirtualMachineTestsStateProvider.VerkleTrie)]
+    [TestFixture(false, VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(false, VirtualMachineTestsStateProvider.VerkleTrie)]
     [Parallelizable(ParallelScope.Self)]
     public class ProofTxTracerTests : VirtualMachineTestsBase
     {
         private readonly bool _treatSystemAccountDifferently;
 
-        public ProofTxTracerTests(bool treatSystemAccountDifferently)
+        public ProofTxTracerTests(bool treatSystemAccountDifferently, VirtualMachineTestsStateProvider stateProviderType): base(stateProviderType)
         {
             _treatSystemAccountDifferently = treatSystemAccountDifferently;
         }

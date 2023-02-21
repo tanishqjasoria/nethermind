@@ -21,6 +21,8 @@ using Nethermind.JsonRpc.Modules.Eth.GasPrice;
 using Nethermind.State;
 using Nethermind.Trie.Pruning;
 using Nethermind.TxPool;
+using Nethermind.Verkle;
+using Nethermind.Verkle.Tree;
 
 namespace Nethermind.Api
 {
@@ -42,6 +44,8 @@ namespace Nethermind.Api
         IUnclesValidator? UnclesValidator { get; set; }
         IHeaderValidator? HeaderValidator { get; set; }
         IManualBlockProductionTrigger ManualBlockProductionTrigger { get; }
+        VerkleStateStore VerkleTrieStore { get; set; }
+        ReadOnlyVerkleStateStore ReadOnlyVerkleTrieStore { get; set; }
         IReadOnlyTrieStore? ReadOnlyTrieStore { get; set; }
         IRewardCalculatorSource? RewardCalculatorSource { get; set; }
         ISealer? Sealer { get; set; }

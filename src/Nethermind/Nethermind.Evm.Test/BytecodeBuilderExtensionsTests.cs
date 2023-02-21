@@ -26,6 +26,8 @@ using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities;
 
 namespace Nethermind.Evm.Test
 {
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class BytecodeBuilderExtensionsTests : VirtualMachineTestsBase
     {
         public class TestCase
@@ -56,7 +58,7 @@ namespace Nethermind.Evm.Test
                     return true;
                 }
 
-                // we check if opcode has a digit at its end 
+                // we check if opcode has a digit at its end
                 bool hasDigits = false;
                 int i = opcodeAsString.Length - 1;
                 while (i > 0)
@@ -133,7 +135,7 @@ namespace Nethermind.Evm.Test
                 //we get MethodInfo of the function representing the opcode
                 var method = GetFluentOpcodeFunction(opcode);
 
-                //we handle the cases requiring a byte differentiator 
+                //we handle the cases requiring a byte differentiator
                 initBytecode = opcode switch
                 {
                     >= Instruction.SWAP1 and <= Instruction.SWAP16 => (Prepare)method.Invoke(null, new object[] { initBytecode, (byte)(opcode - Instruction.SWAP1 + 1) }),
@@ -625,6 +627,9 @@ namespace Nethermind.Evm.Test
         public void code_emited_by_fluent_is_same_as_expected([ValueSource(nameof(FluentBuilderTestCases))] TestCase test)
         {
             test.FluentCodes.Should().BeEquivalentTo(test.ResultCodes, test.Description);
+        }
+        public BytecodeBuilderExtensionsTests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

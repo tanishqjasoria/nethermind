@@ -24,7 +24,7 @@ namespace Nethermind.Consensus.Ethash
             _specProvider = specProvider;
         }
 
-        private const long OfGenesisBlock = 131_072;
+        private const long OfGenesisBlock = 5000;
 
         public UInt256 Calculate(BlockHeader header, BlockHeader parent) =>
             Calculate(parent.Difficulty,

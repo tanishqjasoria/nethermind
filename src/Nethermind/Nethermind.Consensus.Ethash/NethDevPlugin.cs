@@ -65,7 +65,7 @@ namespace Nethermind.Consensus.Ethash
             if (logger.IsWarn) logger.Warn("Starting Neth Dev block producer & sealer");
 
 
-            IReadOnlyTxProcessorSource producerEnv = new ReadOnlyTxProcessingEnv(readOnlyDbProvider, getFromApi.ReadOnlyTrieStore, readOnlyBlockTree, getFromApi.SpecProvider, getFromApi.LogManager);
+            IReadOnlyTxProcessorSource producerEnv = new ReadOnlyTxProcessingEnv(readOnlyDbProvider, getFromApi.ReadOnlyVerkleTrieStore, readOnlyBlockTree, getFromApi.SpecProvider, getFromApi.LogManager);
 
             BlockProcessor producerProcessor = new(
                 getFromApi!.SpecProvider,
@@ -85,16 +85,14 @@ namespace Nethermind.Consensus.Ethash
                 getFromApi.LogManager,
                 BlockchainProcessor.Options.NoReceipts);
 
-            DefaultBlockProductionTrigger = new BuildBlocksRegularly(TimeSpan.FromMilliseconds(200))
-                .IfPoolIsNotEmpty(getFromApi.TxPool)
-                .Or(getFromApi.ManualBlockProductionTrigger);
+            DefaultBlockProductionTrigger = getFromApi.ManualBlockProductionTrigger;
 
             IBlockProducer blockProducer = new DevBlockProducer(
                 additionalTxSource.Then(txPoolTxSource).ServeTxsOneByOne(),
                 producerChainProcessor,
                 producerEnv.WorldState,
                 getFromApi.BlockTree,
-                blockProductionTrigger ?? DefaultBlockProductionTrigger,
+                DefaultBlockProductionTrigger,
                 getFromApi.Timestamper,
                 getFromApi.SpecProvider,
                 getFromApi.Config<IBlocksConfig>(),

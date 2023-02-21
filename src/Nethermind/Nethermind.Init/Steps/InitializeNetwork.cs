@@ -104,16 +104,18 @@ public class InitializeNetwork : IStep
         ProgressTracker progressTracker = new(_api.BlockTree!, _api.DbProvider.StateDb, _api.LogManager);
         _api.SnapProvider = new SnapProvider(progressTracker, _api.DbProvider, _api.LogManager);
 
-        SyncProgressResolver syncProgressResolver = new(
-            _api.BlockTree!,
-            _api.ReceiptStorage!,
-            _api.DbProvider.StateDb,
-            _api.ReadOnlyTrieStore!,
-            progressTracker,
-            _syncConfig,
-            _api.LogManager);
+        switch (_api.SpecProvider!.GenesisSpec.VerkleTreeEnabled)
+        {
+            case true:
+                _api.SyncProgressResolver = new SyncProgressResolver(_api.BlockTree!, _api.ReceiptStorage!, _api.ReadOnlyVerkleTrieStore!, progressTracker, _syncConfig, _api.LogManager);
+                break;
+            case false:
+                _api.SyncProgressResolver = new SyncProgressResolver(_api.BlockTree!, _api.ReceiptStorage!, _api.ReadOnlyTrieStore!, progressTracker, _syncConfig, _api.LogManager);
+                break;
+        }
 
-        _api.SyncProgressResolver = syncProgressResolver;
+
+
         _api.BetterPeerStrategy = new TotalDifficultyBetterPeerStrategy(_api.LogManager);
 
         int maxPeersCount = _networkConfig.ActivePeersMaxCount;
@@ -131,7 +133,7 @@ public class InitializeNetwork : IStep
             await plugin.InitSynchronization();
         }
 
-        _api.SyncModeSelector ??= CreateMultiSyncModeSelector(syncProgressResolver);
+        _api.SyncModeSelector ??= CreateMultiSyncModeSelector(_api.SyncProgressResolver);
         _api.DisposeStack.Push(_api.SyncModeSelector);
 
         _api.Pivot ??= new Pivot(_syncConfig);
@@ -269,7 +271,7 @@ public class InitializeNetwork : IStep
         ThisNodeInfo.AddInfo("Node address :", $"{_api.Enode.Address} (do not use as an account)");
     }
 
-    protected virtual MultiSyncModeSelector CreateMultiSyncModeSelector(SyncProgressResolver syncProgressResolver)
+    protected virtual MultiSyncModeSelector CreateMultiSyncModeSelector(ISyncProgressResolver syncProgressResolver)
         => new(syncProgressResolver, _api.SyncPeerPool!, _syncConfig, No.BeaconSync, _api.BetterPeerStrategy!, _api.LogManager, _api.ChainSpec?.SealEngineType == SealEngineType.Clique);
 
     private Task StartDiscovery()

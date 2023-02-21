@@ -8,6 +8,8 @@ using NUnit.Framework;
 
 namespace Nethermind.Evm.Test
 {
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class Eip152Tests : VirtualMachineTestsBase
     {
         private const int InputLength = 213;
@@ -37,6 +39,9 @@ namespace Nethermind.Evm.Test
                 .Done;
             TestAllTracerWithOutput result = Execute(code);
             Assert.AreEqual(StatusCode.Success, result.StatusCode);
+        }
+        public Eip152Tests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

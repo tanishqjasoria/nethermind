@@ -14,8 +14,13 @@ namespace Nethermind.Evm.Test
 {
     [TestFixture]
     [Parallelizable(ParallelScope.Self)]
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class VirtualMachineTests : VirtualMachineTestsBase
     {
+        public VirtualMachineTests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
+        }
         [Test]
         public void Stop()
         {

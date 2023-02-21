@@ -13,6 +13,8 @@ using NUnit.Framework;
 
 namespace Nethermind.Evm.Test
 {
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class Eip1884Tests : VirtualMachineTestsBase
     {
         protected override long BlockNumber => MainnetSpecProvider.IstanbulBlockNumber;
@@ -135,6 +137,9 @@ namespace Nethermind.Evm.Test
 
             TestAllTracerWithOutput result = Execute(BlockNumber - 1, 100000, code);
             AssertGas(result, 21000 + 2 * GasCostOf.VeryLow + GasCostOf.SLoadEip150);
+        }
+        public Eip1884Tests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

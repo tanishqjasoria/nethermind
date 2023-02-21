@@ -8,6 +8,7 @@ using Nethermind.Api;
 using Nethermind.Blockchain;
 using Nethermind.Core;
 using Nethermind.Core.Crypto;
+using Nethermind.Core.Extensions;
 using Nethermind.Logging;
 using Nethermind.State;
 
@@ -41,6 +42,7 @@ namespace Nethermind.Init.Steps
             {
                 Load();
             }
+            Console.WriteLine($"GenesisRootState: {_api.BlockTree.Genesis?.StateRoot?.Bytes.ToHexString()}");
 
             ValidateGenesisHash(expectedGenesisHash);
 

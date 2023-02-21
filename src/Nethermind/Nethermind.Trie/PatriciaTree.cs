@@ -987,7 +987,7 @@ namespace Nethermind.Trie
             if (rootHash is null) throw new ArgumentNullException(nameof(rootHash));
             visitingOptions ??= VisitingOptions.Default;
 
-            using TrieVisitContext trieVisitContext = new()
+            using TrieVisitContext trieVisitContext = new TrieVisitContext
             {
                 // hacky but other solutions are not much better, something nicer would require a bit of thinking
                 // we introduced a notion of an account on the visit context level which should have no knowledge of account really

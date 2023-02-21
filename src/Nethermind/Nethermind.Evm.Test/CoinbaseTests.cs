@@ -8,7 +8,8 @@ using NUnit.Framework;
 
 namespace Nethermind.Evm.Test
 {
-    [TestFixture]
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class CoinbaseTests : VirtualMachineTestsBase
     {
         protected override long BlockNumber => RinkebySpecProvider.SpuriousDragonBlockNumber;
@@ -54,6 +55,9 @@ namespace Nethermind.Evm.Test
             Execute(code);
 
             AssertStorage(0, TestItem.AddressB);
+        }
+        public CoinbaseTests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

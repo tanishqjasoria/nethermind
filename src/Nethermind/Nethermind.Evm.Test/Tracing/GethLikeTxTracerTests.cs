@@ -13,6 +13,8 @@ namespace Nethermind.Evm.Test.Tracing
 {
     [TestFixture]
     [Parallelizable(ParallelScope.Self)]
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class GethLikeTxTracerTests : VirtualMachineTestsBase
     {
         [Test]
@@ -372,6 +374,9 @@ namespace Nethermind.Evm.Test.Tracing
             Assert.AreEqual(2, trace.Entries[6].Memory.Count, "entry[2] length");
             Assert.AreEqual(SampleHexData1.PadLeft(64, '0'), trace.Entries[6].Memory[0], "entry[6][0]");
             Assert.AreEqual(SampleHexData2.PadLeft(64, '0'), trace.Entries[6].Memory[1], "entry[6][1]");
+        }
+        public GethLikeTxTracerTests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

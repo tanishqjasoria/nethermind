@@ -6,6 +6,8 @@ using NUnit.Framework;
 
 namespace Nethermind.Evm.Test
 {
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class GtTests : VirtualMachineTestsBase
     {
         [TestCase(0, 0, 0)]
@@ -26,6 +28,9 @@ namespace Nethermind.Evm.Test
 
             _ = Execute(code);
             AssertStorage(UInt256.Zero, res);
+        }
+        public GtTests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }

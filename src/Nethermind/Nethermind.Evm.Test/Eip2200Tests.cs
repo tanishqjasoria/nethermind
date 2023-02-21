@@ -11,7 +11,8 @@ using NUnit.Framework;
 
 namespace Nethermind.Evm.Test
 {
-    [TestFixture]
+    [TestFixture(VirtualMachineTestsStateProvider.MerkleTrie)]
+    [TestFixture(VirtualMachineTestsStateProvider.VerkleTrie)]
     public class Eip2200Tests : VirtualMachineTestsBase
     {
         protected override long BlockNumber => RopstenSpecProvider.IstanbulBlockNumber;
@@ -95,6 +96,9 @@ namespace Nethermind.Evm.Test
 
             TestAllTracerWithOutput receipt = Execute(BlockNumber, 21000 + gasUsed + (2299 - 800), Bytes.FromHexString(codeHex));
             Assert.AreEqual(0, receipt.StatusCode);
+        }
+        public Eip2200Tests(VirtualMachineTestsStateProvider stateProvider) : base(stateProvider)
+        {
         }
     }
 }
