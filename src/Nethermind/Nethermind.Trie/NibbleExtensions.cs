@@ -9,6 +9,8 @@ namespace Nethermind.Trie
     [DebuggerStepThrough]
     public static class Nibbles
     {
+        private static readonly byte PathPointerOdd = 0xfe;
+
         public static Nibble[] FromBytes(params byte[] bytes)
         {
             Nibble[] nibbles = new Nibble[2 * bytes.Length];
@@ -74,11 +76,37 @@ namespace Nethermind.Trie
 
         public static byte[] ToBytes(byte[] nibbles)
         {
+            return ToBytes(nibbles.AsSpan());
+        }
+
+        public static byte[] ToBytes(Span<byte> nibbles)
+        {
             byte[] bytes = new byte[nibbles.Length / 2];
             for (int i = 0; i < bytes.Length; i++)
             {
                 bytes[i] = ToByte(nibbles[2 * i], nibbles[2 * i + 1]);
             }
+
+            return bytes;
+        }
+
+        public static byte[] ToEncodedStorageBytes(byte[] nibbles)
+        {
+            return ToEncodedStorageBytes(nibbles.AsSpan());
+        }
+
+        public static byte[] ToEncodedStorageBytes(Span<byte> nibbles)
+        {
+            int oddity = nibbles.Length % 2;
+            byte[] bytes = new byte[nibbles.Length / 2 + oddity + 1];
+            for (int i = 0; i < nibbles.Length / 2; i++)
+            {
+                bytes[i + oddity + 1] = ToByte(nibbles[2 * i + oddity], nibbles[2 * i + 1 + oddity]);
+            }
+            if (oddity == 1)
+                bytes[1] = ToByte(0, nibbles[0]);
+
+            bytes[0] = (byte)(PathPointerOdd | oddity);
 
             return bytes;
         }

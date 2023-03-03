@@ -7,7 +7,6 @@ using System.Linq;
 using Nethermind.Core;
 using Nethermind.Core.Specs;
 using Nethermind.Serialization.Rlp;
-using Nethermind.State.Trie;
 
 namespace Nethermind.State.Proofs;
 

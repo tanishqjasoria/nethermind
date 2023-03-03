@@ -5,6 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Nethermind.Core;
@@ -12,6 +13,7 @@ using Nethermind.Core.Collections;
 using Nethermind.Core.Crypto;
 using Nethermind.Core.Extensions;
 using Nethermind.Logging;
+using Nethermind.Serialization.Rlp;
 
 namespace Nethermind.Trie.Pruning
 {
@@ -19,84 +21,86 @@ namespace Nethermind.Trie.Pruning
     /// Trie store helps to manage trie commits block by block.
     /// If persistence and pruning are needed they have a chance to execute their behaviour on commits.
     /// </summary>
-    public class TrieStore : ITrieStore
+    public class TrieStoreByPath : ITrieStore
     {
+        private static readonly byte[] _rootKeyPath = Array.Empty<byte>();
+
         private class DirtyNodesCache
         {
-            private readonly TrieStore _trieStore;
+            private readonly TrieStoreByPath _trieStore;
 
-            public DirtyNodesCache(TrieStore trieStore)
+            public DirtyNodesCache(TrieStoreByPath trieStore)
             {
                 _trieStore = trieStore;
             }
 
             public void SaveInCache(TrieNode node)
             {
-                Debug.Assert(node.Keccak is not null, "Cannot store in cache nodes without resolved key.");
-                if (_objectsCache.TryAdd(node.Keccak!, node))
+                Debug.Assert(node.FullPath is not null, "Cannot store in cache nodes without resolved key.");
+                if (_objectsCache.TryAdd(node.FullPath!, node))
                 {
                     Metrics.CachedNodesCount = Interlocked.Increment(ref _count);
                     _trieStore.MemoryUsedByDirtyCache += node.GetMemorySize(false);
                 }
             }
 
-            public TrieNode FindCachedOrUnknown(Keccak hash)
+            public TrieNode FindCachedOrUnknown(byte[] path)
             {
-                if (_objectsCache.TryGetValue(hash, out TrieNode trieNode))
+                if (_objectsCache.TryGetValue(path, out TrieNode trieNode))
                 {
                     Metrics.LoadedFromCacheNodesCount++;
                 }
                 else
                 {
                     if (_trieStore._logger.IsTrace) _trieStore._logger.Trace($"Creating new node {trieNode}");
-                    trieNode = new TrieNode(NodeType.Unknown, hash);
+                    trieNode = new TrieNode(NodeType.Unknown, path.AsSpan());
                     SaveInCache(trieNode);
                 }
 
                 return trieNode;
             }
 
-            public TrieNode FromCachedRlpOrUnknown(Keccak hash)
+            public TrieNode FromCachedRlpOrUnknown(byte[] path)
             {
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-                if (_objectsCache.TryGetValue(hash, out TrieNode? trieNode))
+                if (_objectsCache.TryGetValue(path, out TrieNode? trieNode))
                 {
                     if (trieNode!.FullRlp is null)
                     {
                         // // this happens in SyncProgressResolver
                         // throw new InvalidAsynchronousStateException("Read only trie store is trying to read a transient node.");
-                        return new TrieNode(NodeType.Unknown, hash);
+                        return new TrieNode(NodeType.Unknown, path.AsSpan());
                     }
 
                     // we returning a copy to avoid multithreaded access
-                    trieNode = new TrieNode(NodeType.Unknown, hash, trieNode.FullRlp);
+                    trieNode = new TrieNode(NodeType.Unknown, path, trieNode.Keccak, trieNode.FullRlp);
                     trieNode.ResolveNode(_trieStore);
-                    trieNode.Keccak = hash;
+                    //trieNode.Keccak = hash;
 
                     Metrics.LoadedFromCacheNodesCount++;
                 }
                 else
                 {
-                    trieNode = new TrieNode(NodeType.Unknown, hash);
+                    trieNode = new TrieNode(NodeType.Unknown, path.AsSpan());
                 }
 
                 if (_trieStore._logger.IsTrace) _trieStore._logger.Trace($"Creating new node {trieNode}");
                 return trieNode;
             }
 
-            public bool IsNodeCached(Keccak hash) => _objectsCache.ContainsKey(hash);
+            public bool IsNodeCached(byte[] path) => _objectsCache.ContainsKey(path);
 
-            public ConcurrentDictionary<Keccak, TrieNode> AllNodes => _objectsCache;
+            public ConcurrentDictionary<byte[], TrieNode> AllNodes => _objectsCache;
 
-            private readonly ConcurrentDictionary<Keccak, TrieNode> _objectsCache = new();
+            private readonly ConcurrentDictionary<byte[], TrieNode> _objectsCache = new(Bytes.EqualityComparer);
 
             private int _count = 0;
 
             public int Count => _count;
 
-            public void Remove(Keccak hash)
+            public void Remove(byte[] path)
             {
-                if (_objectsCache.Remove(hash, out _))
+                if (_objectsCache.Remove(path, out _))
                 {
                     Metrics.CachedNodesCount = Interlocked.Decrement(ref _count);
                 }
@@ -107,7 +111,7 @@ namespace Nethermind.Trie.Pruning
                 if (_trieStore._logger.IsTrace)
                 {
                     _trieStore._logger.Trace($"Trie node dirty cache ({Count})");
-                    foreach (KeyValuePair<Keccak, TrieNode> keyValuePair in _objectsCache)
+                    foreach (KeyValuePair<byte[], TrieNode> keyValuePair in _objectsCache)
                     {
                         _trieStore._logger.Trace($"  {keyValuePair.Value}");
                     }
@@ -123,32 +127,38 @@ namespace Nethermind.Trie.Pruning
             }
         }
 
+
+
         private int _isFirst;
 
         private IBatch? _currentBatch = null;
 
         private readonly DirtyNodesCache _dirtyNodes;
+        private readonly ILeafHistoryStrategy? _leafHistory;
 
         private bool _lastPersistedReachedReorgBoundary;
         private Task _pruningTask = Task.CompletedTask;
         private CancellationTokenSource _pruningTaskCancellationTokenSource = new();
 
-        public TrieStore(IKeyValueStoreWithBatching? keyValueStore, ILogManager? logManager)
+        public TrieStoreByPath(IKeyValueStoreWithBatching? keyValueStore, ILogManager? logManager)
             : this(keyValueStore, No.Pruning, Pruning.Persist.EveryBlock, logManager)
         {
         }
 
-        public TrieStore(
+        public TrieStoreByPath(
             IKeyValueStoreWithBatching? keyValueStore,
             IPruningStrategy? pruningStrategy,
             IPersistenceStrategy? persistenceStrategy,
-            ILogManager? logManager)
+            ILogManager? logManager,
+            ILeafHistoryStrategy historyStrategy = null)
         {
             _logger = logManager?.GetClassLogger<TrieStore>() ?? throw new ArgumentNullException(nameof(logManager));
             _keyValueStore = keyValueStore ?? throw new ArgumentNullException(nameof(keyValueStore));
             _pruningStrategy = pruningStrategy ?? throw new ArgumentNullException(nameof(pruningStrategy));
             _persistenceStrategy = persistenceStrategy ?? throw new ArgumentNullException(nameof(persistenceStrategy));
             _dirtyNodes = new DirtyNodesCache(this);
+            _leafHistory = historyStrategy;
+            _leafHistory?.Init(this);
         }
 
         public long LastPersistedBlockNumber
@@ -234,7 +244,7 @@ namespace Nethermind.Trie.Pruning
 
                 if (!_pruningStrategy.PruningEnabled)
                 {
-                    Persist(node, blockNumber);
+                    Persist(node, blockNumber, null);
                 }
 
                 CommittedNodesCount++;
@@ -245,9 +255,9 @@ namespace Nethermind.Trie.Pruning
         {
             if (_pruningStrategy.PruningEnabled)
             {
-                if (IsNodeCached(node.Keccak))
+                if (IsNodeCached(node.FullPath))
                 {
-                    TrieNode cachedNodeCopy = FindCachedOrUnknown(node.Keccak);
+                    TrieNode cachedNodeCopy = FindCachedOrUnknown(node.FullPath);
                     if (!ReferenceEquals(cachedNodeCopy, node))
                     {
                         if (_logger.IsTrace) _logger.Trace($"Replacing {node} with its cached copy {cachedNodeCopy}.");
@@ -330,7 +340,39 @@ namespace Nethermind.Trie.Pruning
             return rlp;
         }
 
+        internal byte[] LoadRlp(Span<byte> path, IKeyValueStore? keyValueStore, Keccak rootHash = null)
+        {
+
+            if (rootHash is not null)
+            {
+                return _leafHistory?.GetLeafNode(rootHash, path.ToArray());
+            }
+
+            byte[] keyPath = path.Length < 64 ?
+                        Nibbles.ToEncodedStorageBytes(path) :
+                        Nibbles.ToBytes(path);
+
+            keyValueStore ??= _keyValueStore;
+            byte[]? rlp = _currentBatch?[keyPath] ?? keyValueStore[keyPath];
+            if (path.Length < 64 && rlp?.Length == 32)
+            {
+                byte[]? pointsToPath = _currentBatch?[rlp] ?? keyValueStore[rlp];
+                if (pointsToPath is not null)
+                    rlp = pointsToPath;
+            }
+
+            if (rlp is null)
+            {
+                throw new TrieException($"Node {keyPath} is missing from the DB");
+            }
+
+            Metrics.LoadedFromDbNodesCount++;
+
+            return rlp;
+        }
+
         public byte[] LoadRlp(Keccak keccak) => LoadRlp(keccak, null);
+        public byte[] LoadRlp(Span<byte> path, Keccak rootHash) => LoadRlp(path, null, rootHash);
 
         public bool IsPersisted(Keccak keccak)
         {
@@ -348,29 +390,35 @@ namespace Nethermind.Trie.Pruning
 
         public IReadOnlyTrieStore AsReadOnly(IKeyValueStore? keyValueStore)
         {
-            return new ReadOnlyTrieStore(this, keyValueStore);
+            return new ReadOnlyTrieStoreByPath(this, keyValueStore);
         }
 
-        public bool IsNodeCached(Keccak hash) => _dirtyNodes.IsNodeCached(hash);
+        public bool IsNodeCached(byte[] path) => _dirtyNodes.IsNodeCached(path);
 
-        public TrieNode FindCachedOrUnknown(Keccak? hash)
+
+        public TrieNode FindCachedOrUnknown(Keccak keccak)
         {
-            return FindCachedOrUnknown(hash, false);
+            return new TrieNode(NodeType.Unknown, keccak);
         }
 
-        internal TrieNode FindCachedOrUnknown(Keccak? hash, bool isReadOnly)
+        public TrieNode FindCachedOrUnknown(Span<byte> nodePath)
         {
-            if (hash is null)
-            {
-                throw new ArgumentNullException(nameof(hash));
-            }
+            return FindCachedOrUnknown(nodePath, false);
+        }
+
+        internal TrieNode FindCachedOrUnknown(Span<byte> nodePath, bool isReadOnly)
+        {
+            //if (hash is null)
+            //{
+            //    throw new ArgumentNullException(nameof(hash));
+            //}
 
             if (!_pruningStrategy.PruningEnabled)
             {
-                return new TrieNode(NodeType.Unknown, hash);
+                return new TrieNode(NodeType.Unknown, nodePath);
             }
 
-            return isReadOnly ? _dirtyNodes.FromCachedRlpOrUnknown(hash) : _dirtyNodes.FindCachedOrUnknown(hash);
+            return isReadOnly ? _dirtyNodes.FromCachedRlpOrUnknown(nodePath.ToArray()) : _dirtyNodes.FindCachedOrUnknown(nodePath.ToArray());
         }
 
         public void Dump() => _dirtyNodes.Dump();
@@ -491,7 +539,7 @@ namespace Nethermind.Trie.Pruning
             List<TrieNode> toRemove = new(); // TODO: resettable
 
             long newMemory = 0;
-            foreach ((Keccak key, TrieNode node) in _dirtyNodes.AllNodes)
+            foreach ((byte[] key, TrieNode node) in _dirtyNodes.AllNodes)
             {
                 if (node.IsPersisted)
                 {
@@ -499,7 +547,7 @@ namespace Nethermind.Trie.Pruning
                     if (node.Keccak is null)
                     {
                         node.ResolveKey(this, true); // TODO: hack
-                        if (node.Keccak != key)
+                        if (node.FullPath != key)
                         {
                             throw new InvalidOperationException($"Persisted {node} {key} != {node.Keccak}");
                         }
@@ -535,7 +583,7 @@ namespace Nethermind.Trie.Pruning
                     throw new InvalidOperationException($"{trieNode} has a null key");
                 }
 
-                _dirtyNodes.Remove(trieNode.Keccak);
+                _dirtyNodes.Remove(trieNode.FullPath);
             }
 
             MemoryUsedByDirtyCache = newMemory;
@@ -585,7 +633,7 @@ namespace Nethermind.Trie.Pruning
 
         private long LatestCommittedBlockNumber { get; set; }
 
-        public TrieNodeResolverCapability Capability => TrieNodeResolverCapability.Hash;
+        public TrieNodeResolverCapability Capability => TrieNodeResolverCapability.Path;
 
         private void CreateCommitSet(long blockNumber)
         {
@@ -613,7 +661,7 @@ namespace Nethermind.Trie.Pruning
         /// <param name="commitSet">A commit set of a block which root is to be persisted.</param>
         private void Persist(BlockCommitSet commitSet)
         {
-            void PersistNode(TrieNode tn) => Persist(tn, commitSet.BlockNumber);
+            void PersistNode(TrieNode tn) => Persist(tn, commitSet.BlockNumber, commitSet.Root?.Keccak);
 
             try
             {
@@ -628,6 +676,7 @@ namespace Nethermind.Trie.Pruning
                 if (_logger.IsDebug) _logger.Debug($"Persisted trie from {commitSet.Root} at {commitSet.BlockNumber} in {stopwatch.ElapsedMilliseconds}ms (cache memory {MemoryUsedByDirtyCache})");
 
                 LastPersistedBlockNumber = commitSet.BlockNumber;
+                _leafHistory?.SetRootHashForBlock(commitSet.BlockNumber, commitSet.Root?.Keccak);
             }
             finally
             {
@@ -640,7 +689,7 @@ namespace Nethermind.Trie.Pruning
             PruneCurrentSet();
         }
 
-        private void Persist(TrieNode currentNode, long blockNumber)
+        private void Persist(TrieNode currentNode, long blockNumber, Keccak? rootHash)
         {
             _currentBatch ??= _keyValueStore.StartBatch();
             if (currentNode is null)
@@ -657,9 +706,15 @@ namespace Nethermind.Trie.Pruning
                 // to prevent it from being removed from cache and also want to have it persisted.
 
                 if (_logger.IsTrace) _logger.Trace($"Persisting {nameof(TrieNode)} {currentNode} in snapshot {blockNumber}.");
-                _currentBatch[currentNode.Keccak.Bytes] = currentNode.FullRlp;
+
+                if (currentNode.IsLeaf)
+                    _leafHistory?.AddLeafNode(blockNumber, currentNode);
+
+                SaveNodeDirectly(blockNumber, currentNode, _currentBatch);
+
                 currentNode.IsPersisted = true;
                 currentNode.LastSeen = Math.Max(blockNumber, currentNode.LastSeen);
+
                 PersistedNodesCount++;
             }
             else
@@ -810,7 +865,7 @@ namespace Nethermind.Trie.Pruning
                 }
 
                 if (_logger.IsInfo) _logger.Info($"Full Pruning Persist Cache started.");
-                KeyValuePair<Keccak, TrieNode>[] nodesCopy = _dirtyNodes.AllNodes.ToArray();
+                KeyValuePair<byte[], TrieNode>[] nodesCopy = _dirtyNodes.AllNodes.ToArray();
                 Parallel.For(0, nodesCopy.Length, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount / 2 }, i =>
                 {
                     if (!cancellationToken.IsCancellationRequested)
@@ -823,25 +878,34 @@ namespace Nethermind.Trie.Pruning
             });
         }
 
-        public TrieNode FindCachedOrUnknown(Span<byte> nodePath)
+        private byte[] EncodeLeafNode(TrieNode node)
         {
-            throw new NotImplementedException();
-        }
-
-        public byte[]? LoadRlp(Span<byte> nodePath, Keccak rootHash)
-        {
-            throw new NotImplementedException();
+            return Array.Empty<byte>();
         }
 
         public void SaveNodeDirectly(long blockNumber, TrieNode trieNode)
         {
-            throw new NotImplementedException();
+            SaveNodeDirectly(blockNumber, trieNode, _keyValueStore);
+        }
+
+        private void SaveNodeDirectly(long blockNumber, TrieNode trieNode, IKeyValueStore keyValueStore = null)
+        {
+            keyValueStore ??= _keyValueStore;
+
+            byte[] pathBytes = trieNode.FullPath.Length < 64 ?
+                Nibbles.ToEncodedStorageBytes(trieNode.FullPath) : Nibbles.ToBytes(trieNode.FullPath);
+            if (trieNode.IsLeaf && (trieNode.Key.Length < 64 || trieNode.PathToNode.Length == 0))
+            {
+                byte[] pathToNodeBytes = Nibbles.ToEncodedStorageBytes(trieNode.PathToNode);
+                keyValueStore[pathToNodeBytes] = pathBytes;
+            }
+            keyValueStore[pathBytes] = trieNode.FullRlp;
         }
 
         public byte[]? this[byte[] key]
         {
             get => _pruningStrategy.PruningEnabled
-                   && _dirtyNodes.AllNodes.TryGetValue(new Keccak(key), out TrieNode? trieNode)
+                   && _dirtyNodes.AllNodes.TryGetValue(key, out TrieNode? trieNode)
                    && trieNode is not null
                    && trieNode.NodeType != NodeType.Unknown
                    && trieNode.FullRlp is not null
