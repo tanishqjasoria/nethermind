@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System;
+using System.Linq;
 using FluentAssertions;
 using Nethermind.Core;
 using Nethermind.Core.Crypto;
@@ -66,7 +67,7 @@ namespace Nethermind.Store.Test
             provider.Commit(Homestead.Instance);
 
             var releaseSpec = new ReleaseSpec() { IsEip158Enabled = true };
-            provider.UpdateCodeHash(systemUser, Keccak.OfAnEmptyString, releaseSpec);
+            provider.InsertCode(systemUser, ""u8.ToArray(), releaseSpec);
             provider.Commit(releaseSpec);
 
             provider.GetAccount(systemUser).Should().NotBeNull();
@@ -191,8 +192,7 @@ namespace Nethermind.Store.Test
             provider.CreateAccount(_address1, 1);
             provider.AddToBalance(_address1, 1, Frontier.Instance);
             provider.IncrementNonce(_address1);
-            Keccak codeHash = provider.UpdateCode(new byte[] { 1 });
-            provider.UpdateCodeHash(_address1, codeHash, Frontier.Instance);
+            provider.InsertCode(_address1, new byte[] { 1 }, Frontier.Instance);
             provider.UpdateStorageRoot(_address1, Hash2);
 
             Assert.AreEqual(UInt256.One, provider.GetNonce(_address1));

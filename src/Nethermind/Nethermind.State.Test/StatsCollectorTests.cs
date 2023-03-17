@@ -30,12 +30,11 @@ namespace Nethermind.Store.Test
             StorageProvider storageProvider = new(trieStore, stateProvider, LimboLogs.Instance);
 
             stateProvider.CreateAccount(TestItem.AddressA, 1);
-            Keccak codeHash = stateProvider.UpdateCode(new byte[] { 1, 2, 3 });
-            stateProvider.UpdateCodeHash(TestItem.AddressA, codeHash, Istanbul.Instance);
+            stateProvider.InsertCode(TestItem.AddressA, new byte[] { 1, 2, 3 }, Istanbul.Instance);
 
             stateProvider.CreateAccount(TestItem.AddressB, 1);
-            Keccak codeHash2 = stateProvider.UpdateCode(new byte[] { 1, 2, 3, 4 });
-            stateProvider.UpdateCodeHash(TestItem.AddressB, codeHash2, Istanbul.Instance);
+            Keccak codeHash2 = Keccak.Compute(new byte[] { 1, 2, 3, 4 });
+            stateProvider.InsertCode(TestItem.AddressB, new byte[] { 1, 2, 3, 4 }, Istanbul.Instance);
 
             for (int i = 0; i < 1000; i++)
             {
