@@ -161,8 +161,8 @@ namespace Nethermind.Evm.Test
                 .Done;
 
             TestState.CreateAccount(TestItem.AddressD, 1.Ether());
-            Keccak contractCodeHash = TestState.UpdateCode(contractCode);
-            TestState.UpdateCodeHash(TestItem.AddressD, contractCodeHash, Spec);
+            TestState.InsertCode(TestItem.AddressD, contractCode, Spec);
+            TestState.InsertCode(TestItem.AddressD, contractCode, Spec);
 
             // Store 8 at index 1 and call contract from above
             // Return the result received from the contract
@@ -210,8 +210,7 @@ namespace Nethermind.Evm.Test
                 .Done;
 
             TestState.CreateAccount(TestItem.AddressD, 1.Ether());
-            Keccak contractCodeHash = TestState.UpdateCode(contractCode);
-            TestState.UpdateCodeHash(TestItem.AddressD, contractCodeHash, Spec);
+            TestState.InsertCode(TestItem.AddressD, contractCode, Spec);
 
             // Return the result received from the contract
             byte[] code = Prepare.EvmCode
@@ -257,8 +256,7 @@ namespace Nethermind.Evm.Test
                 .Done;
 
             TestState.CreateAccount(TestItem.AddressD, 1.Ether());
-            Keccak contractCodeHash = TestState.UpdateCode(contractCode);
-            TestState.UpdateCodeHash(TestItem.AddressD, contractCodeHash, Spec);
+            TestState.InsertCode(TestItem.AddressD, contractCode, Spec);
 
             // Return the result received from the contract
             byte[] code = Prepare.EvmCode
@@ -303,8 +301,7 @@ namespace Nethermind.Evm.Test
                 .Done;
 
             TestState.CreateAccount(TestItem.AddressD, 1.Ether());
-            Keccak contractCodeHash = TestState.UpdateCode(contractCode);
-            TestState.UpdateCodeHash(TestItem.AddressD, contractCodeHash, Spec);
+            TestState.InsertCode(TestItem.AddressD, contractCode, Spec);
 
             // Return the result received from the contract
             byte[] code = Prepare.EvmCode
@@ -350,8 +347,7 @@ namespace Nethermind.Evm.Test
                 .Done;
 
             TestState.CreateAccount(TestItem.AddressD, 1.Ether());
-            Keccak contractCodeHash = TestState.UpdateCode(contractCode);
-            TestState.UpdateCodeHash(TestItem.AddressD, contractCodeHash, Spec);
+            TestState.InsertCode(TestItem.AddressD, contractCode, Spec);
 
             // Return the result received from the contract
             byte[] code = Prepare.EvmCode
@@ -399,8 +395,7 @@ namespace Nethermind.Evm.Test
                 .Done;
 
             TestState.CreateAccount(TestItem.AddressD, 1.Ether());
-            Keccak contractCodeHash = TestState.UpdateCode(contractCode);
-            TestState.UpdateCodeHash(TestItem.AddressD, contractCodeHash, Spec);
+            TestState.InsertCode(TestItem.AddressD, contractCode, Spec);
 
             // Return the result received from the contract
             byte[] code = Prepare.EvmCode
@@ -485,8 +480,7 @@ namespace Nethermind.Evm.Test
                 .Done;
 
             TestState.CreateAccount(TestItem.AddressD, 1.Ether());
-            Keccak contractCodeHash = TestState.UpdateCode(contractCode);
-            TestState.UpdateCodeHash(TestItem.AddressD, contractCodeHash, Spec);
+            TestState.InsertCode(TestItem.AddressD, contractCode, Spec);
 
             // Return the result received from the contract
             byte[] code = Prepare.EvmCode
@@ -517,8 +511,7 @@ namespace Nethermind.Evm.Test
                 .Done;
 
             TestState.CreateAccount(TestItem.AddressD, 1.Ether());
-            Keccak contractCodeHash = TestState.UpdateCode(contractCode);
-            TestState.UpdateCodeHash(TestItem.AddressD, contractCodeHash, Spec);
+            TestState.InsertCode(TestItem.AddressD, contractCode, Spec);
 
             // Return the result received from the contract (1 if successful)
             byte[] code = Prepare.EvmCode
@@ -566,8 +559,7 @@ namespace Nethermind.Evm.Test
                 .Done;
 
             TestState.CreateAccount(TestItem.AddressD, 1.Ether());
-            Keccak contractCodeHash = TestState.UpdateCode(contractCode);
-            TestState.UpdateCodeHash(TestItem.AddressD, contractCodeHash, Spec);
+            TestState.InsertCode(TestItem.AddressD, contractCode, Spec);
 
             // Return the result received from the contract
             byte[] code = Prepare.EvmCode
@@ -655,8 +647,7 @@ namespace Nethermind.Evm.Test
                 .Done;
 
             TestState.CreateAccount(TestItem.AddressD, 1.Ether());
-            Keccak contractCodeHash = TestState.UpdateCode(contractCode);
-            TestState.UpdateCodeHash(TestItem.AddressD, contractCodeHash, Spec);
+            TestState.InsertCode(TestItem.AddressD, contractCode, Spec);
 
             // Return the result received from the contract
             byte[] code = Prepare.EvmCode
@@ -682,8 +673,7 @@ namespace Nethermind.Evm.Test
                 .Done;
 
             TestState.CreateAccount(TestItem.AddressD, 1.Ether());
-            Keccak contractCodeHash = TestState.UpdateCode(contractCode);
-            TestState.UpdateCodeHash(TestItem.AddressD, contractCodeHash, Spec);
+            TestState.InsertCode(TestItem.AddressD, contractCode, Spec);
 
             byte[] code = Prepare.EvmCode
                 .StoreDataInTransientStorage(1, 7)
@@ -717,8 +707,7 @@ namespace Nethermind.Evm.Test
                 .Done;
 
             TestState.CreateAccount(TestItem.AddressD, 1.Ether());
-            Keccak contractCodeHash = TestState.UpdateCode(contractCode);
-            TestState.UpdateCodeHash(TestItem.AddressD, contractCodeHash, Spec);
+            TestState.InsertCode(TestItem.AddressD, contractCode, Spec);
 
             byte[] code = Prepare.EvmCode
                 .StoreDataInTransientStorage(1, 7)
@@ -820,8 +809,7 @@ namespace Nethermind.Evm.Test
                 .Done;
 
             TestState.CreateAccount(TestItem.AddressD, 1.Ether());
-            Keccak contractCodeHash = TestState.UpdateCode(contractCode);
-            TestState.UpdateCodeHash(TestItem.AddressD, contractCodeHash, Spec);
+            TestState.InsertCode(TestItem.AddressD, contractCode, Spec);
 
             // Return the result received from the contract
             byte[] code = Prepare.EvmCode

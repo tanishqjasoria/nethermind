@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Nethermind.Core;
@@ -255,7 +256,7 @@ public partial class EthRpcModuleTests
 
         Transaction tx = Build.A.Transaction.SignedAndResolved(TestItem.PrivateKeyA).TestObject;
         TransactionForRpc transaction = new(Keccak.Zero, 1L, 1, tx);
-        ctx.Test.State.UpdateCodeHash(TestItem.AddressA, TestItem.KeccakH, London.Instance);
+        ctx.Test.State.InsertCode(TestItem.AddressA, "H"u8.ToArray(), London.Instance);
         transaction.To = TestItem.AddressB;
 
         string serialized =
