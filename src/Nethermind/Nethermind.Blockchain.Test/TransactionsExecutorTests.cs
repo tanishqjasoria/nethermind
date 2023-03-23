@@ -265,8 +265,7 @@ namespace Nethermind.Blockchain.Test
             MemDb stateDb = new();
             MemDb codeDb = new();
             TrieStore trieStore = new(stateDb, LimboLogs.Instance);
-            StateProvider stateProvider = new(trieStore, codeDb, LimboLogs.Instance);
-            IStorageProvider storageProvider = Substitute.For<IStorageProvider>();
+            IWorldState stateProvider = new WorldState(trieStore, codeDb, LimboLogs.Instance);
             ISpecProvider specProvider = Substitute.For<ISpecProvider>();
 
             IReleaseSpec spec = testCase.ReleaseSpec;
@@ -318,13 +317,11 @@ namespace Nethermind.Blockchain.Test
                 stateProvider.CommitTree(0);
             }
 
-            BlockProcessor.BlockProductionTransactionsExecutor txExecutor =
-                new(
-                    transactionProcessor,
-                    stateProvider,
-                    storageProvider,
-                    specProvider,
-                    LimboLogs.Instance);
+            BlockProcessor.BlockProductionTransactionsExecutor txExecutor = new(
+                transactionProcessor,
+                stateProvider,
+                specProvider,
+                LimboLogs.Instance);
 
             SetAccountStates(testCase.MissingAddresses);
 

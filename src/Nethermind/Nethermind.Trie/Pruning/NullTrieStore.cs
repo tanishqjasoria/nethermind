@@ -45,5 +45,6 @@ namespace Nethermind.Trie.Pruning
         public void Dispose() { }
 
         public byte[]? this[ReadOnlySpan<byte> key] => null;
+        public bool IsFullySynced(Keccak stateRoot) => false;
     }
 }
