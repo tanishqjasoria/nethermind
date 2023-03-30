@@ -52,10 +52,11 @@ namespace Nethermind.JsonRpc.Modules.Proof
                 _dbProvider, _trieStore, _blockTree, _specProvider, _logManager);
 
             ReadOnlyChainProcessingEnv chainProcessingEnv = new(
-                txProcessingEnv, Always.Valid, _recoveryStep, NoBlockRewards.Instance, new InMemoryReceiptStorage(), _dbProvider, _specProvider, _logManager);
+                txProcessingEnv, Always.Valid, _recoveryStep, NoBlockRewards.Instance, new InMemoryReceiptStorage(),
+                _dbProvider, _specProvider, _logManager);
 
             Tracer tracer = new(
-                txProcessingEnv.StateProvider,
+                txProcessingEnv.WorldState,
                 chainProcessingEnv.ChainProcessor);
 
             return new ProofRpcModule(tracer, _blockTree, _receiptFinder, _specProvider, _logManager);

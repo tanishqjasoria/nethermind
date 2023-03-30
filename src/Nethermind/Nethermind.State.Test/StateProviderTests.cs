@@ -66,34 +66,10 @@ namespace Nethermind.Store.Test
             provider.Commit(Homestead.Instance);
 
             var releaseSpec = new ReleaseSpec() { IsEip158Enabled = true };
-            provider.UpdateCodeHash(systemUser, Keccak.OfAnEmptyString, releaseSpec);
+            provider.InsertCode(systemUser, System.Text.Encoding.UTF8.GetBytes(""), releaseSpec);
             provider.Commit(releaseSpec);
 
             provider.GetAccount(systemUser).Should().NotBeNull();
-        }
-
-        [Test]
-        public void Can_dump_state()
-        {
-            StateProvider provider = new(new TrieStore(new MemDb(), Logger), _codeDb, Logger);
-            provider.CreateAccount(TestItem.AddressA, 1.Ether());
-            provider.Commit(MuirGlacier.Instance);
-            provider.CommitTree(0);
-
-            string state = provider.DumpState();
-            state.Should().NotBeEmpty();
-        }
-
-        [Test]
-        public void Can_collect_stats()
-        {
-            StateProvider provider = new(new TrieStore(new MemDb(), Logger), _codeDb, Logger);
-            provider.CreateAccount(TestItem.AddressA, 1.Ether());
-            provider.Commit(MuirGlacier.Instance);
-            provider.CommitTree(0);
-
-            var stats = provider.CollectStats(_codeDb, Logger);
-            stats.AccountCount.Should().Be(1);
         }
 
         [Test]
@@ -191,8 +167,7 @@ namespace Nethermind.Store.Test
             provider.CreateAccount(_address1, 1);
             provider.AddToBalance(_address1, 1, Frontier.Instance);
             provider.IncrementNonce(_address1);
-            Keccak codeHash = provider.UpdateCode(new byte[] { 1 });
-            provider.UpdateCodeHash(_address1, codeHash, Frontier.Instance);
+            provider.InsertCode(_address1, new byte[] { 1 }, Frontier.Instance);
             provider.UpdateStorageRoot(_address1, Hash2);
 
             Assert.AreEqual(UInt256.One, provider.GetNonce(_address1));

@@ -14,6 +14,7 @@ using Nethermind.Int256;
 using Nethermind.Logging;
 using Nethermind.Specs;
 using Nethermind.State;
+using Nethermind.Trie.Pruning;
 using Transaction = Nethermind.Core.Transaction;
 
 namespace Nethermind.Evm.TransactionProcessing
@@ -22,10 +23,8 @@ namespace Nethermind.Evm.TransactionProcessing
     {
         private readonly EthereumEcdsa _ecdsa;
         private readonly ILogger _logger;
-        private readonly IStateProvider _stateProvider;
-        private readonly IStorageProvider _storageProvider;
         private readonly ISpecProvider _specProvider;
-        private readonly IWorldState _worldState;
+        private readonly IWorldState _stateProvider;
         private readonly IVirtualMachine _virtualMachine;
 
         [Flags]
@@ -59,23 +58,13 @@ namespace Nethermind.Evm.TransactionProcessing
 
         public TransactionProcessor(
             ISpecProvider? specProvider,
-            IStateProvider? stateProvider,
-            IStorageProvider? storageProvider,
-            IVirtualMachine? virtualMachine,
-            ILogManager? logManager)
-            : this(specProvider, new WorldState(stateProvider, storageProvider), virtualMachine, logManager) { }
-
-        public TransactionProcessor(
-            ISpecProvider? specProvider,
             IWorldState? worldState,
             IVirtualMachine? virtualMachine,
             ILogManager? logManager)
         {
             _logger = logManager?.GetClassLogger() ?? throw new ArgumentNullException(nameof(logManager));
             _specProvider = specProvider ?? throw new ArgumentNullException(nameof(specProvider));
-            _worldState = worldState ?? throw new ArgumentNullException(nameof(worldState));
-            _stateProvider = worldState.StateProvider;
-            _storageProvider = worldState.StorageProvider;
+            _stateProvider = worldState ?? throw new ArgumentNullException(nameof(worldState));
             _virtualMachine = virtualMachine ?? throw new ArgumentNullException(nameof(virtualMachine));
             _ecdsa = new EthereumEcdsa(specProvider.ChainId, logManager);
         }
@@ -89,7 +78,7 @@ namespace Nethermind.Evm.TransactionProcessing
         {
             // we need to treat the result of previous transaction as the original value of next transaction
             // when we do not commit
-            _worldState.TakeSnapshot(true);
+            _stateProvider.TakeSnapshot(true);
             Execute(transaction, block, txTracer, ExecutionOptions.None);
         }
 
@@ -295,7 +284,7 @@ namespace Nethermind.Evm.TransactionProcessing
             long unspentGas = gasLimit - intrinsicGas;
             long spentGas = gasLimit;
 
-            Snapshot snapshot = _worldState.TakeSnapshot();
+            Snapshot snapshot = _stateProvider.TakeSnapshot();
             _stateProvider.SubtractFromBalance(caller, value, spec);
             byte statusCode = StatusCode.Failure;
             TransactionSubstate substate = null;
@@ -329,7 +318,7 @@ namespace Nethermind.Evm.TransactionProcessing
                 env.ExecutingAccount = recipient;
                 env.InputData = data ?? Array.Empty<byte>();
                 env.CodeInfo = machineCode is null
-                    ? _virtualMachine.GetCachedCodeInfo(_worldState, recipient, spec)
+                    ? _virtualMachine.GetCachedCodeInfo(_stateProvider, recipient, spec)
                     : new CodeInfo(machineCode);
 
                 ExecutionType executionType =
@@ -353,7 +342,7 @@ namespace Nethermind.Evm.TransactionProcessing
                         state.WarmUp(block.GasBeneficiary);
                     }
 
-                    substate = _virtualMachine.Run(state, _worldState, txTracer);
+                    substate = _virtualMachine.Run(state, _stateProvider, txTracer);
                     unspentGas = state.GasAvailable;
 
                     if (txTracer.IsTracingAccess)
@@ -365,7 +354,7 @@ namespace Nethermind.Evm.TransactionProcessing
                 if (substate.ShouldRevert || substate.IsError)
                 {
                     if (_logger.IsTrace) _logger.Trace("Restoring state from before transaction");
-                    _worldState.Restore(snapshot);
+                    _stateProvider.Restore(snapshot);
                 }
                 else
                 {
@@ -386,8 +375,7 @@ namespace Nethermind.Evm.TransactionProcessing
 
                         if (unspentGas >= codeDepositGasCost)
                         {
-                            Keccak codeHash = _stateProvider.UpdateCode(substate.Output);
-                            _stateProvider.UpdateCodeHash(recipient, codeHash, spec);
+                            _stateProvider.InsertCode(recipient, substate.Output, spec);
                             unspentGas -= codeDepositGasCost;
                         }
                     }
@@ -395,7 +383,7 @@ namespace Nethermind.Evm.TransactionProcessing
                     foreach (Address toBeDestroyed in substate.DestroyList)
                     {
                         if (_logger.IsTrace) _logger.Trace($"Destroying account {toBeDestroyed}");
-                        _storageProvider.ClearStorage(toBeDestroyed);
+                        _stateProvider.ClearStorage(toBeDestroyed);
                         _stateProvider.DeleteAccount(toBeDestroyed);
                         if (txTracer.IsTracingRefunds) txTracer.ReportRefund(RefundOf.Destroy(spec.IsEip3529Enabled));
                     }
@@ -409,7 +397,7 @@ namespace Nethermind.Evm.TransactionProcessing
                 ex is EvmException || ex is OverflowException) // TODO: OverflowException? still needed? hope not
             {
                 if (_logger.IsTrace) _logger.Trace($"EVM EXCEPTION: {ex.GetType().Name}");
-                _worldState.Restore(snapshot);
+                _stateProvider.Restore(snapshot);
             }
 
             if (_logger.IsTrace) _logger.Trace("Gas spent: " + spentGas);
@@ -456,7 +444,6 @@ namespace Nethermind.Evm.TransactionProcessing
 
             if (restore)
             {
-                _storageProvider.Reset();
                 _stateProvider.Reset();
                 if (deleteCallerAccount)
                 {
@@ -475,8 +462,7 @@ namespace Nethermind.Evm.TransactionProcessing
             }
             else if (commit)
             {
-                _storageProvider.Commit(txTracer.IsTracingState ? txTracer : NullStorageTracer.Instance);
-                _stateProvider.Commit(spec, txTracer.IsTracingState ? txTracer : NullStateTracer.Instance);
+                _stateProvider.Commit(spec, txTracer.IsTracingState ? (IWorldStateTracer)txTracer : NullTxTracer.Instance);
             }
 
             if (!noValidation && notSystemTransaction)
@@ -511,7 +497,7 @@ namespace Nethermind.Evm.TransactionProcessing
         {
             if (_stateProvider.AccountExists(contractAddress))
             {
-                CodeInfo codeInfo = _virtualMachine.GetCachedCodeInfo(_worldState, contractAddress, spec);
+                CodeInfo codeInfo = _virtualMachine.GetCachedCodeInfo(_stateProvider, contractAddress, spec);
                 bool codeIsNotEmpty = codeInfo.MachineCode.Length != 0;
                 bool accountNonceIsNotZero = _stateProvider.GetNonce(contractAddress) != 0;
 

@@ -8,6 +8,7 @@ using Nethermind.Core;
 using Nethermind.Core.Crypto;
 using Nethermind.Core.Resettables;
 using Nethermind.Core.Specs;
+using Nethermind.Db;
 using Nethermind.Int256;
 using Nethermind.Logging;
 using Nethermind.State.Witnesses;
@@ -24,7 +25,7 @@ using Metrics = Nethermind.Db.Metrics;
 
 namespace Nethermind.State
 {
-    public class StateProvider : IStateProvider
+    public class StateProvider
     {
         private const int StartCapacity = Resettable.StartCapacity;
         private readonly ResettableDictionary<Address, Stack<int>> _intraBlockCache = new();
@@ -132,9 +133,20 @@ namespace Nethermind.State
             return account?.Balance ?? UInt256.Zero;
         }
 
-        public void UpdateCodeHash(Address address, Keccak codeHash, IReleaseSpec releaseSpec, bool isGenesis = false)
+        public void InsertCode(Address address, ReadOnlyMemory<byte> code, IReleaseSpec releaseSpec, bool isGenesis = false)
         {
             _needsStateRootUpdate = true;
+            Keccak codeHash;
+            if (code.Length == 0)
+            {
+                codeHash = Keccak.OfAnEmptyString;
+            }
+            else
+            {
+                codeHash = Keccak.Compute(code.Span);
+                _codeDb[codeHash.Bytes] = code.ToArray();
+            }
+
             Account? account = GetThroughCache(address);
             if (account is null)
             {
@@ -274,21 +286,6 @@ namespace Nethermind.State
             }
         }
 
-        public Keccak UpdateCode(ReadOnlyMemory<byte> code)
-        {
-            _needsStateRootUpdate = true;
-            if (code.Length == 0)
-            {
-                return Keccak.OfAnEmptyString;
-            }
-
-            Keccak codeHash = Keccak.Compute(code.Span);
-
-            _codeDb[codeHash.Bytes] = code.ToArray();
-
-            return codeHash;
-        }
-
         public Keccak GetCodeHash(Address address)
         {
             Account account = GetThroughCache(address);
@@ -323,7 +320,7 @@ namespace Nethermind.State
             PushDelete(address);
         }
 
-        int IJournal<int>.TakeSnapshot()
+        public int TakeSnapshot(bool newTransactionStart)
         {
             if (_logger.IsTrace) _logger.Trace($"State snapshot {_currentPosition}");
             return _currentPosition;
@@ -764,6 +761,7 @@ namespace Nethermind.State
             _intraBlockCache.Reset();
             _committedThisRound.Reset();
             _readsForTracing.Clear();
+            if (_codeDb is ReadOnlyDb db) db.ClearTempChanges();
             _currentPosition = Resettable.EmptyPosition;
             Array.Clear(_changes, 0, _changes.Length);
             _needsStateRootUpdate = false;
@@ -785,7 +783,7 @@ namespace Nethermind.State
         }
 
         // used in EtheereumTests
-        internal void SetNonce(Address address, in UInt256 nonce)
+        public void SetNonce(Address address, in UInt256 nonce)
         {
             _needsStateRootUpdate = true;
             Account? account = GetThroughCache(address);

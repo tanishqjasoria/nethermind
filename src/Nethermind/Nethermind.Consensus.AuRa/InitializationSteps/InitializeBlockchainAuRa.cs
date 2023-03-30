@@ -25,6 +25,7 @@ using Nethermind.Core;
 using Nethermind.Evm.TransactionProcessing;
 using Nethermind.Init.Steps;
 using Nethermind.Logging;
+using Nethermind.State;
 using Nethermind.TxPool;
 using Nethermind.TxPool.Comparison;
 
@@ -53,8 +54,7 @@ namespace Nethermind.Consensus.AuRa.InitializationSteps
             if (_api.RewardCalculatorSource is null) throw new StepDependencyException(nameof(_api.RewardCalculatorSource));
             if (_api.TransactionProcessor is null) throw new StepDependencyException(nameof(_api.TransactionProcessor));
             if (_api.DbProvider is null) throw new StepDependencyException(nameof(_api.DbProvider));
-            if (_api.StateProvider is null) throw new StepDependencyException(nameof(_api.StateProvider));
-            if (_api.StorageProvider is null) throw new StepDependencyException(nameof(_api.StorageProvider));
+            if (_api.WorldState is null) throw new StepDependencyException(nameof(_api.WorldState));
             if (_api.TxPool is null) throw new StepDependencyException(nameof(_api.TxPool));
             if (_api.ReceiptStorage is null) throw new StepDependencyException(nameof(_api.ReceiptStorage));
             if (_api.BlockTree is null) throw new StepDependencyException(nameof(_api.BlockTree));
@@ -91,13 +91,12 @@ namespace Nethermind.Consensus.AuRa.InitializationSteps
                 _api.SpecProvider,
                 _api.BlockValidator,
                 _api.RewardCalculatorSource.Get(_api.TransactionProcessor),
-                new BlockProcessor.BlockValidationTransactionsExecutor(_api.TransactionProcessor, _api.StateProvider),
-                _api.StateProvider,
-                _api.StorageProvider,
+                new BlockProcessor.BlockValidationTransactionsExecutor(_api.TransactionProcessor, _api.WorldState!),
+                _api.WorldState!,
                 _api.ReceiptStorage,
                 _api.LogManager,
                 _api.BlockTree,
-                new WithdrawalProcessor(_api.StateProvider, _api.LogManager),
+                new WithdrawalProcessor(_api.WorldState, _api.LogManager),
                 txFilter,
                 GetGasLimitCalculator(),
                 contractRewriter
@@ -130,7 +129,7 @@ namespace Nethermind.Consensus.AuRa.InitializationSteps
                 chainSpecAuRa.TwoThirdsMajorityTransition);
 
             IAuRaValidator validator = new AuRaValidatorFactory(_api.AbiEncoder,
-                    _api.StateProvider,
+                    _api.WorldState!,
                     _api.TransactionProcessor,
                     _api.BlockTree,
                     readOnlyTxProcessorSource,

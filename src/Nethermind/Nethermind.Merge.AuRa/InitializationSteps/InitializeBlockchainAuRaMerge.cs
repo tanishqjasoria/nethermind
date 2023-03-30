@@ -1,17 +1,14 @@
 // SPDX-FileCopyrightText: 2023 Demerzel Solutions Limited
 // SPDX-License-Identifier: LGPL-3.0-only
 
-using System.Collections.Generic;
-using Nethermind;
+
 using Nethermind.Consensus.AuRa;
 using Nethermind.Consensus.AuRa.InitializationSteps;
 using Nethermind.Consensus.Processing;
-using Nethermind.Core;
 using Nethermind.Init.Steps;
-using Nethermind.Consensus.AuRa.Validators;
-using Nethermind.Consensus.AuRa.Transactions;
 using Nethermind.Consensus.Transactions;
 using Nethermind.Consensus.Withdrawals;
+using Nethermind.State;
 
 namespace Nethermind.Merge.AuRa.InitializationSteps
 {
@@ -30,13 +27,12 @@ namespace Nethermind.Merge.AuRa.InitializationSteps
                 _api.SpecProvider!,
                 _api.BlockValidator!,
                 _api.RewardCalculatorSource!.Get(_api.TransactionProcessor!),
-                new BlockProcessor.BlockValidationTransactionsExecutor(_api.TransactionProcessor!, _api.StateProvider!),
-                _api.StateProvider!,
-                _api.StorageProvider!,
+                new BlockProcessor.BlockValidationTransactionsExecutor(_api.TransactionProcessor!, _api.WorldState!),
+                _api.WorldState!,
                 _api.ReceiptStorage!,
                 _api.LogManager,
                 _api.BlockTree!,
-                new WithdrawalProcessor(_api.StateProvider!, _api.LogManager),
+                new WithdrawalProcessor(_api.WorldState!, _api.LogManager),
                 txFilter,
                 GetGasLimitCalculator(),
                 contractRewriter

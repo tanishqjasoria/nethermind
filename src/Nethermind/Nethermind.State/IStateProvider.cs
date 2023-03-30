@@ -6,7 +6,6 @@ using Nethermind.Core;
 using Nethermind.Core.Crypto;
 using Nethermind.Core.Specs;
 using Nethermind.Int256;
-using Nethermind.Trie;
 
 namespace Nethermind.State
 {
@@ -22,7 +21,7 @@ namespace Nethermind.State
 
         void CreateAccount(Address address, in UInt256 balance, in UInt256 nonce);
 
-        void UpdateCodeHash(Address address, Keccak codeHash, IReleaseSpec spec, bool isGenesis = false);
+        void InsertCode(Address address, ReadOnlyMemory<byte> code, IReleaseSpec spec, bool isGenesis = false);
 
         void AddToBalance(Address address, in UInt256 balanceChange, IReleaseSpec spec);
 
@@ -34,13 +33,9 @@ namespace Nethermind.State
 
         void DecrementNonce(Address address);
 
-        Keccak UpdateCode(ReadOnlyMemory<byte> code);
-
         /* snapshots */
 
         void Commit(IReleaseSpec releaseSpec, bool isGenesis = false);
-
-        void Commit(IReleaseSpec releaseSpec, IStateTracer? stateTracer, bool isGenesis = false);
 
         void Reset();
 
@@ -51,5 +46,11 @@ namespace Nethermind.State
         /// </summary>
         /// <param name="codeHash"></param>
         void TouchCode(Keccak codeHash);
+
+        int TakeSnapshot(bool newTransactionStart = false);
+
+        int IJournal<int>.TakeSnapshot() => TakeSnapshot();
+
+        void SetNonce(Address address, in UInt256 nonce);
     }
 }

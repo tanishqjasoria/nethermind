@@ -105,7 +105,6 @@ public class InitializeNetwork : IStep
         SyncProgressResolver syncProgressResolver = new(
             _api.BlockTree!,
             _api.ReceiptStorage!,
-            _api.DbProvider.StateDb,
             _api.ReadOnlyTrieStore!,
             progressTracker,
             _syncConfig,

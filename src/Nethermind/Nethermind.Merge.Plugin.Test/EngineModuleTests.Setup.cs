@@ -201,7 +201,6 @@ public partial class EngineModuleTests
                 NoBlockRewards.Instance,
                 new BlockProcessor.BlockValidationTransactionsExecutor(TxProcessor, State),
                 State,
-                Storage,
                 ReceiptStorage,
                 NullWitnessCollector.Instance,
                 LogManager);
