@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System;
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -34,6 +35,8 @@ namespace Nethermind.Trie
         private static Action<TrieNode> _markPersisted => tn => tn.IsPersisted = true;
         private RlpStream? _rlpStream;
         private object?[]? _data;
+
+        private bool[] _isDirty;
 
         /// <summary>
         /// Ethereum Patricia Trie specification allows for branch values,
@@ -403,6 +406,16 @@ namespace Nethermind.Trie
             return _data?[i] is null || ReferenceEquals(_data[i], _nullNode);
         }
 
+        public void SetChildDirty(int i, bool isDirty = true)
+        {
+            if (IsExtension)
+            {
+                i++;
+            }
+
+            _isDirty[i] = isDirty;
+        }
+
         public bool IsChildDirty(int i)
         {
             if (IsExtension)
@@ -410,22 +423,7 @@ namespace Nethermind.Trie
                 i++;
             }
 
-            if (_data?[i] is null)
-            {
-                return false;
-            }
-
-            if (ReferenceEquals(_data[i], _nullNode))
-            {
-                return false;
-            }
-
-            if (_data[i] is Keccak)
-            {
-                return false;
-            }
-
-            return ((TrieNode)_data[i])!.IsDirty;
+            return _isDirty[i];
         }
 
         public TrieNode? this[int i]
@@ -497,6 +495,7 @@ namespace Nethermind.Trie
             int index = IsExtension ? i + 1 : i;
             _data![index] = node ?? _nullNode;
             Keccak = null;
+            SetChildDirty(i, node is {IsDirty: true});
         }
 
         public long GetMemorySize(bool recursive)
@@ -751,9 +750,11 @@ namespace Nethermind.Trie
                             $"Cannot resolve children of an {nameof(NodeType.Unknown)} node");
                     case NodeType.Branch:
                         _data = new object[AllowBranchValues ? BranchesCount + 1 : BranchesCount];
+                        _isDirty = new bool[AllowBranchValues ? BranchesCount + 1 : BranchesCount];
                         break;
                     default:
                         _data = new object[2];
+                        _isDirty = new bool[2];
                         break;
                 }
             }

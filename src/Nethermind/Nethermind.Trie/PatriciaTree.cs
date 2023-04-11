@@ -265,6 +265,7 @@ namespace Nethermind.Trie
 
             node.ResolveKey(TrieStore, nodeCommitInfo.IsRoot);
             node.Seal();
+            nodeCommitInfo.NodeParent?.SetChildDirty(nodeCommitInfo.ChildPositionAtParent, false);
 
             if (node.FullRlp?.Length >= 32)
             {
