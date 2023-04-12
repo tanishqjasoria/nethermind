@@ -31,6 +31,8 @@ namespace Nethermind.Trie
         /// </summary>
         public static readonly Keccak EmptyTreeHash = Keccak.EmptyTreeHash;
 
+        private ConcurrentDictionary<byte[], TrieNode?> _nodeCache = new ConcurrentDictionary<byte[], TrieNode?>();
+
         public TrieType TrieType { get; protected set; }
 
         /// <summary>
@@ -421,6 +423,16 @@ namespace Nethermind.Trie
                 _ => throw new NotSupportedException(
                     $"Unknown node type {node.NodeType}")
             };
+        }
+
+        private TrieNode? GetChild(TrieNode node, byte[] path)
+        {
+            if (!_nodeCache.TryGetValue(path, out TrieNode child))
+            {
+                child = node.GetChild(TrieStore, path[^1]);
+            }
+
+            return child;
         }
 
         private void ConnectNodes(TrieNode? node)
@@ -946,6 +958,16 @@ namespace Nethermind.Trie
             public ReadOnlySpan<byte> GetRemainingUpdatePath()
             {
                 return UpdatePath.Slice(CurrentIndex, RemainingUpdatePathLength);
+            }
+
+            public ReadOnlySpan<byte> GetCurrentPath()
+            {
+                return UpdatePath.Slice(0, CurrentIndex);
+            }
+
+            public ReadOnlySpan<byte> GetCurrentPath(int currentIndex)
+            {
+                return UpdatePath.Slice(0, currentIndex);
             }
 
             public TraverseContext(scoped in TraverseContext context, int index)

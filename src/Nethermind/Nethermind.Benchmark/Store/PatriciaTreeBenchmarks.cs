@@ -12,6 +12,7 @@ using Nethermind.Db.Blooms;
 
 namespace Nethermind.Benchmarks.Store
 {
+    [SimpleJob(RuntimeMoniker.Net70)]
     public class PatriciaTreeBenchmarks
     {
         private static readonly Account _empty = Build.An.Account.WithBalance(0).TestObject;
