@@ -20,7 +20,7 @@ namespace Nethermind.Synchronization.SnapSync
     {
 
         public static (AddRangeResult result, bool moreChildrenToRight, IList<PathWithAccount> storageRoots, IList<Keccak> codeHashes) AddAccountRange(
-            StateTree tree,
+            IStateTree tree,
             long blockNumber,
             Keccak expectedRootHash,
             Keccak startingHash,
@@ -73,7 +73,7 @@ namespace Nethermind.Synchronization.SnapSync
 
             StitchBoundaries(sortedBoundaryList, tree.TrieStore);
 
-            tree.Commit(blockNumber, skipRoot: true);
+            tree.Commit(blockNumber, skipRoot: false);
 
             return (AddRangeResult.OK, moreChildrenToRight, accountsWithStorage, codeHashes);
         }
@@ -121,7 +121,7 @@ namespace Nethermind.Synchronization.SnapSync
         }
 
         private static (AddRangeResult result, IList<TrieNode> sortedBoundaryList, bool moreChildrenToRight) FillBoundaryTree(
-            PatriciaTree tree,
+            IPatriciaTree tree,
             Keccak? startingHash,
             Keccak endHash,
             Keccak limitHash,
@@ -173,6 +173,8 @@ namespace Nethermind.Synchronization.SnapSync
             {
                 (TrieNode parent, TrieNode node, int pathIndex, List<byte> path) = proofNodesToProcess.Pop();
 
+                node.PathToNode = path.ToArray();
+                //Console.WriteLine($"Node {node.PathToNode.ToHexString()} hash: {node.Keccak}");
                 if (node.IsExtension)
                 {
                     Keccak? childKeccak = node.GetChildHash(0);

@@ -11,32 +11,32 @@ namespace Nethermind.Trie.Pruning
     /// <summary>
     /// Safe to be reused for the same wrapped store.
     /// </summary>
-    public class ReadOnlyTrieStore : IReadOnlyTrieStore
+    public class ReadOnlyTrieStoreByPath : IReadOnlyTrieStore
     {
-        private readonly TrieStore _trieStore;
+        private readonly TrieStoreByPath _trieStore;
         private readonly IKeyValueStore? _readOnlyStore;
 
-        public ReadOnlyTrieStore(TrieStore trieStore, IKeyValueStore? readOnlyStore)
+        public ReadOnlyTrieStoreByPath(TrieStoreByPath trieStore, IKeyValueStore? readOnlyStore)
         {
             _trieStore = trieStore ?? throw new ArgumentNullException(nameof(trieStore));
             _readOnlyStore = readOnlyStore;
         }
 
         public TrieNode FindCachedOrUnknown(Keccak hash) =>
-            _trieStore.FindCachedOrUnknown(hash, true);
+            _trieStore.FindCachedOrUnknown(hash);
 
         public TrieNode FindCachedOrUnknown(Keccak hash, Span<byte> nodePath) =>
-            _trieStore.FindCachedOrUnknown(hash, true);
+            _trieStore.FindCachedOrUnknown(hash, nodePath);
 
         public byte[] LoadRlp(Keccak hash) => _trieStore.LoadRlp(hash, _readOnlyStore);
 
         public bool IsPersisted(Keccak keccak) => _trieStore.IsPersisted(keccak);
 
-        public TrieNodeResolverCapability Capability => TrieNodeResolverCapability.Hash;
+        public TrieNodeResolverCapability Capability => TrieNodeResolverCapability.Path;
 
         public IReadOnlyTrieStore AsReadOnly(IKeyValueStore keyValueStore)
         {
-            return new ReadOnlyTrieStore(_trieStore, keyValueStore);
+            return new ReadOnlyTrieStoreByPath(_trieStore, keyValueStore);
         }
 
         public void CommitNode(long blockNumber, NodeCommitInfo nodeCommitInfo) { }
@@ -54,24 +54,15 @@ namespace Nethermind.Trie.Pruning
 
         public byte[]? LoadRlp(Span<byte> nodePath, Keccak rootHash)
         {
-            throw new NotImplementedException();
+            return _trieStore.LoadRlp(nodePath, rootHash);
         }
 
-        public void SaveNodeDirectly(long blockNumber, TrieNode trieNode, IKeyValueStore? keyValueStore)
-        {
-            throw new NotImplementedException();
-        }
-        public void ClearCache()
-        {
-            _trieStore.ClearCache();
-        }
+        public void SaveNodeDirectly(long blockNumber, TrieNode trieNode, IKeyValueStore? keyValueStore = null) { }
+        public void ClearCache() => _trieStore.ClearCache();
 
         public bool ExistsInDB(Keccak hash, byte[] nodePathNibbles) => _trieStore.ExistsInDB(hash, nodePathNibbles);
 
-        public TrieNode FindCachedOrUnknown(Span<byte> nodePath, Keccak rootHash)
-        {
-            throw new NotImplementedException();
-        }
+        public TrieNode FindCachedOrUnknown(Span<byte> nodePath, Keccak rootHash) => _trieStore.FindCachedOrUnknown(nodePath, rootHash);
 
         public byte[]? this[ReadOnlySpan<byte> key] => _trieStore[key];
     }

@@ -358,6 +358,11 @@ namespace Nethermind.Trie.Pruning
             return FindCachedOrUnknown(hash, false);
         }
 
+        public TrieNode FindCachedOrUnknown(Keccak? hash, Span<byte> nodePath)
+        {
+            return FindCachedOrUnknown(hash, false);
+        }
+
         internal TrieNode FindCachedOrUnknown(Keccak? hash, bool isReadOnly)
         {
             if (hash is null)
@@ -584,6 +589,8 @@ namespace Nethermind.Trie.Pruning
         private bool IsCurrentListSealed => CurrentPackage is null || CurrentPackage.IsSealed;
 
         private long LatestCommittedBlockNumber { get; set; }
+
+        public TrieNodeResolverCapability Capability => TrieNodeResolverCapability.Hash;
 
         private void CreateCommitSet(long blockNumber)
         {
@@ -819,6 +826,27 @@ namespace Nethermind.Trie.Pruning
 
                 if (_logger.IsInfo) _logger.Info($"Full Pruning Persist Cache finished: {stopwatch.Elapsed} {persistedNodes / (double)million:N} mln nodes persisted.");
             });
+        }
+
+        public TrieNode FindCachedOrUnknown(Span<byte> nodePath, Keccak rootHash)
+        {
+            throw new NotImplementedException();
+        }
+
+        public byte[]? LoadRlp(Span<byte> nodePath, Keccak rootHash)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void SaveNodeDirectly(long blockNumber, TrieNode trieNode, IKeyValueStore? keyValueStore = null)
+        {
+            keyValueStore ??= _keyValueStore;
+            keyValueStore[trieNode.Keccak.Bytes] = trieNode.Value;
+        }
+
+        public bool ExistsInDB(Keccak hash, byte[] nodePathNibbles)
+        {
+            return _keyValueStore[hash.Bytes] is not null;
         }
 
         public byte[]? this[ReadOnlySpan<byte> key]

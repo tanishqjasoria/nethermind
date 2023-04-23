@@ -12,7 +12,16 @@ using Nethermind.Trie.Pruning;
 
 namespace Nethermind.State
 {
-    public class StateTree : PatriciaTree
+    public interface IStateTree : IPatriciaTree
+    {
+        Account? Get(Address address, Keccak? rootHash = null);
+
+        void Set(Address address, Account? account);
+        Rlp? Set(Keccak keccak, Account? account);
+    }
+
+
+    public class StateTree : PatriciaTree, IStateTree
     {
         private readonly AccountDecoder _decoder = new();
 

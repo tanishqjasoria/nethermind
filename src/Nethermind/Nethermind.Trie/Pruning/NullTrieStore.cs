@@ -24,6 +24,8 @@ namespace Nethermind.Trie.Pruning
             return this;
         }
 
+        public TrieNodeResolverCapability Capability => TrieNodeResolverCapability.Hash;
+
         public event EventHandler<ReorgBoundaryReached> ReorgBoundaryReached
         {
             add { }
@@ -35,6 +37,11 @@ namespace Nethermind.Trie.Pruning
             return new(NodeType.Unknown, hash);
         }
 
+        public TrieNode FindCachedOrUnknown(Keccak hash, Span<byte> nodePath)
+        {
+            return new(NodeType.Unknown, nodePath, hash);
+        }
+
         public byte[] LoadRlp(Keccak hash)
         {
             return Array.Empty<byte>();
@@ -43,6 +50,22 @@ namespace Nethermind.Trie.Pruning
         public bool IsPersisted(Keccak keccak) => true;
 
         public void Dispose() { }
+
+        public TrieNode FindCachedOrUnknown(Span<byte> nodePath, Keccak rootHash)
+        {
+            return new(NodeType.Unknown, nodePath.ToArray());
+        }
+
+        public byte[]? LoadRlp(Span<byte> nodePath, Keccak rootHash)
+        {
+            return Array.Empty<byte>();
+        }
+
+        public void SaveNodeDirectly(long blockNumber, TrieNode trieNode, IKeyValueStore? keyValueStore = null) { }
+
+        public void ClearCache() { }
+
+        public bool ExistsInDB(Keccak hash, byte[] nodePathNibbles) => false;
 
         public byte[]? this[ReadOnlySpan<byte> key] => null;
     }
