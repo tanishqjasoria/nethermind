@@ -229,7 +229,7 @@ namespace Nethermind.Synchronization.Test
             public IBlockchainProcessor? BlockchainProcessor { get; set; }
             public ISynchronizer? Synchronizer { get; set; }
             public IBlockTree Tree { get; set; } = null!;
-            public IStateProvider StateProvider { get; set; } = null!;
+            public IWorldState StateProvider { get; set; } = null!;
 
             public DevBlockProducer? BlockProducer { get; set; }
             public ConsoleAsyncLogger? Logger { get; set; }
@@ -261,13 +261,12 @@ namespace Nethermind.Synchronization.Test
 
             TrieStore trieStore = new(stateDb, LimboLogs.Instance);
             StateReader stateReader = new(trieStore, codeDb, logManager);
-            StateProvider stateProvider = new(trieStore, codeDb, logManager);
+            WorldState stateProvider = new WorldState(trieStore, codeDb, logManager);
             stateProvider.CreateAccount(TestItem.AddressA, 10000.Ether());
             stateProvider.Commit(specProvider.GenesisSpec);
             stateProvider.CommitTree(0);
             stateProvider.RecalculateStateRoot();
 
-            StorageProvider storageProvider = new(trieStore, stateProvider, logManager);
             InMemoryReceiptStorage receiptStorage = new();
 
             EthereumEcdsa ecdsa = new(specProvider.ChainId, logManager);
@@ -293,8 +292,7 @@ namespace Nethermind.Synchronization.Test
                 : SyncConfig.WithFullSyncOnly;
 
             RewardCalculator rewardCalculator = new(specProvider);
-            TransactionProcessor txProcessor =
-                new(specProvider, stateProvider, storageProvider, virtualMachine, logManager);
+            TransactionProcessor txProcessor = new TransactionProcessor(specProvider, stateProvider, virtualMachine, logManager);
 
             BlockProcessor blockProcessor = new(
                 specProvider,
@@ -302,7 +300,6 @@ namespace Nethermind.Synchronization.Test
                 rewardCalculator,
                 new BlockProcessor.BlockValidationTransactionsExecutor(txProcessor, stateProvider),
                 stateProvider,
-                storageProvider,
                 receiptStorage,
                 NullWitnessCollector.Instance,
                 logManager);
@@ -315,18 +312,16 @@ namespace Nethermind.Synchronization.Test
             NodeStatsManager nodeStatsManager = new(timerFactory, logManager);
             SyncPeerPool syncPeerPool = new(tree, nodeStatsManager, new TotalDifficultyBetterPeerStrategy(LimboLogs.Instance), logManager, 25);
 
-            StateProvider devState = new(trieStore, codeDb, logManager);
-            StorageProvider devStorage = new(trieStore, devState, logManager);
+            IWorldState devWorldState = new WorldState(trieStore, codeDb, logManager);
             VirtualMachine devEvm = new(blockhashProvider, specProvider, logManager);
-            TransactionProcessor devTxProcessor = new(specProvider, devState, devStorage, devEvm, logManager);
+            TransactionProcessor devTxProcessor = new(specProvider, devWorldState, devEvm, logManager);
 
             BlockProcessor devBlockProcessor = new(
                 specProvider,
                 blockValidator,
                 rewardCalculator,
-                new BlockProcessor.BlockProductionTransactionsExecutor(devTxProcessor, devState, devStorage, specProvider, logManager),
-                devState,
-                devStorage,
+                new BlockProcessor.BlockProductionTransactionsExecutor(devTxProcessor, devWorldState, specProvider, logManager),
+                devWorldState,
                 receiptStorage,
                 NullWitnessCollector.Instance,
                 logManager);
@@ -354,7 +349,7 @@ namespace Nethermind.Synchronization.Test
             SnapProvider snapProvider = new(progressTracker, dbProvider, LimboLogs.Instance);
 
             SyncProgressResolver resolver = new(
-                tree, receiptStorage, stateDb, NullTrieNodeResolver.Instance, progressTracker, syncConfig, logManager);
+                tree, receiptStorage, NullTrieStore.Instance, progressTracker, syncConfig, logManager);
             TotalDifficultyBetterPeerStrategy bestPeerStrategy = new(LimboLogs.Instance);
             MultiSyncModeSelector selector = new(resolver, syncPeerPool, syncConfig, No.BeaconSync, bestPeerStrategy, logManager);
             Pivot pivot = new(syncConfig);

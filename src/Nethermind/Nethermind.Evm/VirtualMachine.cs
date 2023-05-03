@@ -60,10 +60,8 @@ namespace Nethermind.Evm
         private readonly ISpecProvider _specProvider;
         private static readonly LruCache<KeccakKey, CodeInfo> _codeCache = new(MemoryAllowance.CodeCacheSize, MemoryAllowance.CodeCacheSize, "VM bytecodes");
         private readonly ILogger _logger;
-        private IWorldState _worldState;
-        private IStateProvider _state;
+        private IWorldState _state;
         private readonly Stack<EvmState> _stateStack = new();
-        private IStorageProvider _storage;
         private (Address Address, bool ShouldDelete) _parityTouchBugAccount = (Address.FromNumber(3), false);
         private Dictionary<Address, CodeInfo>? _precompiles;
         private byte[] _returnDataBuffer = Array.Empty<byte>();
@@ -84,10 +82,7 @@ namespace Nethermind.Evm
         public TransactionSubstate Run(EvmState state, IWorldState worldState, ITxTracer txTracer)
         {
             _txTracer = txTracer;
-
-            _state = worldState.StateProvider;
-            _storage = worldState.StorageProvider;
-            _worldState = worldState;
+            _state = worldState;
 
             IReleaseSpec spec = _specProvider.GetSpec(state.Env.TxExecutionContext.Header.Number, state.Env.TxExecutionContext.Header.Timestamp);
             EvmState currentState = state;
@@ -148,7 +143,7 @@ namespace Nethermind.Evm
                         if (callResult.IsException)
                         {
                             if (_txTracer.IsTracingActions) _txTracer.ReportActionError(callResult.ExceptionType);
-                            _worldState.Restore(currentState.Snapshot);
+                            _state.Restore(currentState.Snapshot);
 
                             RevertParityTouchBugAccount(spec);
 
@@ -252,8 +247,7 @@ namespace Nethermind.Evm
                             bool invalidCode = CodeDepositHandler.CodeIsInvalid(spec, callResult.Output);
                             if (gasAvailableForCodeDeposit >= codeDepositGasCost && !invalidCode)
                             {
-                                Keccak codeHash = _state.UpdateCode(callResult.Output);
-                                _state.UpdateCodeHash(callCodeOwner, codeHash, spec);
+                                _state.InsertCode(callCodeOwner, callResult.Output, spec);
                                 currentState.GasAvailable -= codeDepositGasCost;
 
                                 if (_txTracer.IsTracingActions)
@@ -311,7 +305,7 @@ namespace Nethermind.Evm
                     }
                     else
                     {
-                        worldState.Restore(previousState.Snapshot);
+                        _state.Restore(previousState.Snapshot);
                         _returnDataBuffer = callResult.Output;
                         previousCallResult = StatusCode.FailureBytes;
                         previousCallOutput = callResult.Output.AsSpan().SliceWithZeroPadding(0, Math.Min(callResult.Output.Length, (int)previousState.OutputLength));
@@ -328,7 +322,7 @@ namespace Nethermind.Evm
                 {
                     if (_logger.IsTrace) _logger.Trace($"exception ({ex.GetType().Name}) in {currentState.ExecutionType} at depth {currentState.Env.CallDepth} - restoring snapshot");
 
-                    _worldState.Restore(currentState.Snapshot);
+                    _state.Restore(currentState.Snapshot);
 
                     RevertParityTouchBugAccount(spec);
 
@@ -374,9 +368,8 @@ namespace Nethermind.Evm
             }
         }
 
-        public CodeInfo GetCachedCodeInfo(IWorldState worldState, Address codeSource, IReleaseSpec vmSpec)
+        public CodeInfo GetCachedCodeInfo(IWorldState state, Address codeSource, IReleaseSpec vmSpec)
         {
-            IStateProvider state = worldState.StateProvider;
             if (codeSource.IsPrecompile(vmSpec))
             {
                 if (_precompiles is null)
@@ -1252,7 +1245,7 @@ namespace Nethermind.Evm
                             Address address = stack.PopAddress();
                             if (!ChargeAccountAccessGas(ref gasAvailable, vmState, address, spec)) goto OutOfGas;
 
-                            byte[] accountCode = GetCachedCodeInfo(_worldState, address, spec).MachineCode;
+                            byte[] accountCode = GetCachedCodeInfo(_state, address, spec).MachineCode;
                             UInt256 codeSize = (UInt256)accountCode.Length;
                             stack.PushUInt256(in codeSize);
                             break;
@@ -1274,7 +1267,7 @@ namespace Nethermind.Evm
                             {
                                 if (!UpdateMemoryCost(vmState, ref gasAvailable, in dest, length)) goto OutOfGas;
 
-                                byte[] externalCode = GetCachedCodeInfo(_worldState, address, spec).MachineCode;
+                                byte[] externalCode = GetCachedCodeInfo(_state, address, spec).MachineCode;
                                 ZeroPaddedSpan callDataSlice = externalCode.SliceWithZeroPadding(src, (int)length);
                                 vmState.Memory.Save(in dest, callDataSlice);
                                 if (_txTracer.IsTracingInstructions)
@@ -1498,7 +1491,7 @@ namespace Nethermind.Evm
                                 StorageAccessType.SLOAD,
                                 spec)) goto OutOfGas;
 
-                            byte[] value = _storage.Get(storageCell);
+                            byte[] value = _state.Get(storageCell);
                             stack.PushBytes(value);
 
                             if (_txTracer.IsTracingOpLevelStorage)
@@ -1544,7 +1537,7 @@ namespace Nethermind.Evm
                                 StorageAccessType.SSTORE,
                                 spec)) goto OutOfGas;
 
-                            Span<byte> currentValue = _storage.Get(storageCell);
+                            Span<byte> currentValue = _state.Get(storageCell);
                             // Console.WriteLine($"current: {currentValue.ToHexString()} newValue {newValue.ToHexString()}");
                             bool currentIsZero = currentValue.IsZero();
 
@@ -1574,7 +1567,7 @@ namespace Nethermind.Evm
                                 }
                                 else // net metered, C != N
                                 {
-                                    Span<byte> originalValue = _storage.GetOriginal(storageCell);
+                                    Span<byte> originalValue = _state.GetOriginal(storageCell);
                                     bool originalIsZero = originalValue.IsZero();
 
                                     bool currentSameAsOriginal = Bytes.AreEqual(originalValue, currentValue);
@@ -1638,7 +1631,7 @@ namespace Nethermind.Evm
                             if (!newSameAsCurrent)
                             {
                                 Span<byte> valueToStore = newIsZero ? BytesZero : newValue;
-                                _storage.Set(storageCell, valueToStore.ToArray());
+                                _state.Set(storageCell, valueToStore.ToArray());
                             }
 
                             if (_txTracer.IsTracingInstructions)
@@ -1667,7 +1660,7 @@ namespace Nethermind.Evm
                             stack.PopUInt256(out UInt256 storageIndex);
                             StorageCell storageCell = new(env.ExecutingAccount, storageIndex);
 
-                            byte[] value = _storage.GetTransientState(storageCell);
+                            byte[] value = _state.GetTransientState(storageCell);
                             stack.PushBytes(value);
 
                             if (_txTracer.IsTracingOpLevelStorage)
@@ -1701,7 +1694,7 @@ namespace Nethermind.Evm
 
                             StorageCell storageCell = new(env.ExecutingAccount, storageIndex);
                             byte[] currentValue = newValue.ToArray();
-                            _storage.SetTransientState(storageCell, currentValue);
+                            _state.SetTransientState(storageCell, currentValue);
 
                             if (_txTracer.IsTracingOpLevelStorage)
                             {
@@ -1990,10 +1983,10 @@ namespace Nethermind.Evm
 
                             _state.IncrementNonce(env.ExecutingAccount);
 
-                            Snapshot snapshot = _worldState.TakeSnapshot();
+                            Snapshot snapshot = _state.TakeSnapshot();
 
                             bool accountExists = _state.AccountExists(contractAddress);
-                            if (accountExists && (GetCachedCodeInfo(_worldState, contractAddress, spec).MachineCode.Length != 0 || _state.GetNonce(contractAddress) != 0))
+                            if (accountExists && (GetCachedCodeInfo(_state, contractAddress, spec).MachineCode.Length != 0 || _state.GetNonce(contractAddress) != 0))
                             {
                                 /* we get the snapshot before this as there is a possibility with that we will touch an empty account and remove it even if the REVERT operation follows */
                                 if (isTrace) _logger.Trace($"Contract collision at {contractAddress}");
@@ -2008,7 +2001,7 @@ namespace Nethermind.Evm
                             }
                             else if (_state.IsDeadAccount(contractAddress))
                             {
-                                _storage.ClearStorage(contractAddress);
+                                _state.ClearStorage(contractAddress);
                             }
 
                             _state.SubtractFromBalance(env.ExecutingAccount, value, spec);
@@ -2162,7 +2155,7 @@ namespace Nethermind.Evm
 
                             ReadOnlyMemory<byte> callData = vmState.Memory.Load(in dataOffset, dataLength);
 
-                            Snapshot snapshot = _worldState.TakeSnapshot();
+                            Snapshot snapshot = _state.TakeSnapshot();
                             _state.SubtractFromBalance(caller, transferValue, spec);
 
                             ExecutionEnvironment callEnv = new
@@ -2175,7 +2168,7 @@ namespace Nethermind.Evm
                                 transferValue: transferValue,
                                 value: callValue,
                                 inputData: callData,
-                                codeInfo: GetCachedCodeInfo(_worldState, codeSource, spec)
+                                codeInfo: GetCachedCodeInfo(_state, codeSource, spec)
                             );
                             if (isTrace) _logger.Trace($"Tx call gas {gasLimitUl}");
                             if (outputLength == 0)

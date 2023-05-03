@@ -50,5 +50,7 @@ namespace Nethermind.Trie.Pruning
         public byte[]? this[ReadOnlySpan<byte> key] => _trieStore[key];
 
         public byte[]? Get(ReadOnlySpan<byte> key, ReadFlags flags) => _trieStore.Get(key, flags);
+
+        public bool IsFullySynced(Keccak stateRoot) => _trieStore.IsFullySynced(stateRoot);
     }
 }

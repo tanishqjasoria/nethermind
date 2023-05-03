@@ -25,12 +25,11 @@ public partial class BlockProcessor : IBlockProcessor
 {
     private readonly ILogger _logger;
     private readonly ISpecProvider _specProvider;
-    protected readonly IStateProvider _stateProvider;
+    protected readonly IWorldState _worldState;
     private readonly IReceiptStorage _receiptStorage;
     private readonly IWitnessCollector _witnessCollector;
     private readonly IWithdrawalProcessor _withdrawalProcessor;
     private readonly IBlockValidator _blockValidator;
-    private readonly IStorageProvider _storageProvider;
     private readonly IRewardCalculator _rewardCalculator;
     private readonly IBlockProcessor.IBlockTransactionsExecutor _blockTransactionsExecutor;
 
@@ -47,8 +46,7 @@ public partial class BlockProcessor : IBlockProcessor
         IBlockValidator? blockValidator,
         IRewardCalculator? rewardCalculator,
         IBlockProcessor.IBlockTransactionsExecutor? blockTransactionsExecutor,
-        IStateProvider? stateProvider,
-        IStorageProvider? storageProvider,
+        IWorldState? worldState,
         IReceiptStorage? receiptStorage,
         IWitnessCollector? witnessCollector,
         ILogManager? logManager,
@@ -57,11 +55,10 @@ public partial class BlockProcessor : IBlockProcessor
         _logger = logManager?.GetClassLogger() ?? throw new ArgumentNullException(nameof(logManager));
         _specProvider = specProvider ?? throw new ArgumentNullException(nameof(specProvider));
         _blockValidator = blockValidator ?? throw new ArgumentNullException(nameof(blockValidator));
-        _stateProvider = stateProvider ?? throw new ArgumentNullException(nameof(stateProvider));
-        _storageProvider = storageProvider ?? throw new ArgumentNullException(nameof(storageProvider));
+        _worldState = worldState ?? throw new ArgumentNullException(nameof(worldState));
         _receiptStorage = receiptStorage ?? throw new ArgumentNullException(nameof(receiptStorage));
         _witnessCollector = witnessCollector ?? throw new ArgumentNullException(nameof(witnessCollector));
-        _withdrawalProcessor = withdrawalProcessor ?? new WithdrawalProcessor(stateProvider, logManager);
+        _withdrawalProcessor = withdrawalProcessor ?? new WithdrawalProcessor(worldState, logManager);
         _rewardCalculator = rewardCalculator ?? throw new ArgumentNullException(nameof(rewardCalculator));
         _blockTransactionsExecutor = blockTransactionsExecutor ?? throw new ArgumentNullException(nameof(blockTransactionsExecutor));
 
@@ -151,7 +148,7 @@ public partial class BlockProcessor : IBlockProcessor
     {
         /* Please note that we do not reset the state if branch state root is null.
            That said, I do not remember in what cases we receive null here.*/
-        if (branchStateRoot is not null && _stateProvider.StateRoot != branchStateRoot)
+        if (branchStateRoot is not null && _worldState.StateRoot != branchStateRoot)
         {
             /* Discarding the other branch data - chain reorganization.
                We cannot use cached values any more because they may have been written
@@ -159,34 +156,33 @@ public partial class BlockProcessor : IBlockProcessor
 
             if (incrementReorgMetric)
                 Metrics.Reorganizations++;
-            _storageProvider.Reset();
-            _stateProvider.Reset();
-            _stateProvider.StateRoot = branchStateRoot;
+            _worldState.Reset();
+            _worldState.Reset();
+            _worldState.StateRoot = branchStateRoot;
         }
     }
 
     // TODO: move to branch processor
     private Keccak CreateCheckpoint()
     {
-        return _stateProvider.StateRoot;
+        return _worldState.StateRoot;
     }
 
     // TODO: move to block processing pipeline
     private void PreCommitBlock(Keccak newBranchStateRoot, long blockNumber)
     {
         if (_logger.IsTrace) _logger.Trace($"Committing the branch - {newBranchStateRoot}");
-        _storageProvider.CommitTrees(blockNumber);
-        _stateProvider.CommitTree(blockNumber);
+        _worldState.CommitTree(blockNumber);
     }
 
     // TODO: move to branch processor
     private void RestoreBranch(Keccak branchingPointStateRoot)
     {
         if (_logger.IsTrace) _logger.Trace($"Restoring the branch checkpoint - {branchingPointStateRoot}");
-        _storageProvider.Reset();
-        _stateProvider.Reset();
-        _stateProvider.StateRoot = branchingPointStateRoot;
-        if (_logger.IsTrace) _logger.Trace($"Restored the branch checkpoint - {branchingPointStateRoot} | {_stateProvider.StateRoot}");
+        _worldState.Reset();
+        _worldState.Reset();
+        _worldState.StateRoot = branchingPointStateRoot;
+        if (_logger.IsTrace) _logger.Trace($"Restored the branch checkpoint - {branchingPointStateRoot} | {_worldState.StateRoot}");
     }
 
     // TODO: block processor pipeline
@@ -234,10 +230,10 @@ public partial class BlockProcessor : IBlockProcessor
         _withdrawalProcessor.ProcessWithdrawals(block, spec);
         _receiptsTracer.EndBlockTrace();
 
-        _stateProvider.Commit(spec);
-        _stateProvider.RecalculateStateRoot();
+        _worldState.Commit(spec);
+        _worldState.RecalculateStateRoot();
 
-        block.Header.StateRoot = _stateProvider.StateRoot;
+        block.Header.StateRoot = _worldState.StateRoot;
         block.Header.Hash = block.Header.CalculateHash();
 
         return receipts;
@@ -308,7 +304,7 @@ public partial class BlockProcessor : IBlockProcessor
                 tracer.ReportReward(reward.Address, reward.RewardType.ToLowerString(), reward.Value);
                 if (txTracer.IsTracingState)
                 {
-                    _stateProvider.Commit(spec, txTracer);
+                    _worldState.Commit(spec, txTracer);
                 }
             }
         }
@@ -319,13 +315,13 @@ public partial class BlockProcessor : IBlockProcessor
     {
         if (_logger.IsTrace) _logger.Trace($"  {(BigInteger)reward.Value / (BigInteger)Unit.Ether:N3}{Unit.EthSymbol} for account at {reward.Address}");
 
-        if (!_stateProvider.AccountExists(reward.Address))
+        if (!_worldState.AccountExists(reward.Address))
         {
-            _stateProvider.CreateAccount(reward.Address, reward.Value);
+            _worldState.CreateAccount(reward.Address, reward.Value);
         }
         else
         {
-            _stateProvider.AddToBalance(reward.Address, reward.Value, spec);
+            _worldState.AddToBalance(reward.Address, reward.Value, spec);
         }
     }
 
@@ -336,16 +332,16 @@ public partial class BlockProcessor : IBlockProcessor
         {
             if (_logger.IsInfo) _logger.Info("Applying the DAO transition");
             Address withdrawAccount = DaoData.DaoWithdrawalAccount;
-            if (!_stateProvider.AccountExists(withdrawAccount))
+            if (!_worldState.AccountExists(withdrawAccount))
             {
-                _stateProvider.CreateAccount(withdrawAccount, 0);
+                _worldState.CreateAccount(withdrawAccount, 0);
             }
 
             foreach (Address daoAccount in DaoData.DaoAccounts)
             {
-                UInt256 balance = _stateProvider.GetBalance(daoAccount);
-                _stateProvider.AddToBalance(withdrawAccount, balance, Dao.Instance);
-                _stateProvider.SubtractFromBalance(daoAccount, balance, Dao.Instance);
+                UInt256 balance = _worldState.GetBalance(daoAccount);
+                _worldState.AddToBalance(withdrawAccount, balance, Dao.Instance);
+                _worldState.SubtractFromBalance(daoAccount, balance, Dao.Instance);
             }
         }
     }

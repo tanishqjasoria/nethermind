@@ -12,6 +12,7 @@ using Nethermind.Consensus.Transactions;
 using Nethermind.Core;
 using Nethermind.Init.Steps;
 using Nethermind.Merge.AuRa.Withdrawals;
+using Nethermind.State;
 
 namespace Nethermind.Merge.AuRa.InitializationSteps
 {
@@ -32,9 +33,8 @@ namespace Nethermind.Merge.AuRa.InitializationSteps
                 _api.SpecProvider!,
                 _api.BlockValidator!,
                 _api.RewardCalculatorSource!.Get(_api.TransactionProcessor!),
-                new BlockProcessor.BlockValidationTransactionsExecutor(_api.TransactionProcessor!, _api.StateProvider!),
-                _api.StateProvider!,
-                _api.StorageProvider!,
+                new BlockProcessor.BlockValidationTransactionsExecutor(_api.TransactionProcessor!, _api.WorldState!),
+                _api.WorldState!,
                 _api.ReceiptStorage!,
                 _api.LogManager,
                 _api.BlockTree!,

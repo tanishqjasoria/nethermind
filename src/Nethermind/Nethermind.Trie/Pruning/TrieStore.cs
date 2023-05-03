@@ -836,5 +836,17 @@ namespace Nethermind.Trie.Pruning
                 ? trieNode.FullRlp
                 : _currentBatch?.Get(key, flags) ?? _keyValueStore.Get(key, flags);
         }
+
+        public bool IsFullySynced(Keccak stateRoot)
+        {
+            if (stateRoot == Keccak.EmptyTreeHash)
+            {
+                return true;
+            }
+
+            TrieNode trieNode = FindCachedOrUnknown(stateRoot);
+            bool stateRootIsInMemory = trieNode.NodeType != NodeType.Unknown;
+            return stateRootIsInMemory || _keyValueStore[stateRoot.Bytes] is not null;
+        }
     }
 }
