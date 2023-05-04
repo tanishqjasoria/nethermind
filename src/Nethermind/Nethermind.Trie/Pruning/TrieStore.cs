@@ -358,9 +358,14 @@ namespace Nethermind.Trie.Pruning
             return FindCachedOrUnknown(hash, false);
         }
 
-        public TrieNode FindCachedOrUnknown(Keccak? hash, Span<byte> nodePath)
+        public TrieNode FindCachedOrUnknown(Keccak? hash, Span<byte> nodePath, Span<byte> storagePrefix)
         {
             return FindCachedOrUnknown(hash, false);
+        }
+
+        public TrieNode FindCachedOrUnknown(Span<byte> nodePath, Span<byte> storagePrefix, Keccak rootHash)
+        {
+            throw new NotImplementedException();
         }
 
         internal TrieNode FindCachedOrUnknown(Keccak? hash, bool isReadOnly)
@@ -590,6 +595,10 @@ namespace Nethermind.Trie.Pruning
 
         private long LatestCommittedBlockNumber { get; set; }
 
+        public byte[]? TryLoadRlp(Span<byte> path, IKeyValueStore? keyValueStore)
+        {
+            throw new NotImplementedException();
+        }
         public TrieNodeResolverCapability Capability => TrieNodeResolverCapability.Hash;
 
         private void CreateCommitSet(long blockNumber)
@@ -826,11 +835,6 @@ namespace Nethermind.Trie.Pruning
 
                 if (_logger.IsInfo) _logger.Info($"Full Pruning Persist Cache finished: {stopwatch.Elapsed} {persistedNodes / (double)million:N} mln nodes persisted.");
             });
-        }
-
-        public TrieNode FindCachedOrUnknown(Span<byte> nodePath, Keccak rootHash)
-        {
-            throw new NotImplementedException();
         }
 
         public byte[]? LoadRlp(Span<byte> nodePath, Keccak rootHash)

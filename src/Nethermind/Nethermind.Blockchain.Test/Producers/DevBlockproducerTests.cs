@@ -48,7 +48,7 @@ namespace Nethermind.Blockchain.Test.Producers
                 specProvider,
                 NullBloomStorage.Instance,
                 LimboLogs.Instance);
-            TrieStore trieStore = new(
+            TrieStoreByPath trieStore = new(
                 dbProvider.RegisteredDbs[DbNames.State],
                 NoPruning.Instance,
                 Archive.Instance,
@@ -57,7 +57,7 @@ namespace Nethermind.Blockchain.Test.Producers
                 trieStore,
                 dbProvider.RegisteredDbs[DbNames.Code],
                 LimboLogs.Instance);
-            StateReader stateReader = new(trieStore, trieStore, dbProvider.GetDb<IDb>(DbNames.State), LimboLogs.Instance);
+            StateReader stateReader = new(trieStore, dbProvider.GetDb<IDb>(DbNames.State), LimboLogs.Instance);
             StorageProvider storageProvider = new(trieStore, stateProvider, LimboLogs.Instance);
             BlockhashProvider blockhashProvider = new(blockTree, LimboLogs.Instance);
             VirtualMachine virtualMachine = new(

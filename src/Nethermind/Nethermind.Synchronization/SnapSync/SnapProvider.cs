@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Microsoft.Extensions.ObjectPool;
@@ -73,7 +74,7 @@ namespace Nethermind.Synchronization.SnapSync
             ITrieStore store = _pathBasedTrieStorePool.Get();
             try
             {
-                StateTreeByPath tree = new(store, _logManager);
+                StateTreeByPath tree = new StateTreeByPath(store, _logManager);
 
                 if (hashLimit == null) hashLimit = Keccak.MaxValue;
 
@@ -160,8 +161,11 @@ namespace Nethermind.Synchronization.SnapSync
 
         public AddRangeResult AddStorageRange(long blockNumber, PathWithAccount pathWithAccount, Keccak expectedRootHash, Keccak? startingHash, PathWithStorageSlot[] slots, byte[][]? proofs = null)
         {
-            ITrieStore store = _trieStorePool.Get();
-            StorageTree tree = new(store, _logManager);
+            if (pathWithAccount is null)
+                throw new TrieException("Not Allowed");
+            Debug.Assert(pathWithAccount is not null, "path based storage need the account for the storage tree");
+            ITrieStore store = _pathBasedTrieStorePool.Get();
+            StorageTree tree = new(store, _logManager, pathWithAccount.Path);
             try
             {
                 (AddRangeResult result, bool moreChildrenToRight) = SnapProviderHelper.AddStorageRange(tree, blockNumber, startingHash, slots, expectedRootHash, proofs);
@@ -196,7 +200,7 @@ namespace Nethermind.Synchronization.SnapSync
             }
             finally
             {
-                _trieStorePool.Return(store);
+                _pathBasedTrieStorePool.Return(store);
             }
         }
 

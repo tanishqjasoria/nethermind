@@ -163,9 +163,10 @@ namespace Nethermind.Synchronization.SnapSync
 
             Stack<(TrieNode parent, TrieNode node, int pathIndex, List<byte> path)> proofNodesToProcess = new();
 
+            root.StoreNibblePathPrefix = tree.StoreNibblePathPrefix;
             tree.RootRef = root;
             proofNodesToProcess.Push((null, root, -1, new List<byte>()));
-            sortedBoundaryList.Add(root); ;
+            sortedBoundaryList.Add(root);
 
             bool moreChildrenToRight = false;
 
@@ -174,6 +175,7 @@ namespace Nethermind.Synchronization.SnapSync
                 (TrieNode parent, TrieNode node, int pathIndex, List<byte> path) = proofNodesToProcess.Pop();
 
                 node.PathToNode = path.ToArray();
+                node.StoreNibblePathPrefix = tree.StoreNibblePathPrefix;
                 //Console.WriteLine($"Node {node.PathToNode.ToHexString()} hash: {node.Keccak}");
                 if (node.IsExtension)
                 {
@@ -322,12 +324,7 @@ namespace Nethermind.Synchronization.SnapSync
             }
 
             Keccak childKeccak = node.GetChildHash(childIndex);
-            if (childKeccak is null)
-            {
-                return true;
-            }
-
-            return store.IsPersisted(childKeccak);
+            return childKeccak is null || store.IsPersisted(childKeccak);
         }
     }
 }

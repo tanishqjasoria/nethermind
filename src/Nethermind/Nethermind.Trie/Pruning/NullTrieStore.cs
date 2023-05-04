@@ -24,6 +24,10 @@ namespace Nethermind.Trie.Pruning
             return this;
         }
 
+        public byte[]? TryLoadRlp(Span<byte> path, IKeyValueStore? keyValueStore)
+        {
+            throw new NotImplementedException();
+        }
         public TrieNodeResolverCapability Capability => TrieNodeResolverCapability.Hash;
 
         public event EventHandler<ReorgBoundaryReached> ReorgBoundaryReached
@@ -37,9 +41,14 @@ namespace Nethermind.Trie.Pruning
             return new(NodeType.Unknown, hash);
         }
 
-        public TrieNode FindCachedOrUnknown(Keccak hash, Span<byte> nodePath)
+        public TrieNode FindCachedOrUnknown(Keccak hash, Span<byte> nodePath, Span<byte> storagePrefix)
         {
-            return new(NodeType.Unknown, nodePath, hash);
+            return new(NodeType.Unknown, nodePath, hash){StoreNibblePathPrefix = storagePrefix.ToArray()};
+        }
+
+        public TrieNode FindCachedOrUnknown(Span<byte> nodePath, Span<byte> storagePrefix, Keccak rootHash)
+        {
+            return new(NodeType.Unknown, nodePath){StoreNibblePathPrefix = storagePrefix.ToArray()};
         }
 
         public byte[] LoadRlp(Keccak hash)
@@ -50,11 +59,6 @@ namespace Nethermind.Trie.Pruning
         public bool IsPersisted(Keccak keccak) => true;
 
         public void Dispose() { }
-
-        public TrieNode FindCachedOrUnknown(Span<byte> nodePath, Keccak rootHash)
-        {
-            return new(NodeType.Unknown, nodePath.ToArray());
-        }
 
         public byte[]? LoadRlp(Span<byte> nodePath, Keccak rootHash)
         {

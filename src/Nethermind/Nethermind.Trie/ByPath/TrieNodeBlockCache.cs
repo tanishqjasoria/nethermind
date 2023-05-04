@@ -35,22 +35,25 @@ public class TrieNodeBlockCache : IPathTrieNodeCache
                 this[blockNumber] = nodeDictionary;
             }
 
-            TrieNode addFunc(byte[] key)
+            TrieNode AddFunc(byte[] key)
             {
                 Interlocked.Increment(ref _nodesCount);
                 MemoryUsed += trieNode.GetMemorySize(false);
                 return trieNode;
             }
 
-            TrieNode updateFunc(byte[] key, TrieNode prev)
+            TrieNode UpdateFunc(byte[] key, TrieNode prev)
             {
                 MemoryUsed += prev.GetMemorySize(false) - trieNode.GetMemorySize(false);
                 return trieNode;
             }
 
-            nodeDictionary?.AddOrUpdate(trieNode.FullPath, addFunc, updateFunc);
-            if (trieNode.PathToNode == Array.Empty<byte>())
-                nodeDictionary?.AddOrUpdate(trieNode.PathToNode, k => trieNode, (k, n) => trieNode);
+
+            nodeDictionary.AddOrUpdate(trieNode.FullPath, AddFunc, UpdateFunc);
+            // TODO: this causes issues when writing to db - this causes double writes
+            if (trieNode.IsLeaf)
+                nodeDictionary.AddOrUpdate(trieNode.StoreNibblePathPrefix.Concat(trieNode.PathToNode).ToArray(), AddFunc, UpdateFunc);
+
         }
     }
 
@@ -70,14 +73,14 @@ public class TrieNodeBlockCache : IPathTrieNodeCache
     {
         _trieStore = trieStore;
         _maxNumberOfBlocks = maxNumberOfBlocks;
-        _logger = logManager?.GetClassLogger<TrieNodePathCache>() ?? throw new ArgumentNullException(nameof(logManager));
+        _logger = logManager?.GetClassLogger<TrieNodeBlockCache>() ?? throw new ArgumentNullException(nameof(logManager));
     }
 
     public TrieNode? GetNode(byte[] path, Keccak keccak)
     {
-        foreach (long blockNumer in _nodesByBlock.Keys.OrderByDescending(b => b))
+        foreach (long blockNumber in _nodesByBlock.Keys.OrderByDescending(b => b))
         {
-            ConcurrentDictionary<byte[], TrieNode> nodeDictionary = _nodesByBlock[blockNumer];
+            ConcurrentDictionary<byte[], TrieNode> nodeDictionary = _nodesByBlock[blockNumber];
             if (nodeDictionary.TryGetValue(path, out TrieNode node))
             {
                 if (node.Keccak == keccak)
@@ -94,14 +97,18 @@ public class TrieNodeBlockCache : IPathTrieNodeCache
     {
         if (_rootHashToBlock.TryGetValue(rootHash, out HashSet<long> blocks))
         {
+            if (_nodesByBlock.Count == 0)
+            {
+                return null;
+            }
             long blockNo = blocks.Min();
             long minBlockNumberStored = _nodesByBlock.Keys.Min();
 
             while (blockNo >= minBlockNumberStored)
             {
-                if (_nodesByBlock.TryGetValue(blockNo, out ConcurrentDictionary<byte[], TrieNode> nodeDictrionary))
+                if (_nodesByBlock.TryGetValue(blockNo, out ConcurrentDictionary<byte[], TrieNode> nodeDictionary))
                 {
-                    if (nodeDictrionary.TryGetValue(path, out TrieNode node))
+                    if (nodeDictionary.TryGetValue(path, out TrieNode node))
                     {
                         Pruning.Metrics.LoadedFromCacheNodesCount++;
                         return node;
@@ -136,18 +143,23 @@ public class TrieNodeBlockCache : IPathTrieNodeCache
 
     public void PersistUntilBlock(long blockNumber, IBatch? batch = null)
     {
-        if (_nodesByBlock.IsEmpty)
-            return;
+        if (_nodesByBlock.IsEmpty) return;
+
         long currentBlockNumber = _nodesByBlock.Keys.Min();
         while (currentBlockNumber <= blockNumber)
         {
             if (_nodesByBlock.TryRemove(blockNumber, out ConcurrentDictionary<byte[], TrieNode> nodesByPath))
             {
-                Parallel.ForEach(nodesByPath.Values, node =>
+                foreach (TrieNode? node in nodesByPath.Values)
                 {
                     _trieStore.SaveNodeDirectly(blockNumber, node, batch);
                     node.IsPersisted = true;
-                });
+                }
+                // Parallel.ForEach(nodesByPath.Values, node =>
+                // {
+                //     _trieStore.SaveNodeDirectly(blockNumber, node, batch);
+                //     node.IsPersisted = true;
+                // });
             }
             currentBlockNumber++;
         }
