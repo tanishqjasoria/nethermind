@@ -4,6 +4,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using Nethermind.Core;
+using Nethermind.Core.Verkle;
+using Nethermind.Serialization.Rlp.Verkle;
 
 namespace Nethermind.Serialization.Rlp
 {
@@ -12,6 +14,7 @@ namespace Nethermind.Serialization.Rlp
         private readonly HeaderDecoder _headerDecoder = new();
         private readonly TxDecoder _txDecoder = new();
         private readonly WithdrawalDecoder _withdrawalDecoder = new();
+        // private readonly ExecutionWitnessDecoder _witnessDecoder = new();
 
         public Block? Decode(RlpStream rlpStream, RlpBehaviors rlpBehaviors = RlpBehaviors.None)
         {
@@ -67,6 +70,12 @@ namespace Nethermind.Serialization.Rlp
                 rlpStream.Check(withdrawalsCheck);
             }
 
+            // ExecutionWitness? witness = null;
+            // if (rlpStream.Position != blockCheck)
+            // {
+            //     witness = _witnessDecoder.Decode(rlpStream);
+            // }
+
             if ((rlpBehaviors & RlpBehaviors.AllowExtraBytes) != RlpBehaviors.AllowExtraBytes)
             {
                 rlpStream.Check(blockCheck);
@@ -75,6 +84,7 @@ namespace Nethermind.Serialization.Rlp
             return new(header, transactions, uncleHeaders, withdrawals);
         }
 
+        // private (int Total, int Txs, int Uncles, int? Withdrawals, int? ExecutionWitness) GetContentLength(Block item, RlpBehaviors rlpBehaviors)
         private (int Total, int Txs, int Uncles, int? Withdrawals) GetContentLength(Block item, RlpBehaviors rlpBehaviors)
         {
             int contentLength = _headerDecoder.GetLength(item.Header, rlpBehaviors);
@@ -93,6 +103,13 @@ namespace Nethermind.Serialization.Rlp
                 if (withdrawalsLength.HasValue)
                     contentLength += Rlp.LengthOfSequence(withdrawalsLength.Value);
             }
+
+            // int? wintessLength = null;
+            // if (item.ExecutionWitness is not null)
+            // {
+            //     wintessLength = ExecutionWitnessDecoder.GetContentLength(item.ExecutionWitness).contentLength;
+            //     contentLength += Rlp.LengthOfSequence(wintessLength.Value);
+            // }
 
             return (contentLength, txLength, unclesLength, withdrawalsLength);
         }
@@ -193,11 +210,18 @@ namespace Nethermind.Serialization.Rlp
                 decoderContext.Check(withdrawalsCheck);
             }
 
+            // ExecutionWitness? witness = null;
+            // if (decoderContext.Position != blockCheck)
+            // {
+            //     witness = _witnessDecoder.Decode(ref decoderContext);
+            // }
+
             if ((rlpBehaviors & RlpBehaviors.AllowExtraBytes) != RlpBehaviors.AllowExtraBytes)
             {
                 decoderContext.Check(blockCheck);
             }
 
+            // return new(header, transactions, uncleHeaders, withdrawals, witness);
             return new(header, transactions, uncleHeaders, withdrawals);
         }
 
@@ -245,6 +269,11 @@ namespace Nethermind.Serialization.Rlp
                     stream.Encode(item.Withdrawals[i]);
                 }
             }
+
+            // if (witnessLength.HasValue)
+            // {
+            //     _witnessDecoder.Encode(stream, item.ExecutionWitness);
+            // }
         }
     }
 }

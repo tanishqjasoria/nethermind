@@ -65,6 +65,7 @@ namespace Nethermind.Evm.Tracing.ParityStyle
         }
 
         public bool IsTracingReceipt { get; }
+        public bool IsTracingVerkleWitness => false;
         public bool IsTracingActions { get; }
         public bool IsTracingOpLevelStorage => false;
         public bool IsTracingMemory => false;
@@ -271,6 +272,11 @@ namespace Nethermind.Evm.Tracing.ParityStyle
             _currentOperation = operationTrace;
             _currentPushList.Clear();
             _currentVmTrace.Ops.Add(operationTrace);
+        }
+
+        public void SetVerkleWitnessKeys(IReadOnlyList<byte[]> verkleWitnessKeys)
+        {
+            throw new NotSupportedException();
         }
 
         public void ReportOperationError(EvmExceptionType error)

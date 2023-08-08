@@ -27,6 +27,7 @@ namespace Nethermind.Evm.Tracing.GethStyle
         bool IStateTracer.IsTracingState => false;
         bool IStorageTracer.IsTracingStorage => false;
         public bool IsTracingReceipt => true;
+        public bool IsTracingVerkleWitness => false;
         bool ITxTracer.IsTracingActions => false;
         public bool IsTracingOpLevelStorage { get; }
         public bool IsTracingMemory { get; }
@@ -83,6 +84,11 @@ namespace Nethermind.Evm.Tracing.GethStyle
 
                 _traceEntry.Storage = new Dictionary<string, string>(previousTraceEntry.Storage);
             }
+        }
+
+        public void SetVerkleWitnessKeys(IReadOnlyList<byte[]> verkleWitnessKeys)
+        {
+            throw new NotSupportedException();
         }
 
         public void ReportOperationError(EvmExceptionType error)

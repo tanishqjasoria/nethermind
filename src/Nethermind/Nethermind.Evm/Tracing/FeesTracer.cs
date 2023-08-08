@@ -13,6 +13,7 @@ public class FeesTracer : IBlockTracer, ITxTracer
 {
     public bool IsTracingRewards => false;
     public bool IsTracingState => false;
+    public bool IsTracingVerkleWitness => false;
     public bool IsTracingActions => false;
     public bool IsTracingOpLevelStorage => false;
     public bool IsTracingMemory => false;
@@ -86,6 +87,11 @@ public class FeesTracer : IBlockTracer, ITxTracer
     }
 
     public void StartOperation(int depth, long gas, Instruction opcode, int pc, bool isPostMerge = false)
+    {
+        throw new NotImplementedException();
+    }
+
+    public void SetVerkleWitnessKeys(IReadOnlyList<byte[]> verkleWitnessKeys)
     {
         throw new NotImplementedException();
     }

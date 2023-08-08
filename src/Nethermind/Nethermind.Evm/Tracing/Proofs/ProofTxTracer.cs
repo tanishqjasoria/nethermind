@@ -29,6 +29,7 @@ namespace Nethermind.Evm.Tracing.Proofs
         public bool IsTracingBlockHash => true;
         public bool IsTracingAccess => false;
         public bool IsTracingReceipt => true;
+        public bool IsTracingVerkleWitness => false;
         public bool IsTracingActions => false;
         public bool IsTracingOpLevelStorage => false;
         public bool IsTracingMemory => false;
@@ -147,6 +148,11 @@ namespace Nethermind.Evm.Tracing.Proofs
         public void StartOperation(int depth, long gas, Instruction opcode, int pc, bool isPostMerge = false)
         {
             throw new NotSupportedException();
+        }
+
+        public void SetVerkleWitnessKeys(IReadOnlyList<byte[]> verkleWitnessKeys)
+        {
+            throw new NotImplementedException();
         }
 
         public void ReportOperationError(EvmExceptionType error)

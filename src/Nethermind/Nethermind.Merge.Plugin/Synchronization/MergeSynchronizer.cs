@@ -20,6 +20,7 @@ using Nethermind.Synchronization.ParallelSync;
 using Nethermind.Synchronization.Peers;
 using Nethermind.Synchronization.Reporting;
 using Nethermind.Synchronization.SnapSync;
+using Nethermind.Synchronization.VerkleSync;
 
 namespace Nethermind.Merge.Plugin.Synchronization;
 
@@ -39,6 +40,7 @@ public class MergeSynchronizer : Synchronizer
         ISyncModeSelector syncModeSelector,
         ISyncConfig syncConfig,
         ISnapProvider snapProvider,
+        IVerkleSyncProvider verkleProvider,
         IBlockDownloaderFactory blockDownloaderFactory,
         IPivot pivot,
         IPoSSwitcher poSSwitcher,
@@ -56,6 +58,7 @@ public class MergeSynchronizer : Synchronizer
             syncModeSelector,
             syncConfig,
             snapProvider,
+            verkleProvider,
             blockDownloaderFactory,
             pivot,
             syncReport,

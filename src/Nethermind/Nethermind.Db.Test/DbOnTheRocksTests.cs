@@ -25,6 +25,8 @@ namespace Nethermind.Db.Test
     [Parallelizable(ParallelScope.None)]
     public class DbOnTheRocksTests
     {
+        public static Random Random { get; } = new();
+
         [Test]
         public void Smoke_test()
         {
@@ -67,6 +69,34 @@ namespace Nethermind.Db.Test
             {
                 db.Clear();
                 db.Dispose();
+            }
+        }
+
+        [Test]
+        public void RangeIteratorTest()
+        {
+            IDbConfig config = new DbConfig();
+            DbOnTheRocks db = new("testRangeIterator1", GetRocksDbSettings("testRangeIterator1", "TestRangeIterator1"),
+                config, LimboLogs.Instance);
+
+            byte[] key = new byte[32];
+            byte[] value = new byte[32];
+
+            Random.NextBytes(key);
+            Random.NextBytes(value);
+
+            for (int i = 0; i < 10000; i++)
+            {
+                Random.NextBytes(key);
+                Random.NextBytes(value);
+                db.Set(key, value.AsSpan().ToArray());
+            }
+
+            var xx = db.GetIterator();
+
+            foreach (KeyValuePair<byte[], byte[]> x in xx)
+            {
+                Console.WriteLine($"Key:{x.Key.ToHexString()} Value:{x.Value.ToHexString()}");
             }
         }
 

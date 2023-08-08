@@ -98,6 +98,21 @@ namespace Nethermind.Db
             File.Delete(DbPath);
         }
 
+        public IEnumerable<KeyValuePair<byte[], byte[]>> GetIterator()
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerable<KeyValuePair<byte[], byte[]>> GetIterator(byte[] start)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerable<KeyValuePair<byte[], byte[]>> GetIterator(byte[] start, byte[] end)
+        {
+            throw new NotImplementedException();
+        }
+
         public IEnumerable<KeyValuePair<byte[], byte[]>> GetAll(bool ordered = false) => _cache;
 
         public IEnumerable<byte[]> GetAllValues(bool ordered = false) => _cache.Values;

@@ -90,6 +90,21 @@ namespace Nethermind.Db
 
         public void Clear() { throw new InvalidOperationException(); }
 
+        public IEnumerable<KeyValuePair<byte[], byte[]>> GetIterator()
+        {
+            return _wrappedDb.GetIterator();
+        }
+
+        public IEnumerable<KeyValuePair<byte[], byte[]>> GetIterator(byte[] start)
+        {
+            return _wrappedDb.GetIterator(start);
+        }
+
+        public IEnumerable<KeyValuePair<byte[], byte[]>> GetIterator(byte[] start, byte[] end)
+        {
+            return _wrappedDb.GetIterator(start, end);
+        }
+
         public virtual void ClearTempChanges()
         {
             _memDb.Clear();

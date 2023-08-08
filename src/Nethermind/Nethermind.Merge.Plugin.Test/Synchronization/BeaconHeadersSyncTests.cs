@@ -24,6 +24,7 @@ using Nethermind.Synchronization.ParallelSync;
 using Nethermind.Synchronization.Peers;
 using Nethermind.Synchronization.Reporting;
 using Nethermind.Synchronization.SnapSync;
+using Nethermind.Synchronization.VerkleSync;
 using Nethermind.Trie.Pruning;
 using NSubstitute;
 using NUnit.Framework;
@@ -101,12 +102,12 @@ public class BeaconHeadersSyncTests
                 if (_selector is null)
                 {
                     MemDb stateDb = new();
-                    ProgressTracker progressTracker = new(BlockTree, stateDb, LimboLogs.Instance);
+                    SnapProgressTracker snapProgressTracker = new(BlockTree, stateDb, LimboLogs.Instance);
                     SyncProgressResolver syncProgressResolver = new(
                         BlockTree,
                         NullReceiptStorage.Instance,
                         new TrieStore(stateDb, LimboLogs.Instance),
-                        progressTracker,
+                        snapProgressTracker,
                         SyncConfig,
                         LimboLogs.Instance);
                     TotalDifficultyBetterPeerStrategy bestPeerStrategy = new(LimboLogs.Instance);

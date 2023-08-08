@@ -25,6 +25,15 @@ namespace Nethermind.Evm.Tracing
         bool IsTracingReceipt { get; }
 
         /// <summary>
+        /// Defines whether SetVerkleWitnessKeys will be called
+        /// </summary>
+        /// <remarks>
+        /// Controls
+        /// - <see cref="SetVerkleWitnessKeys"/>
+        /// </remarks>
+        bool IsTracingVerkleWitness { get; }
+
+        /// <summary>
         /// High level calls with information on the target account
         /// </summary>
         /// <remarks>
@@ -159,6 +168,13 @@ namespace Nethermind.Evm.Tracing
         /// <param name="isPostMerge"></param>
         /// <remarks>Depends on <see cref="IsTracingInstructions"/></remarks>
         void StartOperation(int depth, long gas, Instruction opcode, int pc, bool isPostMerge = false);
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="verkleWitnessKeys"></param>
+        /// <remarks>Depends on <see cref="IsTracingVerkleWitness"/></remarks>
+        void SetVerkleWitnessKeys(IReadOnlyList<byte[]> verkleWitnessKeys);
 
         /// <summary>
         ///

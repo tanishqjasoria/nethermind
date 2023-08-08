@@ -51,6 +51,20 @@ namespace Nethermind.Db
         public IDb Innermost => this;
         public void Flush() { }
         public void Clear() { }
+        public IEnumerable<KeyValuePair<byte[], byte[]>> GetIterator()
+        {
+            yield break;
+        }
+
+        public IEnumerable<KeyValuePair<byte[], byte[]>> GetIterator(byte[] start)
+        {
+            yield break;
+        }
+
+        public IEnumerable<KeyValuePair<byte[], byte[]>> GetIterator(byte[] start, byte[] end)
+        {
+            yield break;
+        }
 
         public IEnumerable<KeyValuePair<byte[], byte[]>> GetAll(bool ordered = false) => Enumerable.Empty<KeyValuePair<byte[], byte[]>>();
 

@@ -36,6 +36,7 @@ namespace Nethermind.Mev
         public void EndBlockTrace() { }
         public bool IsTracingStorage => false;
         public bool IsTracingReceipt => false;
+        public bool IsTracingVerkleWitness => false;
         public bool IsTracingActions => false;
         public bool IsTracingOpLevelStorage => false;
         public bool IsTracingMemory => false;
@@ -55,6 +56,8 @@ namespace Nethermind.Mev
         public void MarkAsSuccess(Address recipient, long gasSpent, byte[] output, LogEntry[] logs, Keccak? stateRoot = null) { }
         public void MarkAsFailed(Address recipient, long gasSpent, byte[] output, string error, Keccak? stateRoot = null) { }
         public void StartOperation(int depth, long gas, Instruction opcode, int pc, bool isPostMerge = false) { }
+        public void SetVerkleWitnessKeys(IReadOnlyList<byte[]> verkleWitnessKeys) { }
+
         public void ReportOperationError(EvmExceptionType error) { }
         public void ReportOperationRemainingGas(long gas) { }
         public void SetOperationStack(List<string> stackTrace) { }

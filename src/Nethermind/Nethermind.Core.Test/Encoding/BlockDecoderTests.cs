@@ -2,14 +2,22 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System;
+using System.Collections.Generic;
 using System.IO;
+using FluentAssertions;
+using MathNet.Numerics.Random;
 using Nethermind.Core.Crypto;
 using Nethermind.Core.Extensions;
 using Nethermind.Core.Test.Builders;
+using Nethermind.Core.Verkle;
 using Nethermind.Crypto;
 using Nethermind.Int256;
 using Nethermind.Logging;
 using Nethermind.Serialization.Rlp;
+using Nethermind.Serialization.Rlp.Verkle;
+using Nethermind.Verkle.Curve;
+using Nethermind.Verkle.Fields.FrEElement;
+using Nethermind.Verkle.Proofs;
 using NUnit.Framework;
 
 namespace Nethermind.Core.Test.Encoding;
@@ -56,6 +64,14 @@ public class BlockDecoderTests
                 .WithUncles(uncles)
                 .WithWithdrawals(8)
                 .WithMixHash(Keccak.EmptyTreeHash)
+                .TestObject,
+            Build.A.Block
+                .WithNumber(1)
+                .WithTransactions(transactions)
+                .WithUncles(uncles)
+                .WithWithdrawals(8)
+                .WithMixHash(Keccak.EmptyTreeHash)
+                .WithExecutionWitness(GenRandomWitness())
                 .TestObject
         };
     }
@@ -110,5 +126,82 @@ public class BlockDecoderTests
     {
         BlockDecoder decoder = new();
         Assert.That(decoder.GetLength(null, RlpBehaviors.None), Is.EqualTo(1));
+    }
+
+    [Test]
+    public void TestWitnessRlp()
+    {
+        ExecutionWitnessDecoder decoder = new();
+        ExecutionWitness item = GenRandomWitness();
+        RlpStream stream = new (decoder.GetLength(item, RlpBehaviors.None));
+        decoder.Encode(stream, item);
+        string dataPrev = stream.Data.ToHexString();
+
+        ExecutionWitness exec = decoder.Decode(new RlpStream(stream.Data));
+        RlpStream stream2 = new (decoder.GetLength(exec, RlpBehaviors.None));
+        decoder.Encode(stream2, exec);
+        string dataNew = stream2.Data.ToHexString();
+
+        dataPrev.Should().BeEquivalentTo(dataNew);
+    }
+
+    private static ExecutionWitness GenRandomWitness()
+    {
+        var rand = new Random();
+        const int suffixDiffLength = 20;
+        const int stemLength = 20;
+        List<SuffixStateDiff> suffixDiffs = new();
+        for (int i = 0; i < suffixDiffLength; i++)
+        {
+            var d = new SuffixStateDiff()
+            {
+                Suffix = (byte)i, CurrentValue = rand.NextBytes(32), NewValue = rand.NextBytes(32)
+            };
+            suffixDiffs.Add(d);
+        }
+
+        List<StemStateDiff> stateDiff = new List<StemStateDiff>();
+        for (int i = 0; i < stemLength; i++)
+        {
+            stateDiff.Add(new StemStateDiff()
+            {
+                SuffixDiffs = new List<SuffixStateDiff>(suffixDiffs.ToArray()),
+                Stem = rand.NextBytes(31)
+            });
+        }
+
+        List<Stem> otherStems = new();
+        for (int i = 0; i < 5; i++)
+        {
+            otherStems.Add(new Stem(rand.NextBytes(31)));
+        }
+
+        byte[] depthExt = rand.NextBytes(5);
+
+        List<Banderwagon> comm = new();
+        for (int i = 0; i < 100; i++)
+        {
+            Banderwagon? point;
+            while (true)
+            {
+                point = Banderwagon.FromBytes(rand.NextBytes(32), subgroupCheck: true);
+                if (point.HasValue) break;
+            }
+            comm.Add(point.Value);
+        }
+
+        Banderwagon? pointd;
+        while (true)
+        {
+            pointd = Banderwagon.FromBytes(rand.NextBytes(32), subgroupCheck: true);
+            if (pointd.HasValue) break;
+        }
+        Banderwagon dd = pointd.Value;
+
+        IpaProofStruct proof = new IpaProofStruct(comm.ToArray()[..8], FrE.One, comm.ToArray()[..8]);
+
+        var outerProof = new WitnessVerkleProof(otherStems.ToArray(), depthExt, comm.ToArray(), dd, proof);
+
+        return new ExecutionWitness(stateDiff, outerProof);
     }
 }

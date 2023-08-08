@@ -28,14 +28,19 @@ using NUnit.Framework;
 using System.Threading.Tasks;
 using Nethermind.Consensus.Processing;
 using Nethermind.State.Tracing;
+using Nethermind.Verkle.Tree;
+using Nethermind.Verkle.Tree.VerkleDb;
 using NSubstitute;
 
 namespace Nethermind.JsonRpc.Test.Modules.Proof
 {
     [Parallelizable(ParallelScope.None)]
-    [TestFixture(true, true)]
-    [TestFixture(true, false)]
-    [TestFixture(false, false)]
+    // [TestFixture(true, true, TreeType.VerkleTree)]
+    // [TestFixture(true, false, TreeType.VerkleTree)]
+    // [TestFixture(false, false, TreeType.VerkleTree)]
+    [TestFixture(true, true, StateType.Merkle)]
+    [TestFixture(true, false, StateType.Merkle)]
+    [TestFixture(false, false, StateType.Merkle)]
     public class ProofRpcModuleTests
     {
         private readonly bool _createSystemAccount;
@@ -44,11 +49,13 @@ namespace Nethermind.JsonRpc.Test.Modules.Proof
         private IBlockTree _blockTree;
         private IDbProvider _dbProvider;
         private TestSpecProvider _specProvider;
+        private StateType _stateType;
 
-        public ProofRpcModuleTests(bool createSystemAccount, bool useNonZeroGasPrice)
+        public ProofRpcModuleTests(bool createSystemAccount, bool useNonZeroGasPrice, StateType stateType)
         {
             _createSystemAccount = createSystemAccount;
             _useNonZeroGasPrice = useNonZeroGasPrice;
+            _stateType = stateType;
         }
 
         [SetUp]
@@ -58,15 +65,14 @@ namespace Nethermind.JsonRpc.Test.Modules.Proof
             _specProvider = new TestSpecProvider(London.Instance);
             _blockTree = Build.A.BlockTree(_specProvider).WithTransactions(receiptStorage).OfChainLength(10).TestObject;
             _dbProvider = await TestMemDbProvider.InitAsync();
-
-            ProofModuleFactory moduleFactory = new(
-                _dbProvider,
-                _blockTree,
-                new TrieStore(_dbProvider.StateDb, LimboLogs.Instance).AsReadOnly(),
-                new CompositeBlockPreprocessorStep(new RecoverSignatures(new EthereumEcdsa(TestBlockchainIds.ChainId, LimboLogs.Instance), NullTxPool.Instance, _specProvider, LimboLogs.Instance)),
-                receiptStorage,
-                _specProvider,
-                LimboLogs.Instance);
+            ProofModuleFactory moduleFactory = _stateType switch
+            {
+                StateType.Merkle => new(_dbProvider, _blockTree, new TrieStore(_dbProvider.StateDb, LimboLogs.Instance).AsReadOnly(),
+                    new CompositeBlockPreprocessorStep(new RecoverSignatures(new EthereumEcdsa(TestBlockchainIds.ChainId, LimboLogs.Instance), NullTxPool.Instance, _specProvider, LimboLogs.Instance)), receiptStorage, _specProvider, LimboLogs.Instance),
+                StateType.Verkle => new(_dbProvider, _blockTree, new VerkleStateStore(_dbProvider, LimboLogs.Instance).AsReadOnly(new VerkleMemoryDb()),
+                    new CompositeBlockPreprocessorStep(new RecoverSignatures(new EthereumEcdsa(TestBlockchainIds.ChainId, LimboLogs.Instance), NullTxPool.Instance, _specProvider, LimboLogs.Instance)), receiptStorage, _specProvider, LimboLogs.Instance),
+                _ => throw new ArgumentOutOfRangeException()
+            };
 
             _proofRpcModule = moduleFactory.Create();
         }
@@ -77,7 +83,7 @@ namespace Nethermind.JsonRpc.Test.Modules.Proof
         {
             Keccak txHash = _blockTree.FindBlock(1).Transactions[0].Hash;
             TransactionWithProof txWithProof = _proofRpcModule.proof_getTransactionByHash(txHash, withHeader).Data;
-            Assert.NotNull(txWithProof.Transaction);
+            Assert.That(txWithProof.Transaction, Is.Not.Null);
             Assert.That(txWithProof.TxProof.Length, Is.EqualTo(2));
             if (withHeader)
             {
@@ -204,14 +210,14 @@ namespace Nethermind.JsonRpc.Test.Modules.Proof
             _receiptFinder.Get(Arg.Any<Keccak>()).Returns(receipts);
             _receiptFinder.FindBlockHash(Arg.Any<Keccak>()).Returns(_blockTree.FindBlock(1).Hash);
 
-            ProofModuleFactory moduleFactory = new ProofModuleFactory(
-                _dbProvider,
-                _blockTree,
-                new TrieStore(_dbProvider.StateDb, LimboLogs.Instance).AsReadOnly(),
-                new CompositeBlockPreprocessorStep(new RecoverSignatures(new EthereumEcdsa(TestBlockchainIds.ChainId, LimboLogs.Instance), NullTxPool.Instance, _specProvider, LimboLogs.Instance)),
-                _receiptFinder,
-                _specProvider,
-                LimboLogs.Instance);
+            ProofModuleFactory moduleFactory = _stateType switch
+            {
+                StateType.Merkle => new(_dbProvider, _blockTree, new TrieStore(_dbProvider.StateDb, LimboLogs.Instance).AsReadOnly(),
+                    new CompositeBlockPreprocessorStep(new RecoverSignatures(new EthereumEcdsa(TestBlockchainIds.ChainId, LimboLogs.Instance), NullTxPool.Instance, _specProvider, LimboLogs.Instance)), _receiptFinder, _specProvider, LimboLogs.Instance),
+                StateType.Verkle => new(_dbProvider, _blockTree, new VerkleStateStore(_dbProvider, LimboLogs.Instance).AsReadOnly(new VerkleMemoryDb()),
+                    new CompositeBlockPreprocessorStep(new RecoverSignatures(new EthereumEcdsa(TestBlockchainIds.ChainId, LimboLogs.Instance), NullTxPool.Instance, _specProvider, LimboLogs.Instance)), _receiptFinder, _specProvider, LimboLogs.Instance),
+                _ => throw new ArgumentOutOfRangeException()
+            };
 
             _proofRpcModule = moduleFactory.Create();
             ReceiptWithProof receiptWithProof = _proofRpcModule.proof_getTransactionReceipt(txHash, withHeader).Data;
@@ -232,7 +238,7 @@ namespace Nethermind.JsonRpc.Test.Modules.Proof
         [Test]
         public void Can_call()
         {
-            WorldState stateProvider = CreateInitialState(null);
+            IWorldState stateProvider = CreateInitialState(null);
 
             Keccak root = stateProvider.StateRoot;
             Block block = Build.A.Block.WithParent(_blockTree.Head).WithStateRoot(root).TestObject;
@@ -257,7 +263,7 @@ namespace Nethermind.JsonRpc.Test.Modules.Proof
         [Test]
         public void Can_call_by_hash()
         {
-            WorldState stateProvider = CreateInitialState(null);
+            IWorldState stateProvider = CreateInitialState(null);
 
             Keccak root = stateProvider.StateRoot;
             Block block = Build.A.Block.WithParent(_blockTree.Head).WithStateRoot(root).TestObject;
@@ -759,7 +765,7 @@ namespace Nethermind.JsonRpc.Test.Modules.Proof
 
         private CallResultWithProof TestCallWithCode(byte[] code, Address? from = null)
         {
-            WorldState stateProvider = CreateInitialState(code);
+            IWorldState stateProvider = CreateInitialState(code);
 
             Keccak root = stateProvider.StateRoot;
             Block block = Build.A.Block.WithParent(_blockTree.Head!).WithStateRoot(root).WithBeneficiary(TestItem.AddressD).TestObject;
@@ -797,7 +803,7 @@ namespace Nethermind.JsonRpc.Test.Modules.Proof
 
         private void TestCallWithStorageAndCode(byte[] code, UInt256 gasPrice, Address? from = null)
         {
-            WorldState stateProvider = CreateInitialState(code);
+            IWorldState stateProvider = CreateInitialState(code);
 
             for (int i = 0; i < 10000; i++)
             {
@@ -868,9 +874,9 @@ namespace Nethermind.JsonRpc.Test.Modules.Proof
             Assert.True(response.Contains("\"result\""));
         }
 
-        private WorldState CreateInitialState(byte[] code)
+        private IWorldState CreateInitialState(byte[] code)
         {
-            WorldState stateProvider = new(new TrieStore(_dbProvider.StateDb, LimboLogs.Instance), _dbProvider.CodeDb, LimboLogs.Instance);
+            IWorldState stateProvider = new WorldState(new TrieStore(_dbProvider.StateDb, LimboLogs.Instance), _dbProvider.CodeDb, LimboLogs.Instance);
             AddAccount(stateProvider, TestItem.AddressA, 1.Ether());
             AddAccount(stateProvider, TestItem.AddressB, 1.Ether());
 
@@ -889,13 +895,13 @@ namespace Nethermind.JsonRpc.Test.Modules.Proof
             return stateProvider;
         }
 
-        private void AddAccount(WorldState stateProvider, Address account, UInt256 initialBalance)
+        private static void AddAccount(IWorldState stateProvider, Address account, UInt256 initialBalance)
         {
             stateProvider.CreateAccount(account, initialBalance);
             stateProvider.Commit(MuirGlacier.Instance, NullStateTracer.Instance);
         }
 
-        private void AddCode(WorldState stateProvider, Address account, byte[] code)
+        private static void AddCode(IWorldState stateProvider, Address account, byte[] code)
         {
             stateProvider.InsertCode(account, code, MuirGlacier.Instance);
             stateProvider.Commit(MainnetSpecProvider.Instance.GenesisSpec, NullStateTracer.Instance);

@@ -69,6 +69,11 @@ public enum BlockTreeSuggestOptions
     /// Force not to set as main block
     /// </summary>
     ForceDontSetAsMain = 8,
+
+    /// <summary>
+    /// If block should be processed in a stateless manner
+    /// </summary>
+    ShouldProcessStateless = 16,
 }
 
 public static class BlockTreeSuggestOptionsExtensions

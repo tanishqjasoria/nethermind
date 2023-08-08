@@ -4,6 +4,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using Microsoft.IdentityModel.Tokens;
 using Nethermind.Core;
 using Nethermind.Core.Crypto;
 using Nethermind.Core.Specs;
@@ -15,6 +16,7 @@ using Nethermind.Logging;
 using Nethermind.Specs;
 using Nethermind.State;
 using Nethermind.State.Tracing;
+using Nethermind.Verkle.Tree;
 using Transaction = Nethermind.Core.Transaction;
 
 namespace Nethermind.Evm.TransactionProcessing
@@ -23,6 +25,7 @@ namespace Nethermind.Evm.TransactionProcessing
     {
         private readonly EthereumEcdsa _ecdsa;
         private readonly ILogger _logger;
+        private readonly ILogManager? _logManager;
         private readonly ISpecProvider _specProvider;
         private readonly IWorldState _worldState;
         private readonly IVirtualMachine _virtualMachine;
@@ -62,6 +65,7 @@ namespace Nethermind.Evm.TransactionProcessing
             IVirtualMachine? virtualMachine,
             ILogManager? logManager)
         {
+            _logManager = logManager;
             _logger = logManager?.GetClassLogger() ?? throw new ArgumentNullException(nameof(logManager));
             _specProvider = specProvider ?? throw new ArgumentNullException(nameof(specProvider));
             _worldState = worldState ?? throw new ArgumentNullException(nameof(worldState));
@@ -90,6 +94,11 @@ namespace Nethermind.Evm.TransactionProcessing
         public void Trace(Transaction transaction, BlockHeader block, ITxTracer txTracer)
         {
             Execute(transaction, block, txTracer, ExecutionOptions.NoValidation);
+        }
+
+        public ITransactionProcessor WithNewStateProvider(IWorldState worldState)
+        {
+            return new TransactionProcessor(_specProvider, worldState, _virtualMachine, _logManager);
         }
 
         private void QuickFail(Transaction tx, BlockHeader block, ITxTracer txTracer, bool eip658NotEnabled,
@@ -130,6 +139,8 @@ namespace Nethermind.Evm.TransactionProcessing
             bool notSystemTransaction = !transaction.IsSystem();
             bool deleteCallerAccount = false;
 
+            VerkleWitness witness = new();
+
             if (!notSystemTransaction)
             {
                 spec = new SystemTransactionReleaseSpec(spec);
@@ -161,6 +172,7 @@ namespace Nethermind.Evm.TransactionProcessing
                 return;
             }
 
+            // TODO: do we need to check Intrinsic Gas before this?
             if (!noValidation && _worldState.IsInvalidContractSender(spec, caller))
             {
                 TraceLogInvalidTx(transaction, "SENDER_IS_CONTRACT");
@@ -187,7 +199,7 @@ namespace Nethermind.Evm.TransactionProcessing
                 return;
             }
 
-            long intrinsicGas = IntrinsicGasCalculator.Calculate(transaction, spec);
+            long intrinsicGas = IntrinsicGasCalculator.Calculate(transaction, spec, ref witness);
             if (_logger.IsTrace) _logger.Trace($"Intrinsic gas calculated for {transaction.Hash}: " + intrinsicGas);
 
             if (notSystemTransaction)
@@ -228,7 +240,8 @@ namespace Nethermind.Evm.TransactionProcessing
                     TraceLogInvalidTx(transaction, $"SENDER_ACCOUNT_DOES_NOT_EXIST {caller}");
                     if (!commit || noValidation || effectiveGasPrice == UInt256.Zero)
                     {
-                        deleteCallerAccount = !commit || restore;
+                        // TODO: move it to checking EIP-4758
+                        deleteCallerAccount = (!commit || restore) && !spec.IsVerkleTreeEipEnabled;
                         _worldState.CreateAccount(caller, UInt256.Zero);
                     }
                 }
@@ -296,18 +309,21 @@ namespace Nethermind.Evm.TransactionProcessing
                     transaction.GetRecipient(transaction.IsContractCreation ? _worldState.GetNonce(caller) : 0);
                 if (transaction.IsContractCreation)
                 {
+                    if (spec.IsVerkleTreeEipEnabled)
+                    {
+                        long gasContractCreationInit = witness.AccessForContractCreationInit(recipient, !transaction.Value.IsZero);
+                        if (!GasUtils.UpdateGas(gasContractCreationInit, ref unspentGas))
+                        {
+                            TraceLogInvalidTx(transaction, $"INSUFFICIENT_GAS: UNSPENT_GAS = {unspentGas}");
+                            QuickFail(transaction, block, txTracer, eip658NotEnabled, "insufficient unspent gas");
+                            return;
+                        }
+                    }
                     // if transaction is a contract creation then recipient address is the contract deployment address
-                    Address contractAddress = recipient;
-                    PrepareAccountForContractDeployment(contractAddress!, spec);
+                    PrepareAccountForContractDeployment(recipient!, spec);
                 }
 
-                if (recipient is null)
-                {
-                    // this transaction is not a contract creation so it should have the recipient known and not null
-                    throw new InvalidDataException("Recipient has not been resolved properly before tx execution");
-                }
-
-                recipientOrNull = recipient;
+                recipientOrNull = recipient ?? throw new InvalidDataException("Recipient has not been resolved properly before tx execution");
 
                 ExecutionEnvironment env = new
                 (
@@ -320,7 +336,8 @@ namespace Nethermind.Evm.TransactionProcessing
                     inputData: data ?? Array.Empty<byte>(),
                     codeInfo: machineCode is null
                         ? _virtualMachine.GetCachedCodeInfo(_worldState, recipient, spec)
-                        : new CodeInfo(machineCode)
+                        : new CodeInfo(machineCode),
+                    verkleWitness: witness
                 );
                 ExecutionType executionType =
                     transaction.IsContractCreation ? ExecutionType.Create : ExecutionType.Transaction;
@@ -379,7 +396,21 @@ namespace Nethermind.Evm.TransactionProcessing
                             _worldState.InsertCode(recipient, substate.Output, spec);
                             unspentGas -= codeDepositGasCost;
                         }
+
+                        if (spec.IsVerkleTreeEipEnabled)
+                        {
+                            long gasContractCreationCompleted = witness.AccessContractCreated(recipient);
+                            if (!GasUtils.UpdateGas(gasContractCreationCompleted, ref unspentGas))
+                            {
+                                TraceLogInvalidTx(transaction, $"INSUFFICIENT_GAS: UNSPENT_GAS = {unspentGas}");
+                                QuickFail(transaction, block, txTracer, eip658NotEnabled, "insufficient unspent gas");
+                                return;
+                            }
+                        }
                     }
+
+                    if (spec.IsVerkleTreeEipEnabled && !substate.DestroyList.IsNullOrEmpty())
+                        throw new InvalidOperationException("DestroyList should be empty for Verkle Trees");
 
                     foreach (Address toBeDestroyed in substate.DestroyList)
                     {
@@ -405,6 +436,8 @@ namespace Nethermind.Evm.TransactionProcessing
 
             Address gasBeneficiary = block.GasBeneficiary;
             bool gasBeneficiaryNotDestroyed = substate?.DestroyList.Contains(gasBeneficiary) != true;
+            // TODO: check and modify
+            witness.AccessForGasBeneficiary(gasBeneficiary);
             if (statusCode == StatusCode.Failure || gasBeneficiaryNotDestroyed)
             {
                 if (notSystemTransaction)
@@ -492,6 +525,8 @@ namespace Nethermind.Evm.TransactionProcessing
                         substate.Logs.Any() ? substate.Logs.ToArray() : Array.Empty<LogEntry>(), stateRoot);
                 }
             }
+
+            if (txTracer.IsTracingVerkleWitness) txTracer.SetVerkleWitnessKeys(witness.GetAccessedKeys());
         }
 
         private void PrepareAccountForContractDeployment(Address contractAddress, IReleaseSpec spec)
@@ -515,7 +550,7 @@ namespace Nethermind.Evm.TransactionProcessing
                 }
 
                 // we clean any existing storage (in case of a previously called self destruct)
-                _worldState.UpdateStorageRoot(contractAddress, Keccak.EmptyTreeHash);
+                if (!spec.IsVerkleTreeEipEnabled) _worldState.UpdateStorageRoot(contractAddress, Keccak.EmptyTreeHash);
             }
         }
 

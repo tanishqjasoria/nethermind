@@ -57,6 +57,7 @@ namespace Nethermind.Synchronization.ParallelSync
         private readonly long _pivotNumber;
         private bool FastSyncEnabled => _syncConfig.FastSync;
         private bool SnapSyncEnabled => _syncConfig.SnapSync && !_isSnapSyncDisabledAfterAnyStateSync;
+        private bool VerkleSyncEnabled => _syncConfig.VerkleSync;
         private bool FastBlocksEnabled => _syncConfig.FastSync && _syncConfig.FastBlocks;
         private bool FastBodiesEnabled => FastBlocksEnabled && _syncConfig.DownloadBodiesInFastSync;
         private bool FastReceiptsEnabled => FastBlocksEnabled && _syncConfig.DownloadReceiptsInFastSync;
@@ -210,6 +211,7 @@ namespace Nethermind.Synchronization.ParallelSync
                             CheckAddFlag(best.IsInFullSync, SyncMode.Full, ref newModes);
                             CheckAddFlag(best.IsInStateNodes, SyncMode.StateNodes, ref newModes);
                             CheckAddFlag(best.IsInSnapRanges, SyncMode.SnapSync, ref newModes);
+                            CheckAddFlag(best.IsInVerkleRanges, SyncMode.VerkleSync, ref newModes);
                             CheckAddFlag(best.IsInDisconnected, SyncMode.Disconnected, ref newModes);
                             CheckAddFlag(best.IsInWaitingForBlock, SyncMode.WaitingForBlock, ref newModes);
                             if (IsTheModeSwitchWorthMentioning(newModes))
@@ -564,16 +566,18 @@ namespace Nethermind.Synchronization.ParallelSync
         {
             bool isInStateSync = best.IsInStateSync;
             bool snapSyncDisabled = !SnapSyncEnabled;
-            bool snapRangesFinished = _syncProgressResolver.IsSnapGetRangesFinished();
+            bool verkleSyncDisabled = !VerkleSyncEnabled;
+            bool rangesFinished = _syncProgressResolver.IsGetRangesFinished();
 
-            bool result = isInStateSync && (snapSyncDisabled || snapRangesFinished);
+            bool result = isInStateSync && (snapSyncDisabled || rangesFinished) && (verkleSyncDisabled || rangesFinished);
 
             if (_logger.IsTrace)
             {
                 LogDetailedSyncModeChecks("STATE_NODES",
                     (nameof(isInStateSync), isInStateSync),
                     (nameof(snapSyncDisabled), snapSyncDisabled),
-                    (nameof(snapRangesFinished), snapRangesFinished));
+                    (nameof(verkleSyncDisabled), verkleSyncDisabled),
+                    (nameof(rangesFinished), rangesFinished));
             }
 
             return result;
@@ -583,7 +587,7 @@ namespace Nethermind.Synchronization.ParallelSync
         {
             bool isInStateSync = best.IsInStateSync;
             bool isCloseToHead = best.TargetBlock >= best.Header && (best.TargetBlock - best.Header) < Constants.MaxDistanceFromHead;
-            bool snapNotFinished = !_syncProgressResolver.IsSnapGetRangesFinished();
+            bool snapNotFinished = !_syncProgressResolver.IsGetRangesFinished();
 
             if (_logger.IsTrace)
             {
@@ -598,6 +602,27 @@ namespace Nethermind.Synchronization.ParallelSync
                 && isInStateSync
                 && isCloseToHead
                 && snapNotFinished;
+        }
+
+        private bool ShouldBeBeInVerkleRangesPhase(Snapshot best)
+        {
+            bool isInStateSync = best.IsInStateSync;
+            bool isCloseToHead = best.TargetBlock >= best.Header && (best.TargetBlock - best.Header) < Constants.MaxDistanceFromHead;
+            bool verkleRangesNotFinished = !_syncProgressResolver.IsGetRangesFinished();
+
+            if (_logger.IsTrace)
+            {
+                LogDetailedSyncModeChecks("VERKLE_RANGES",
+                    (nameof(VerkleSyncEnabled), VerkleSyncEnabled),
+                    (nameof(isInStateSync), isInStateSync),
+                    (nameof(isCloseToHead), isCloseToHead),
+                    (nameof(verkleRangesNotFinished), verkleRangesNotFinished));
+            }
+
+            return VerkleSyncEnabled
+                   && isInStateSync
+                   && isCloseToHead
+                   && verkleRangesNotFinished;
         }
 
         private bool HasJustStartedFullSync(Snapshot best) =>
@@ -744,7 +769,8 @@ namespace Nethermind.Synchronization.ParallelSync
                 TargetBlock = targetBlock;
 
                 IsInWaitingForBlock = IsInDisconnected = IsInFastReceipts = IsInFastBodies = IsInFastHeaders
-                    = IsInFastSync = IsInFullSync = IsInStateSync = IsInStateNodes = IsInSnapRanges = IsInBeaconHeaders = false;
+                    = IsInFastSync = IsInFullSync = IsInStateSync = IsInStateNodes = IsInSnapRanges = IsInVerkleRanges
+                        = IsInBeaconHeaders = false;
             }
 
             public bool IsInFastHeaders { get; set; }
@@ -754,6 +780,7 @@ namespace Nethermind.Synchronization.ParallelSync
             public bool IsInStateSync { get; set; }
             public bool IsInStateNodes { get; set; }
             public bool IsInSnapRanges { get; set; }
+            public bool IsInVerkleRanges { get; set; }
             public bool IsInFullSync { get; set; }
             public bool IsInDisconnected { get; set; }
             public bool IsInWaitingForBlock { get; set; }

@@ -47,6 +47,7 @@ using NSubstitute.Exceptions;
 using NUnit.Framework;
 using BlockTree = Nethermind.Blockchain.BlockTree;
 using Nethermind.Core.Specs;
+using Nethermind.Synchronization.VerkleSync;
 
 namespace Nethermind.Synchronization.Test
 {
@@ -943,9 +944,9 @@ namespace Nethermind.Synchronization.Test
             public ResponseBuilder ResponseBuilder =>
                 _responseBuilder ??= new ResponseBuilder(BlockTree, TestHeaderMapping);
 
-            private ProgressTracker? _progressTracker;
+            private SnapProgressTracker? _progressTracker;
 
-            private ProgressTracker ProgressTracker => _progressTracker ??=
+            private SnapProgressTracker SnapProgressTracker => _progressTracker ??=
                 new(BlockTree, _stateDb, LimboLogs.Instance);
 
             private ISyncProgressResolver? _syncProgressResolver;
@@ -955,7 +956,7 @@ namespace Nethermind.Synchronization.Test
                     BlockTree,
                     ReceiptStorage,
                     new TrieStore(_stateDb, LimboLogs.Instance),
-                    ProgressTracker,
+                    SnapProgressTracker,
                     syncConfig,
                     LimboLogs.Instance);
 

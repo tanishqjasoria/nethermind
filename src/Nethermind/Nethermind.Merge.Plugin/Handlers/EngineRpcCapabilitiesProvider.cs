@@ -5,9 +5,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Nethermind.Core.Specs;
 using Nethermind.JsonRpc;
-using Nethermind.Merge.Plugin;
 
-namespace Nethermind.HealthChecks;
+namespace Nethermind.Merge.Plugin.Handlers;
 
 public class EngineRpcCapabilitiesProvider : IRpcCapabilitiesProvider
 {

@@ -6,19 +6,22 @@ using Nethermind.Core;
 using Nethermind.Core.Crypto;
 using Nethermind.Core.Extensions;
 using Nethermind.Specs;
+using Nethermind.State;
 using NUnit.Framework;
 
 namespace Nethermind.Evm.Test
 {
-    [TestFixture(true)]
-    [TestFixture(false)]
+    [TestFixture(true, StateType.Merkle)]
+    [TestFixture(false, StateType.Merkle)]
+    [TestFixture(true, StateType.Verkle)]
+    [TestFixture(false, StateType.Verkle)]
     [Parallelizable(ParallelScope.Self)]
     public class SimdTests : VirtualMachineTestsBase
     {
         private readonly bool _simdDisabled;
         protected override long BlockNumber => MainnetSpecProvider.ConstantinopleFixBlockNumber;
 
-        public SimdTests(bool simdDisabled)
+        public SimdTests(bool simdDisabled, StateType stateType): base(stateType)
         {
             _simdDisabled = simdDisabled;
         }

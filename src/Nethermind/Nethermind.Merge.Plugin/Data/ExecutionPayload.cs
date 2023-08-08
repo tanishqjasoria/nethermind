@@ -8,6 +8,7 @@ using System.Linq;
 using Nethermind.Core;
 using Nethermind.Core.Crypto;
 using Nethermind.Core.Specs;
+using Nethermind.Core.Verkle;
 using Nethermind.Int256;
 using Nethermind.Serialization.Json;
 using Nethermind.Serialization.Rlp;
@@ -40,9 +41,12 @@ public class ExecutionPayload
         BaseFeePerGas = block.BaseFeePerGas;
         Withdrawals = block.Withdrawals;
         ExcessDataGas = block.ExcessDataGas;
+        ExecutionWitness = block.ExecutionWitness!;
 
         SetTransactions(block.Transactions);
     }
+
+    public ExecutionWitness ExecutionWitness { get; set; } = new ();
 
     public UInt256 BaseFeePerGas { get; set; }
 
@@ -127,7 +131,7 @@ public class ExecutionPayload
                 ExcessDataGas = ExcessDataGas,
             };
 
-            block = new(header, transactions, Array.Empty<BlockHeader>(), Withdrawals);
+            block = new(header, transactions, Array.Empty<BlockHeader>(), Withdrawals, ExecutionWitness);
 
             return true;
         }

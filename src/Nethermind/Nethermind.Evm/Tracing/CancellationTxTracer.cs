@@ -17,6 +17,7 @@ namespace Nethermind.Evm.Tracing
         private readonly CancellationToken _token;
         private readonly bool _isTracingReceipt;
         private readonly bool _isTracingActions;
+        private readonly bool _isTracingVerkleWitness;
         private readonly bool _isTracingOpLevelStorage;
         private readonly bool _isTracingMemory;
         private readonly bool _isTracingInstructions;
@@ -41,6 +42,12 @@ namespace Nethermind.Evm.Tracing
         {
             get => _isTracingReceipt || _innerTracer.IsTracingReceipt;
             init => _isTracingReceipt = value;
+        }
+
+        public bool IsTracingVerkleWitness
+        {
+            get => _isTracingVerkleWitness || _innerTracer.IsTracingVerkleWitness;
+            init => _isTracingVerkleWitness = value;
         }
 
         public bool IsTracingActions
@@ -193,6 +200,15 @@ namespace Nethermind.Evm.Tracing
             if (_innerTracer.IsTracingInstructions)
             {
                 _innerTracer.StartOperation(depth, gas, opcode, pc, isPostMerge);
+            }
+        }
+
+        public void SetVerkleWitnessKeys(IReadOnlyList<byte[]> verkleWitnessKeys)
+        {
+            _token.ThrowIfCancellationRequested();
+            if (_innerTracer.IsTracingInstructions)
+            {
+                _innerTracer.SetVerkleWitnessKeys(verkleWitnessKeys);
             }
         }
 

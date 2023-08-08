@@ -20,11 +20,11 @@ namespace Nethermind.Evm.Tracing
         public CompositeTxTracer(IList<ITxTracer> txTracers)
         {
             _txTracers = txTracers;
-            for (int index = 0; index < txTracers.Count; index++)
+            foreach (ITxTracer? t in txTracers)
             {
-                ITxTracer t = txTracers[index];
                 IsTracingState |= t.IsTracingState;
                 IsTracingReceipt |= t.IsTracingReceipt;
+                IsTracingVerkleWitness |= t.IsTracingVerkleWitness;
                 IsTracingActions |= t.IsTracingActions;
                 IsTracingOpLevelStorage |= t.IsTracingOpLevelStorage;
                 IsTracingMemory |= t.IsTracingMemory;
@@ -42,6 +42,7 @@ namespace Nethermind.Evm.Tracing
         public bool IsTracingState { get; }
         public bool IsTracingStorage { get; }
         public bool IsTracingReceipt { get; }
+        public bool IsTracingVerkleWitness { get; }
         public bool IsTracingActions { get; }
         public bool IsTracingOpLevelStorage { get; }
         public bool IsTracingMemory { get; }
@@ -157,6 +158,18 @@ namespace Nethermind.Evm.Tracing
                 if (innerTracer.IsTracingInstructions)
                 {
                     innerTracer.StartOperation(depth, gas, opcode, pc, isPostMerge);
+                }
+            }
+        }
+
+        public void SetVerkleWitnessKeys(IReadOnlyList<byte[]> verkleWitnessKeys)
+        {
+            for (int index = 0; index < _txTracers.Count; index++)
+            {
+                ITxTracer innerTracer = _txTracers[index];
+                if (innerTracer.IsTracingInstructions)
+                {
+                    innerTracer.SetVerkleWitnessKeys(verkleWitnessKeys);
                 }
             }
         }

@@ -38,7 +38,7 @@ namespace Nethermind.Evm
 
             /// <summary>
             /// The word 'return' acts here once as a verb 'to return stack to the pool' and once as a part of the
-            /// compound noun 'return stack' which is a stack of subroutine return values.  
+            /// compound noun 'return stack' which is a stack of subroutine return values.
             /// </summary>
             /// <param name="dataStack"></param>
             /// <param name="returnStack"></param>
@@ -106,6 +106,11 @@ namespace Nethermind.Evm
         // As we can add here from VM, we need it as ICollection
         public ICollection<LogEntry> Logs => _logs;
 
+        /// <summary>
+        /// Verkle Tree: to maintain a list of all accessed subtrees and leaves
+        /// </summary>
+        public IVerkleWitness? VerkleTreeWitness { get; }
+
         private readonly JournalSet<Address> _accessedAddresses;
         private readonly JournalSet<StorageCell> _accessedStorageCells;
         private readonly JournalCollection<LogEntry> _logs;
@@ -114,6 +119,7 @@ namespace Nethermind.Evm
         private readonly int _accessedStorageKeysSnapshot;
         private readonly int _destroyListSnapshot;
         private readonly int _logsSnapshot;
+        private readonly int _verkleWitnessSnapshot;
 
         public int DataStackHead = 0;
 
@@ -179,6 +185,7 @@ namespace Nethermind.Evm
                 _accessedStorageCells = stateForAccessLists._accessedStorageCells;
                 _destroyList = stateForAccessLists._destroyList;
                 _logs = stateForAccessLists._logs;
+                VerkleTreeWitness = stateForAccessLists.VerkleTreeWitness;
             }
             else
             {
@@ -187,13 +194,14 @@ namespace Nethermind.Evm
                 _accessedStorageCells = new JournalSet<StorageCell>();
                 _destroyList = new JournalSet<Address>();
                 _logs = new JournalCollection<LogEntry>();
+                VerkleTreeWitness = env.VerkleWitness;
             }
 
             _accessedAddressesSnapshot = _accessedAddresses.TakeSnapshot();
             _accessedStorageKeysSnapshot = _accessedStorageCells.TakeSnapshot();
             _destroyListSnapshot = _destroyList.TakeSnapshot();
             _logsSnapshot = _logs.TakeSnapshot();
-
+            _verkleWitnessSnapshot = VerkleTreeWitness?.TakeSnapshot() ?? 0;
         }
 
         public Address From
@@ -295,6 +303,7 @@ namespace Nethermind.Evm
                 _destroyList.Restore(_destroyListSnapshot);
                 _accessedAddresses.Restore(_accessedAddressesSnapshot);
                 _accessedStorageCells.Restore(_accessedStorageKeysSnapshot);
+                VerkleTreeWitness?.Restore(_verkleWitnessSnapshot);
             }
         }
     }

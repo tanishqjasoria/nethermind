@@ -14,6 +14,7 @@ public enum InitiateDisconnectReason : byte
     OppositeDirectionCleanup,
 
     SnapServerNotImplemented,
+    VerkleSyncServerNotImplemented,
     IncompatibleP2PVersion,
     InvalidNetworkId,
     InvalidGenesis,

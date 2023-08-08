@@ -29,6 +29,7 @@ namespace Nethermind.Evm.Tracing
         }
 
         public bool IsTracingReceipt => true;
+        public bool IsTracingVerkleWitness => true;
         public bool IsTracingActions => true;
         public bool IsTracingOpLevelStorage => true;
         public bool IsTracingMemory => true;
@@ -47,6 +48,9 @@ namespace Nethermind.Evm.Tracing
         public void MarkAsFailed(Address recipient, long gasSpent, byte[] output, string error, Keccak stateRoot = null) => throw new OperationCanceledException(ErrorMessage);
 
         public void StartOperation(int depth, long gas, Instruction opcode, int pc, bool isPostMerge = false) => throw new OperationCanceledException(ErrorMessage);
+
+        public void SetVerkleWitnessKeys(IReadOnlyList<byte[]> verkleWitnessKeys) =>
+            throw new OperationCanceledException(ErrorMessage);
 
         public void ReportOperationError(EvmExceptionType error) => throw new OperationCanceledException(ErrorMessage);
 

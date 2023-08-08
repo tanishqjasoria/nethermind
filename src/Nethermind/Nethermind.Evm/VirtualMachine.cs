@@ -128,8 +128,13 @@ public class VirtualMachine : IVirtualMachine
                 {
                     if (_txTracer.IsTracingActions && !currentState.IsContinuation)
                     {
-                        _txTracer.ReportAction(currentState.GasAvailable, currentState.Env.Value, currentState.From, currentState.To, currentState.ExecutionType.IsAnyCreate() ? currentState.Env.CodeInfo.MachineCode : currentState.Env.InputData, currentState.ExecutionType);
-                        if (_txTracer.IsTracingCode) _txTracer.ReportByteCode(currentState.Env.CodeInfo.MachineCode);
+                        _txTracer.ReportAction(currentState.GasAvailable, currentState.Env.Value, currentState.From,
+                            currentState.To,
+                            currentState.ExecutionType.IsAnyCreate()
+                                ? currentState.Env.CodeInfo.MachineCode.ToBytes()
+                                : currentState.Env.InputData, currentState.ExecutionType);
+                        if (_txTracer.IsTracingCode)
+                            _txTracer.ReportByteCode(currentState.Env.CodeInfo.MachineCode.ToBytes());
                     }
 
                     callResult = ExecuteCall(currentState, previousCallResult, previousCallOutput, previousCallOutputDestination, spec);
@@ -387,15 +392,24 @@ public class VirtualMachine : IVirtualMachine
         CodeInfo cachedCodeInfo = _codeCache.Get(codeHash);
         if (cachedCodeInfo is null)
         {
-            byte[] code = worldState.GetCode(codeHash);
-
-            if (code is null)
+            try
             {
-                throw new NullReferenceException($"Code {codeHash} missing in the state for address {codeSource}");
+                byte[] code = worldState.GetCode(codeHash);
+                cachedCodeInfo = new CodeInfo(code);
+                _codeCache.Set(codeHash, cachedCodeInfo);
             }
-
-            cachedCodeInfo = new CodeInfo(code);
-            _codeCache.Set(codeHash, cachedCodeInfo);
+            catch (InvalidOperationException)
+            {
+                // this means that code is not there
+                if (worldState.StateType == StateType.Verkle)
+                {
+                    cachedCodeInfo = new CodeInfo(worldState, codeSource);
+                }
+                else
+                {
+                    throw new NullReferenceException($"Code {codeHash} missing in the state for address {codeSource}");
+                }
+            }
         }
         else
         {
@@ -458,27 +472,72 @@ public class VirtualMachine : IVirtualMachine
         gasAvailable += refund;
     }
 
-    private bool ChargeAccountAccessGas(ref long gasAvailable, EvmState vmState, Address address, IReleaseSpec spec, bool chargeForWarm = true)
+    private bool ChargeAccountAccessGas(ref long gasAvailable, EvmState vmState, Address address, IReleaseSpec spec, bool chargeForWarm = true, bool valueTransfer = false, Instruction opCode = Instruction.STOP)
     {
         // Console.WriteLine($"Accessing {address}");
 
         bool result = true;
-        if (spec.UseHotAndColdStorage)
+        if (spec.IsVerkleTreeEipEnabled)
         {
-            if (_txTracer.IsTracingAccess) // when tracing access we want cost as if it was warmed up from access list
+            bool isAddressPreCompile = address.IsPrecompile(spec);
+            switch (opCode)
             {
-                vmState.WarmUp(address);
-            }
+                case Instruction.BALANCE:
+                {
+                    result = UpdateGas(vmState.VerkleTreeWitness.AccessBalance(address), ref gasAvailable);
+                    break;
+                }
+                case Instruction.EXTCODESIZE:
+                case Instruction.EXTCODECOPY:
+                case Instruction.SELFDESTRUCT:
+                case Instruction.CALL:
+                case Instruction.CALLCODE:
+                case Instruction.DELEGATECALL:
+                case Instruction.STATICCALL:
+                {
+                    if (!isAddressPreCompile)
+                    {
+                        result = UpdateGas(vmState.VerkleTreeWitness.AccessForCodeOpCodes(address), ref gasAvailable);
+                        if (!result) break;
+                    }
 
-            if (vmState.IsCold(address) && !address.IsPrecompile(spec))
-            {
-                result = UpdateGas(GasCostOf.ColdAccountAccess, ref gasAvailable);
-                vmState.WarmUp(address);
+                    if (valueTransfer)
+                    {
+                        result = UpdateGas(
+                            vmState.VerkleTreeWitness.AccessBalance(address),
+                            ref gasAvailable);
+                    }
+                    break;
+                }
+                case Instruction.EXTCODEHASH:
+                {
+                    result = UpdateGas(
+                        vmState.VerkleTreeWitness.AccessCodeHash(address),
+                        ref gasAvailable);
+                    break;
+                }
+                default:
+                {
+                    throw new ArgumentOutOfRangeException(nameof(opCode), opCode, null);
+                }
             }
-            else if (chargeForWarm)
-            {
-                result = UpdateGas(GasCostOf.WarmStateRead, ref gasAvailable);
-            }
+            return result;
+        }
+
+        if (!spec.UseHotAndColdStorage) return true;
+        if (_txTracer.IsTracingAccess) // when tracing access we want cost as if it was warmed up from access list
+        {
+            vmState.WarmUp(address);
+        }
+
+        if (vmState.IsCold(address) && !address.IsPrecompile(spec))
+        {
+            result = UpdateGas(GasCostOf.ColdAccountAccess, ref gasAvailable);
+            vmState.WarmUp(address);
+        }
+        else if (chargeForWarm)
+        {
+            result = UpdateGas(GasCostOf.WarmStateRead, ref gasAvailable);
         }
 
         return result;
@@ -500,6 +559,12 @@ public class VirtualMachine : IVirtualMachine
         // Console.WriteLine($"Accessing {storageCell} {storageAccessType}");
 
         bool result = true;
+        if (spec.IsVerkleTreeEipEnabled)
+        {
+            long storageGas = vmState.VerkleTreeWitness.AccessStorage(storageCell.Address, storageCell.Index,
+                storageAccessType == StorageAccessType.SSTORE);
+            if (!UpdateGas(storageGas, ref gasAvailable)) return false;
+        }
         if (spec.UseHotAndColdStorage)
         {
             if (_txTracer.IsTracingAccess) // when tracing access we want cost as if it was warmed up from access list
@@ -596,10 +661,25 @@ public class VirtualMachine : IVirtualMachine
         ref readonly ExecutionEnvironment env = ref vmState.Env;
         ref readonly TxExecutionContext txCtx = ref env.TxExecutionContext;
 
+        vmState.InitStacks();
+        EvmStack stack = new(vmState.DataStack.AsSpan(), vmState.DataStackHead, _txTracer);
+        long gasAvailable = vmState.GasAvailable;
+        int programCounter = vmState.ProgramCounter;
+        ICode code = env.CodeInfo.MachineCode;
+
         if (!vmState.IsContinuation)
         {
             if (!_state.AccountExists(env.ExecutingAccount))
             {
+                // TODO: this part is completely wrong - just for consensus with geth
+                if (spec.IsVerkleTreeEipEnabled && vmState.ExecutionType == ExecutionType.Transaction)
+                {
+                    if (env.TransferValue.IsZero)
+                    {
+                        long gasProofOfAbsence = vmState.VerkleTreeWitness.AccessForProofOfAbsence(env.Caller);
+                        if (!UpdateGas(gasProofOfAbsence, ref gasAvailable)) goto OutOfGas;
+                    }
+                }
                 _state.CreateAccount(env.ExecutingAccount, env.TransferValue);
             }
             else
@@ -615,14 +695,15 @@ public class VirtualMachine : IVirtualMachine
 
         if (vmState.Env.CodeInfo.MachineCode.Length == 0)
         {
+            UpdateCurrentState(vmState, programCounter, gasAvailable, stack.Head);
             goto Empty;
         }
 
-        vmState.InitStacks();
-        EvmStack stack = new(vmState.DataStack.AsSpan(), vmState.DataStackHead, _txTracer);
-        long gasAvailable = vmState.GasAvailable;
-        int programCounter = vmState.ProgramCounter;
-        Span<byte> code = env.CodeInfo.MachineCode.AsSpan();
+        byte CalculateCodeChunkIdFromPc(int pc)
+        {
+            int chunkId = pc / 31;
+            return (byte)chunkId;
+        }
 
         static void UpdateCurrentState(EvmState state, int pc, long gas, int stackHead)
         {
@@ -651,6 +732,14 @@ public class VirtualMachine : IVirtualMachine
 
         while (programCounter < code.Length)
         {
+            if (spec.IsVerkleTreeEipEnabled)
+            {
+                if (vmState.ExecutionType is not (ExecutionType.Create or ExecutionType.Create2))
+                {
+                    long gas = vmState.VerkleTreeWitness.AccessCodeChunk(vmState.To, CalculateCodeChunkIdFromPc(programCounter), false);
+                    if (!UpdateGas(gas, ref gasAvailable)) goto OutOfGas;
+                }
+            }
             Instruction instruction = (Instruction)code[programCounter];
             // Console.WriteLine(instruction);
             if (traceOpcodes)
@@ -1140,7 +1229,7 @@ public class VirtualMachine : IVirtualMachine
                         if (gasCost != 0 && !UpdateGas(gasCost, ref gasAvailable)) goto OutOfGas;
 
                         Address address = stack.PopAddress();
-                        if (!ChargeAccountAccessGas(ref gasAvailable, vmState, address, spec)) goto OutOfGas;
+                        if (!ChargeAccountAccessGas(ref gasAvailable, vmState, address, spec, opCode: instruction)) goto OutOfGas;
 
                         UInt256 balance = _state.GetBalance(address);
                         stack.PushUInt256(in balance);
@@ -1228,6 +1317,23 @@ public class VirtualMachine : IVirtualMachine
                             ZeroPaddedSpan codeSlice = code.SliceWithZeroPadding(src, (int)length);
                             vmState.Memory.Save(in dest, codeSlice);
                             if (_txTracer.IsTracingInstructions) _txTracer.ReportMemoryChange((long)dest, codeSlice);
+
+                            if (spec.IsVerkleTreeEipEnabled)
+                            {
+                                // TODO: modify - add the chunk that gets jumped when PUSH32 is called.
+                                if (src > length)
+                                {
+                                    src = length;
+                                }
+                                byte startChunkId = CalculateCodeChunkIdFromPc((int)src);
+                                byte endChunkId = CalculateCodeChunkIdFromPc((int)src + codeSlice.Length);
+
+                                for (byte ch = startChunkId; ch <= endChunkId; ch++)
+                                {
+                                    long gas = vmState.VerkleTreeWitness.AccessCodeChunk(vmState.To, ch, false);
+                                    if (!UpdateGas(gas, ref gasAvailable)) goto OutOfGas;
+                                }
+                            }
                         }
 
                         break;
@@ -1246,9 +1352,9 @@ public class VirtualMachine : IVirtualMachine
                         if (!UpdateGas(gasCost, ref gasAvailable)) goto OutOfGas;
 
                         Address address = stack.PopAddress();
-                        if (!ChargeAccountAccessGas(ref gasAvailable, vmState, address, spec)) goto OutOfGas;
+                        if (!ChargeAccountAccessGas(ref gasAvailable, vmState, address, spec, opCode: instruction)) goto OutOfGas;
 
-                        byte[] accountCode = GetCachedCodeInfo(_worldState, address, spec).MachineCode;
+                        ICode accountCode = GetCachedCodeInfo(_worldState, address, spec).MachineCode;
                         UInt256 codeSize = (UInt256)accountCode.Length;
                         stack.PushUInt256(in codeSize);
                         break;
@@ -1264,18 +1370,33 @@ public class VirtualMachine : IVirtualMachine
                         if (!UpdateGas(gasCost + GasCostOf.Memory * EvmPooledMemory.Div32Ceiling(length),
                             ref gasAvailable)) goto OutOfGas;
 
-                        if (!ChargeAccountAccessGas(ref gasAvailable, vmState, address, spec)) goto OutOfGas;
+                        if (!ChargeAccountAccessGas(ref gasAvailable, vmState, address, spec, opCode: instruction)) goto OutOfGas;
 
                         if (length > UInt256.Zero)
                         {
                             if (!UpdateMemoryCost(vmState, ref gasAvailable, in dest, length)) goto OutOfGas;
 
-                            byte[] externalCode = GetCachedCodeInfo(_worldState, address, spec).MachineCode;
+                            ICode externalCode = GetCachedCodeInfo(_worldState, address, spec).MachineCode;
                             ZeroPaddedSpan callDataSlice = externalCode.SliceWithZeroPadding(src, (int)length);
                             vmState.Memory.Save(in dest, callDataSlice);
                             if (_txTracer.IsTracingInstructions)
                             {
                                 _txTracer.ReportMemoryChange((long)dest, callDataSlice);
+                            }
+
+                            if (spec.IsVerkleTreeEipEnabled)
+                            {
+                                // TODO: modify - add the chunk that gets jumped when PUSH32 is called.
+                                if (src > length) src = length;
+
+                                byte startChunkId = CalculateCodeChunkIdFromPc((int)src);
+                                byte endChunkId = CalculateCodeChunkIdFromPc((int)src + callDataSlice.Length);
+
+                                for (byte ch = startChunkId; ch <= endChunkId; ch++)
+                                {
+                                    long gas = vmState.VerkleTreeWitness.AccessCodeChunk(address, ch, false);
+                                    if (!UpdateGas(gas, ref gasAvailable)) goto OutOfGas;
+                                }
                             }
                         }
 
@@ -1573,7 +1694,11 @@ public class VirtualMachine : IVirtualMachine
                                 Span<byte> originalValue = _state.GetOriginal(storageCell);
                                 bool originalIsZero = originalValue.IsZero();
 
-                                bool currentSameAsOriginal = Bytes.AreEqual(originalValue, currentValue);
+                                bool currentSameAsOriginal = originalValue.WithoutLeadingZeros().SequenceEqual(currentValue.WithoutLeadingZeros());
+                                if (originalValue.Length == 0 && currentIsZero)
+                                {
+                                    currentSameAsOriginal = true;
+                                }
                                 if (currentSameAsOriginal)
                                 {
                                     if (currentIsZero)
@@ -1782,6 +1907,13 @@ public class VirtualMachine : IVirtualMachine
                         else
                         {
                             stack.PushByte(code[programCounterInt]);
+
+                            if (spec.IsVerkleTreeEipEnabled && programCounterInt % 31 == 0)
+                            {
+                                // TODO: modify - add the chunk that gets jumped when PUSH32 is called.
+                                long gas = vmState.VerkleTreeWitness.AccessCodeChunk(vmState.To, CalculateCodeChunkIdFromPc(programCounterInt + 1), false);
+                                if (!UpdateGas(gas, ref gasAvailable)) goto OutOfGas;
+                            }
                         }
 
                         programCounter++;
@@ -1828,6 +1960,21 @@ public class VirtualMachine : IVirtualMachine
                         stack.PushLeftPaddedBytes(code.Slice(programCounterInt, usedFromCode), length);
 
                         programCounter += length;
+
+                        if (spec.IsVerkleTreeEipEnabled)
+                        {
+                            // TODO: modify - add the chunk that gets jumped when PUSH32 is called.
+                            byte startChunkId = CalculateCodeChunkIdFromPc(programCounterInt);
+                            int endOffset = programCounterInt + length > code.Length ? code.Length : programCounterInt + length;
+                            // var endChunkId = CalculateChunkIdFromPc(programCounterInt + usedFromCode);
+                            byte endChunkId = CalculateCodeChunkIdFromPc(endOffset - 1);
+
+                            for (byte ch = startChunkId; ch <= endChunkId; ch++)
+                            {
+                                long gas = vmState.VerkleTreeWitness.AccessCodeChunk(vmState.To, ch, false);
+                                if (!UpdateGas(gas, ref gasAvailable)) goto OutOfGas;
+                            }
+                        }
                         break;
                     }
                 case Instruction.DUP1:
@@ -1978,6 +2125,12 @@ public class VirtualMachine : IVirtualMachine
                             ? ContractAddress.From(env.ExecutingAccount, _state.GetNonce(env.ExecutingAccount))
                             : ContractAddress.From(env.ExecutingAccount, salt, initCode);
 
+                        if (spec.IsVerkleTreeEipEnabled)
+                        {
+                            long gasWitness = vmState.VerkleTreeWitness.AccessForContractCreationInit(contractAddress, !vmState.Env.Value.IsZero);
+                            if (!UpdateGas(gasWitness, ref gasAvailable)) goto OutOfGas;
+                        }
+
                         if (spec.UseHotAndColdStorage)
                         {
                             // EIP-2929 assumes that warm-up cost is included in the costs of CREATE and CREATE2
@@ -1998,13 +2151,10 @@ public class VirtualMachine : IVirtualMachine
                             break;
                         }
 
-                        if (accountExists)
+                        if (!spec.IsVerkleTreeEipEnabled)
                         {
-                            _state.UpdateStorageRoot(contractAddress, Keccak.EmptyTreeHash);
-                        }
-                        else if (_state.IsDeadAccount(contractAddress))
-                        {
-                            _state.ClearStorage(contractAddress);
+                            if (accountExists) _state.UpdateStorageRoot(contractAddress, Keccak.EmptyTreeHash);
+                            else if (_state.IsDeadAccount(contractAddress)) _state.ClearStorage(contractAddress);
                         }
 
                         _state.SubtractFromBalance(env.ExecutingAccount, value, spec);
@@ -2032,6 +2182,12 @@ public class VirtualMachine : IVirtualMachine
                             vmState,
                             false,
                             accountExists);
+
+                        if (spec.IsVerkleTreeEipEnabled)
+                        {
+                            long gasWitness = vmState.VerkleTreeWitness.AccessContractCreated(contractAddress);
+                            if (!UpdateGas(gasWitness, ref gasAvailable)) goto OutOfGas;
+                        }
 
                         UpdateCurrentState(vmState, programCounter, gasAvailable, stack.Head);
                         return new CallResult(callState);
@@ -2062,7 +2218,7 @@ public class VirtualMachine : IVirtualMachine
                         Address codeSource = stack.PopAddress();
 
                         // Console.WriteLine($"CALLIN {codeSource}");
-                        if (!ChargeAccountAccessGas(ref gasAvailable, vmState, codeSource, spec)) goto OutOfGas;
+                        if (!ChargeAccountAccessGas(ref gasAvailable, vmState, codeSource, spec, opCode: instruction)) goto OutOfGas;
 
                         UInt256 callValue;
                         switch (instruction)
@@ -2228,9 +2384,10 @@ public class VirtualMachine : IVirtualMachine
                         Metrics.SelfDestructs++;
 
                         Address inheritor = stack.PopAddress();
-                        if (!ChargeAccountAccessGas(ref gasAvailable, vmState, inheritor, spec, false)) goto OutOfGas;
+                        if (!ChargeAccountAccessGas(ref gasAvailable, vmState, inheritor, spec, false, opCode: instruction)) goto OutOfGas;
 
-                        vmState.DestroyList.Add(env.ExecutingAccount);
+                        // TODO: replace this by EIP-4758
+                        if (!spec.IsVerkleTreeEipEnabled) vmState.DestroyList.Add(env.ExecutingAccount);
 
                         UInt256 ownerBalance = _state.GetBalance(env.ExecutingAccount);
                         if (_txTracer.IsTracingActions) _txTracer.ReportSelfDestruct(env.ExecutingAccount, ownerBalance, inheritor);
@@ -2333,11 +2490,11 @@ public class VirtualMachine : IVirtualMachine
                     {
                         if (!spec.ExtCodeHashOpcodeEnabled) goto InvalidInstruction;
 
-                        var gasCost = spec.GetExtCodeHashCost();
+                        long gasCost = spec.GetExtCodeHashCost();
                         if (!UpdateGas(gasCost, ref gasAvailable)) goto OutOfGas;
 
                         Address address = stack.PopAddress();
-                        if (!ChargeAccountAccessGas(ref gasAvailable, vmState, address, spec)) goto OutOfGas;
+                        if (!ChargeAccountAccessGas(ref gasAvailable, vmState, address, spec, opCode: instruction)) goto OutOfGas;
 
                         if (!_state.AccountExists(address) || _state.IsDeadAccount(address))
                         {
@@ -2523,27 +2680,14 @@ AccessViolation:
 
     private static ExecutionType GetCallExecutionType(Instruction instruction, bool isPostMerge = false)
     {
-        ExecutionType executionType;
-        if (instruction == Instruction.CALL)
+        ExecutionType executionType = instruction switch
         {
-            executionType = ExecutionType.Call;
-        }
-        else if (instruction == Instruction.DELEGATECALL)
-        {
-            executionType = ExecutionType.DelegateCall;
-        }
-        else if (instruction == Instruction.STATICCALL)
-        {
-            executionType = ExecutionType.StaticCall;
-        }
-        else if (instruction == Instruction.CALLCODE)
-        {
-            executionType = ExecutionType.CallCode;
-        }
-        else
-        {
-            throw new NotSupportedException($"Execution type is undefined for {instruction.GetName(isPostMerge)}");
-        }
+            Instruction.CALL => ExecutionType.Call,
+            Instruction.DELEGATECALL => ExecutionType.DelegateCall,
+            Instruction.STATICCALL => ExecutionType.StaticCall,
+            Instruction.CALLCODE => ExecutionType.CallCode,
+            _ => throw new NotSupportedException($"Execution type is undefined for {instruction.GetName(isPostMerge)}")
+        };
 
         return executionType;
     }

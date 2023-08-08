@@ -64,6 +64,7 @@ namespace Nethermind.AccountAbstraction.Executor
         public byte[] Output { get; private set; }
 
         public bool IsTracingReceipt => true;
+        public bool IsTracingVerkleWitness => false;
         public bool IsTracingActions => true;
         public bool IsTracingOpLevelStorage => true;
         public bool IsTracingMemory => false;
@@ -183,6 +184,11 @@ namespace Nethermind.AccountAbstraction.Executor
                     }
                 }
             }
+        }
+
+        public void SetVerkleWitnessKeys(IReadOnlyList<byte[]> verkleWitnessKeys)
+        {
+            throw new NotImplementedException();
         }
 
         public void ReportOperationError(EvmExceptionType error)

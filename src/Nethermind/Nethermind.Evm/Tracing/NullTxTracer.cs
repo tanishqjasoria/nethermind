@@ -17,6 +17,7 @@ namespace Nethermind.Evm.Tracing
         private NullTxTracer() { }
 
         public bool IsTracingReceipt => false;
+        public bool IsTracingVerkleWitness => false;
         public bool IsTracingActions => false;
         public bool IsTracingOpLevelStorage => false;
         public bool IsTracingMemory => false;
@@ -38,6 +39,9 @@ namespace Nethermind.Evm.Tracing
 
         public void StartOperation(int depth, long gas, Instruction opcode, int pc, bool isPostMerge = false)
             => throw new InvalidOperationException(ErrorMessage);
+
+        public void SetVerkleWitnessKeys(IReadOnlyList<byte[]> verkleWitnessKeys) =>
+            throw new InvalidOperationException(ErrorMessage);
 
         public void ReportOperationError(EvmExceptionType error)
             => throw new InvalidOperationException(ErrorMessage);

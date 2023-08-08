@@ -1039,6 +1039,23 @@ namespace Nethermind.Serialization.Rlp
                 return DecodeByteArraySpan().ToArray();
             }
 
+            public byte DecodeByte()
+            {
+                byte byteValue = PeekByte();
+                if (byteValue < 128)
+                {
+                    SkipBytes(1);
+                    return byteValue;
+                }
+
+                ReadOnlySpan<byte> bytes = DecodeByteArraySpan();
+                return bytes.Length == 0 ? (byte)0
+                    : bytes.Length == 1 ? bytes[0] == (byte)128
+                        ? (byte)0
+                        : bytes[0]
+                    : bytes[1];
+            }
+
             public Span<byte> DecodeByteArraySpan()
             {
                 int prefix = ReadByte();
@@ -1467,7 +1484,7 @@ namespace Nethermind.Serialization.Rlp
 
         public static int LengthOf(byte value)
         {
-            return 1;
+            return (value >= 128) ? 2 : 1;
         }
 
         public static int LengthOf(bool value)

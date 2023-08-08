@@ -3,10 +3,12 @@
 
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using Nethermind.Core.Attributes;
 using Nethermind.Core.Crypto;
 using Nethermind.Core.Extensions;
+using Nethermind.Core.Verkle;
 using Nethermind.Int256;
 
 namespace Nethermind.Core;
@@ -66,10 +68,9 @@ public class BlockHeader
     public UInt256 BaseFeePerGas { get; set; }
     public Keccak? WithdrawalsRoot { get; set; }
     public UInt256? ExcessDataGas { get; set; }
-
     public bool HasBody => (TxRoot is not null && TxRoot != Keccak.EmptyTreeHash)
-        || (UnclesHash is not null && UnclesHash != Keccak.OfAnEmptySequenceRlp)
-        || (WithdrawalsRoot is not null && WithdrawalsRoot != Keccak.EmptyTreeHash);
+                           || (UnclesHash is not null && UnclesHash != Keccak.OfAnEmptySequenceRlp)
+                           || (WithdrawalsRoot is not null && WithdrawalsRoot != Keccak.EmptyTreeHash);
 
     public bool HasTransactions => (TxRoot is not null && TxRoot != Keccak.EmptyTreeHash);
 

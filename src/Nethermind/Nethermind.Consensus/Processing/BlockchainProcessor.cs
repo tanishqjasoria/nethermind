@@ -31,6 +31,8 @@ namespace Nethermind.Consensus.Processing
         public ITracerBag Tracers => _compositeBlockTracer;
 
         private readonly IBlockProcessor _blockProcessor;
+        private readonly IBlockProcessor? _statelessBlockProcessor;
+        private bool _canProcessStatelessBlocks = false;
         private readonly IBlockPreprocessorStep _recoveryStep;
         private readonly IStateReader _stateReader;
         private readonly Options _options;
@@ -88,6 +90,40 @@ namespace Nethermind.Consensus.Processing
             _stats = new ProcessingStats(_logger);
         }
 
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="blockTree"></param>
+        /// <param name="blockProcessor"></param>
+        /// <param name="recoveryStep"></param>
+        /// <param name="stateReader"></param>
+        /// <param name="logManager"></param>
+        /// <param name="options"></param>
+        public BlockchainProcessor(
+            IBlockTree? blockTree,
+            IBlockProcessor? blockProcessor,
+            IBlockProcessor? statelessBlockProcessor,
+            IBlockPreprocessorStep? recoveryStep,
+            IStateReader stateReader,
+            ILogManager? logManager,
+            Options options)
+        {
+            _logger = logManager?.GetClassLogger() ?? throw new ArgumentNullException(nameof(logManager));
+            _blockTree = blockTree ?? throw new ArgumentNullException(nameof(blockTree));
+            _blockProcessor = blockProcessor ?? throw new ArgumentNullException(nameof(blockProcessor));
+            _statelessBlockProcessor = statelessBlockProcessor ?? throw new ArgumentNullException(nameof(statelessBlockProcessor));
+            _canProcessStatelessBlocks = true;
+            _recoveryStep = recoveryStep ?? throw new ArgumentNullException(nameof(recoveryStep));
+            _stateReader = stateReader ?? throw new ArgumentNullException(nameof(stateReader));
+            _options = options;
+
+            _blockTree.NewBestSuggestedBlock += OnNewBestBlock;
+            _blockTree.NewHeadBlock += OnNewHeadBlock;
+
+            _stats = new ProcessingStats(_logger);
+        }
+
         private void OnNewHeadBlock(object? sender, BlockEventArgs e)
         {
             _lastProcessedBlock = DateTime.UtcNow;
@@ -109,7 +145,7 @@ namespace Nethermind.Consensus.Processing
 
         public void Enqueue(Block block, ProcessingOptions processingOptions)
         {
-            if (_logger.IsTrace) _logger.Trace($"Enqueuing a new block {block.ToString(Block.Format.Short)} for processing.");
+            if (_logger.IsTrace) _logger.Trace($"Enqueuing a new block {block.ToString(Block.Format.Full)} for processing.");
 
             int currentRecoveryQueueSize = Interlocked.Add(ref _currentRecoveryQueueSize, block.Transactions.Length);
             Keccak? blockHash = block.Hash!;
@@ -270,7 +306,7 @@ namespace Nethermind.Consensus.Processing
 
                     Block block = blockRef.Block;
 
-                    if (_logger.IsTrace) _logger.Trace($"Processing block {block.ToString(Block.Format.Short)}).");
+                    if (_logger.IsTrace) _logger.Trace($"Processing block in processor {block.ToString(Block.Format.Full)}).");
                     _stats.Start();
 
                     Block processedBlock = Process(block, blockRef.ProcessingOptions, _compositeBlockTracer.GetTracer());
@@ -329,7 +365,8 @@ namespace Nethermind.Consensus.Processing
             bool shouldProcess =
                 suggestedBlock.IsGenesis
                 || _blockTree.IsBetterThanHead(suggestedBlock.Header)
-                || options.ContainsFlag(ProcessingOptions.ForceProcessing);
+                || options.ContainsFlag(ProcessingOptions.ForceProcessing)
+                || options.ContainsFlag(ProcessingOptions.StatelessProcessing);
 
             if (!shouldProcess)
             {
@@ -458,7 +495,7 @@ namespace Nethermind.Consensus.Processing
                 TraceFailingBranch(
                     processingBranch,
                     options,
-                    new BlockReceiptsTracer(),
+                    new BlockReceiptsTracer(true, false),
                     DumpOptions.Receipts);
 
                 TraceFailingBranch(
@@ -522,7 +559,14 @@ namespace Nethermind.Consensus.Processing
 
                     if (!_stateReader.HasStateForBlock(parentOfFirstBlock))
                     {
-                        throw new InvalidOperationException("Attempted to process a blockchain without having starting state");
+                        bool canThisBlockBeProcessedStateless = _canProcessStatelessBlocks &&
+                                                                  (blocksToProcess[0].ExecutionWitness is not null);
+                        // here we assume that if a block has execution witness - then all the following block will
+                        // also have execution witness
+                        if (!canThisBlockBeProcessedStateless)
+                        {
+                            throw new InvalidOperationException("Attempted to process a blockchain without having starting state");
+                        }
                     }
                 }
             }
@@ -564,6 +608,7 @@ namespace Nethermind.Consensus.Processing
 
                 branchingPoint = _blockTree.FindParentHeader(toBeProcessed.Header,
                     BlockTreeLookupOptions.TotalDifficultyNotNeeded);
+                toBeProcessed.Header.MaybeParent = new WeakReference<BlockHeader>(branchingPoint);
                 if (branchingPoint is null)
                 {
                     // genesis block
@@ -595,6 +640,7 @@ namespace Nethermind.Consensus.Processing
                     break;
                 }
 
+                // TODO: check if we have a separate condition that we need to account for in Stateless Processing
                 if (isFastSyncTransition)
                 {
                     // If we hit this condition, it means that something is wrong in MultiSyncModeSelector.
@@ -657,6 +703,10 @@ namespace Nethermind.Consensus.Processing
         private bool RunSimpleChecksAheadOfProcessing(Block suggestedBlock, ProcessingOptions options)
         {
             /* a bit hacky way to get the invalid branch out of the processing loop */
+            // if (suggestedBlock.ExecutionWitness is not null)
+            // {
+            //     _logger.Info($"RunSimpleChecksAheadOfProcessing: ExecutionWitness Present {suggestedBlock.ToString(Block.Format.Short)}");
+            // }
             if (suggestedBlock.Number != 0 &&
                 !_blockTree.IsKnownBlock(suggestedBlock.Number - 1, suggestedBlock.ParentHash))
             {
@@ -671,6 +721,7 @@ namespace Nethermind.Consensus.Processing
                 if (_logger.IsDebug)
                     _logger.Debug(
                         $"Skipping processing block {suggestedBlock.ToString(Block.Format.FullHashAndNumber)} without total difficulty");
+                // suggestedBlock.Header.TotalDifficulty = 1;
                 throw new InvalidOperationException(
                     "Block without total difficulty calculated was suggested for processing");
             }

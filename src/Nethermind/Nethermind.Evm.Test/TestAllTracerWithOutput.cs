@@ -13,6 +13,7 @@ namespace Nethermind.Evm.Test
     public class TestAllTracerWithOutput : ITxTracer
     {
         public bool IsTracingReceipt => true;
+        public bool IsTracingVerkleWitness => true;
         public bool IsTracingActions => true;
         public bool IsTracingOpLevelStorage => true;
         public bool IsTracingMemory => true;
@@ -54,6 +55,10 @@ namespace Nethermind.Evm.Test
         }
 
         public void StartOperation(int depth, long gas, Instruction opcode, int pc, bool isPostMerge = false)
+        {
+        }
+
+        public void SetVerkleWitnessKeys(IReadOnlyList<byte[]> verkleWitnessKeys)
         {
         }
 

@@ -1,8 +1,10 @@
 // SPDX-FileCopyrightText: 2022 Demerzel Solutions Limited
 // SPDX-License-Identifier: LGPL-3.0-only
 
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Nethermind.Core.Crypto;
 using Nethermind.Int256;
+using Nethermind.Serialization.Rlp;
 
 namespace Nethermind.Core.Test.Builders
 {
@@ -27,7 +29,7 @@ namespace Nethermind.Core.Test.Builders
 
         public AccountBuilder WithCode(byte[] code)
         {
-            TestObjectInternal = TestObjectInternal.WithChangedCodeHash(Keccak.Compute(code));
+            TestObjectInternal = TestObjectInternal.WithChangedCodeHash(Keccak.Compute(code), code);
             return this;
         }
 

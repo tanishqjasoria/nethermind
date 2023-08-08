@@ -13,6 +13,7 @@ namespace Nethermind.Evm.Tracing
     public class CallOutputTracer : ITxTracer
     {
         public bool IsTracingReceipt => true;
+        public bool IsTracingVerkleWitness => false;
         public bool IsTracingActions => false;
         public bool IsTracingOpLevelStorage => false;
         public bool IsTracingMemory => false;
@@ -50,6 +51,11 @@ namespace Nethermind.Evm.Tracing
         }
 
         public void StartOperation(int depth, long gas, Instruction opcode, int pc, bool isPostMerge = false)
+        {
+            throw new NotSupportedException();
+        }
+
+        public void SetVerkleWitnessKeys(IReadOnlyList<byte[]> verkleWitnessKeys)
         {
             throw new NotSupportedException();
         }

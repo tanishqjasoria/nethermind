@@ -21,8 +21,8 @@ public class ProgressTrackerTests
     public async Task Did_not_have_race_issue()
     {
         BlockTree blockTree = Build.A.BlockTree().WithBlocks(Build.A.Block.TestObject).TestObject;
-        ProgressTracker progressTracker = new ProgressTracker(blockTree, new MemDb(), LimboLogs.Instance);
-        progressTracker.EnqueueStorageRange(new StorageRange()
+        SnapProgressTracker snapProgressTracker = new SnapProgressTracker(blockTree, new MemDb(), LimboLogs.Instance);
+        snapProgressTracker.EnqueueStorageRange(new StorageRange()
         {
             Accounts = Array.Empty<PathWithAccount>(),
         });
@@ -32,9 +32,9 @@ public class ProgressTrackerTests
         {
             for (int i = 0; i < loopIteration; i++)
             {
-                (SnapSyncBatch snapSyncBatch, bool ok) = progressTracker.GetNextRequest();
+                (SnapSyncBatch snapSyncBatch, bool ok) = snapProgressTracker.GetNextRequest();
                 ok.Should().BeFalse();
-                progressTracker.EnqueueStorageRange(snapSyncBatch.StorageRangeRequest!);
+                snapProgressTracker.EnqueueStorageRange(snapSyncBatch.StorageRangeRequest!);
             }
         });
 
@@ -42,7 +42,7 @@ public class ProgressTrackerTests
         {
             for (int i = 0; i < loopIteration; i++)
             {
-                progressTracker.IsSnapGetRangesFinished().Should().BeFalse();
+                snapProgressTracker.IsGetRangesFinished().Should().BeFalse();
             }
         });
 
@@ -54,33 +54,33 @@ public class ProgressTrackerTests
     public void Will_create_multiple_get_address_range_request()
     {
         BlockTree blockTree = Build.A.BlockTree().WithBlocks(Build.A.Block.TestObject).TestObject;
-        ProgressTracker progressTracker = new ProgressTracker(blockTree, new MemDb(), LimboLogs.Instance, 4);
+        SnapProgressTracker snapProgressTracker = new SnapProgressTracker(blockTree, new MemDb(), LimboLogs.Instance, 4);
 
-        (SnapSyncBatch request, bool finished) = progressTracker.GetNextRequest();
+        (SnapSyncBatch request, bool finished) = snapProgressTracker.GetNextRequest();
         request.AccountRangeRequest.Should().NotBeNull();
         request.AccountRangeRequest!.StartingHash.Bytes[0].Should().Be(0);
         request.AccountRangeRequest.LimitHash!.Bytes[0].Should().Be(64);
         finished.Should().BeFalse();
 
-        (request, finished) = progressTracker.GetNextRequest();
+        (request, finished) = snapProgressTracker.GetNextRequest();
         request.AccountRangeRequest.Should().NotBeNull();
         request.AccountRangeRequest!.StartingHash.Bytes[0].Should().Be(64);
         request.AccountRangeRequest.LimitHash!.Bytes[0].Should().Be(128);
         finished.Should().BeFalse();
 
-        (request, finished) = progressTracker.GetNextRequest();
+        (request, finished) = snapProgressTracker.GetNextRequest();
         request.AccountRangeRequest.Should().NotBeNull();
         request.AccountRangeRequest!.StartingHash.Bytes[0].Should().Be(128);
         request.AccountRangeRequest.LimitHash!.Bytes[0].Should().Be(192);
         finished.Should().BeFalse();
 
-        (request, finished) = progressTracker.GetNextRequest();
+        (request, finished) = snapProgressTracker.GetNextRequest();
         request.AccountRangeRequest.Should().NotBeNull();
         request.AccountRangeRequest!.StartingHash.Bytes[0].Should().Be(192);
         request.AccountRangeRequest.LimitHash!.Bytes[0].Should().Be(255);
         finished.Should().BeFalse();
 
-        (request, finished) = progressTracker.GetNextRequest();
+        (request, finished) = snapProgressTracker.GetNextRequest();
         request.Should().BeNull();
         finished.Should().BeFalse();
     }

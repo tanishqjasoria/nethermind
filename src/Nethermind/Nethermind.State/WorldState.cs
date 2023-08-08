@@ -23,6 +23,8 @@ namespace Nethermind.State
 {
     public class WorldState : IWorldState
     {
+        public StateType StateType => StateType.Merkle;
+
         private readonly StateProvider _stateProvider;
         private readonly PersistentStorageProvider _persistentStorageProvider;
         private readonly TransientStorageProvider _transientStorageProvider;
@@ -126,6 +128,9 @@ namespace Nethermind.State
         {
             _stateProvider.TouchCode(codeHash);
         }
+
+        public byte[] GetCodeChunk(Address codeOwner, UInt256 chunkId) =>
+            throw new NotSupportedException("Merkle state does not support code chunks");
 
         public UInt256 GetNonce(Address address)
         {

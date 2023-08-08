@@ -65,7 +65,7 @@ public partial class EngineModuleTests
         ILogManager? logManager = null)
         => await CreateBaseBlockChain(null, null, logManager).Build(specProvider);
 
-    private IEngineRpcModule CreateEngineModule(MergeTestBlockchain chain, ISyncConfig? syncConfig = null, TimeSpan? newPayloadTimeout = null, int newPayloadCacheSize = 50)
+    private IEngineRpcModule CreateEngineModule(MergeTestBlockchain chain, ISyncConfig? syncConfig = null, TimeSpan? newPayloadTimeout = null, int newPayloadCacheSize = 50, bool processStateless=false)
     {
         IPeerRefresher peerRefresher = Substitute.For<IPeerRefresher>();
 
@@ -102,6 +102,7 @@ public partial class EngineModuleTests
                 invalidChainTracker,
                 chain.BeaconSync,
                 chain.LogManager,
+                processStateless,
                 newPayloadTimeout,
                 newPayloadCacheSize),
             new ForkchoiceUpdatedHandler(

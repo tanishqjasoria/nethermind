@@ -13,11 +13,11 @@ namespace Nethermind.Blockchain
     /// </summary>
     public class TrieStoreBoundaryWatcher : IDisposable
     {
-        private readonly ITrieStore _trieStore;
+        private readonly IStoreWithReorgBoundary _trieStore;
         private readonly IBlockTree _blockTree;
         private readonly ILogger _logger;
 
-        public TrieStoreBoundaryWatcher(ITrieStore trieStore, IBlockTree blockTree, ILogManager logManager)
+        public TrieStoreBoundaryWatcher(IStoreWithReorgBoundary trieStore, IBlockTree blockTree, ILogManager logManager)
         {
             _trieStore = trieStore;
             _blockTree = blockTree;
@@ -27,7 +27,7 @@ namespace Nethermind.Blockchain
 
         private void OnReorgBoundaryReached(object? sender, ReorgBoundaryReached e)
         {
-            if (_logger.IsDebug) _logger.Debug($"Saving reorg boundary {e.BlockNumber}");
+            _logger.Info($"Saving reorg boundary {e.BlockNumber}");
             _blockTree.BestPersistedState = e.BlockNumber;
         }
 

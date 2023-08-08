@@ -2,12 +2,20 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using Nethermind.Int256;
+using Nethermind.State;
 using NUnit.Framework;
 
 namespace Nethermind.Evm.Test
 {
+
+    [TestFixture(StateType.Merkle)]
+    [TestFixture(StateType.Verkle)]
     public class SltTests : VirtualMachineTestsBase
     {
+        public SltTests(StateType stateType): base(stateType)
+        {
+
+        }
         [TestCase(1, 1, 0)]
         [TestCase(1, 0, 0)]
         [TestCase(1, -1, 0)]
