@@ -46,5 +46,12 @@ namespace Nethermind.Core.Extensions
 
             return bytes;
         }
+
+        public static byte[] ToByteArrayLittleEndian(this int value)
+        {
+            byte[] bytes = new byte[sizeof(int)];
+            BinaryPrimitives.WriteInt32LittleEndian(bytes, value);
+            return bytes;
+        }
     }
 }

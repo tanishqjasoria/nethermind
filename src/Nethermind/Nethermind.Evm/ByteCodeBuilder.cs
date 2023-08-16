@@ -295,7 +295,7 @@ namespace Nethermind.Evm
             return StoreDataInMemory(position, Bytes.FromHexString(hexString));
         }
 
-        public Prepare StoreDataInMemory(int position, byte[] data)
+        private Prepare StoreDataInMemory(int position, byte[] data)
         {
             for (int i = 0; i < data.Length; i += 32)
             {

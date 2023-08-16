@@ -125,6 +125,15 @@ namespace Nethermind.Evm.Tracing
         /// </remarks>
         bool IsTracingFees { get; }
 
+        /// <summary>
+        /// Defines whether SetVerkleWitnessKeys will be called
+        /// </summary>
+        /// <remarks>
+        /// Controls
+        /// - <see cref="SetVerkleWitnessKeys"/>
+        /// </remarks>
+        bool IsTracingVerkleWitness { get; }
+
         bool IsTracing => IsTracingReceipt
                           || IsTracingActions
                           || IsTracingOpLevelStorage
@@ -295,6 +304,13 @@ namespace Nethermind.Evm.Tracing
         /// <param name="currentValue"></param>
         /// <remarks>Depends on <see cref="IsTracingOpLevelStorage"/></remarks>
         void SetOperationTransientStorage(Address storageCellAddress, UInt256 storageIndex, ReadOnlySpan<byte> newValue, byte[] currentValue) { }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="verkleWitnessKeys"></param>
+        /// <remarks>Depends on <see cref="IsTracingVerkleWitness"/></remarks>
+        void SetVerkleWitnessKeys(IReadOnlyList<byte[]> verkleWitnessKeys);
 
         /// <summary>
         ///

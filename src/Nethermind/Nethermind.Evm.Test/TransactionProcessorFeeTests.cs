@@ -6,7 +6,6 @@ using System.Threading;
 using FluentAssertions;
 using Nethermind.Core;
 using Nethermind.Core.Extensions;
-using Nethermind.Core.Test;
 using Nethermind.Core.Test.Builders;
 using Nethermind.Crypto;
 using Nethermind.Db;
@@ -44,7 +43,8 @@ public class TransactionProcessorFeeTests
         _stateProvider.CommitTree(0);
 
         VirtualMachine virtualMachine = new(TestBlockhashProvider.Instance, _specProvider, LimboLogs.Instance);
-        _transactionProcessor = new TransactionProcessor(_specProvider, _stateProvider, virtualMachine, LimboLogs.Instance);
+        _transactionProcessor = new TransactionProcessor(_specProvider, _stateProvider, virtualMachine,
+            LimboLogs.Instance);
         _ethereumEcdsa = new EthereumEcdsa(_specProvider.ChainId, LimboLogs.Instance);
     }
 
@@ -167,7 +167,7 @@ public class TransactionProcessorFeeTests
 
         CancellationBlockTracer cancellationBlockTracer = new(feesTracer, token);
 
-        BlockReceiptsTracer blockTracer = new();
+        BlockReceiptsTracer blockTracer = new(true, false);
         blockTracer.SetOtherTracer(cancellationBlockTracer);
 
         blockTracer.StartNewBlockTrace(block);
@@ -230,7 +230,7 @@ public class TransactionProcessorFeeTests
 
     private void ExecuteAndTrace(Block block, IBlockTracer otherTracer)
     {
-        BlockReceiptsTracer tracer = new();
+        BlockReceiptsTracer tracer = new(true, false);
         tracer.SetOtherTracer(otherTracer);
 
         tracer.StartNewBlockTrace(block);

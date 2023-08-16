@@ -5,7 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Nethermind.Core;
+using Nethermind.Core.Collections;
 using Nethermind.Core.Crypto;
+using Nethermind.Core.Extensions;
 using Nethermind.Int256;
 using Nethermind.State;
 
@@ -14,7 +16,10 @@ namespace Nethermind.Evm.Tracing
     public class BlockReceiptsTracer : IBlockTracer, ITxTracer, IJournal<int>, ITxTracerWrapper
     {
         private Block _block = null!;
-        public bool IsTracingReceipt => true;
+        private readonly bool _isTracingReceipt;
+        private readonly bool _isTracingVerkleWitness;
+        public bool IsTracingReceipt => _isTracingReceipt | _currentTxTracer.IsTracingReceipt;
+        public bool IsTracingVerkleWitness => _isTracingVerkleWitness | _currentTxTracer.IsTracingVerkleWitness;
         public bool IsTracingActions => _currentTxTracer.IsTracingActions;
         public bool IsTracingOpLevelStorage => _currentTxTracer.IsTracingOpLevelStorage;
         public bool IsTracingMemory => _currentTxTracer.IsTracingMemory;
@@ -31,9 +36,15 @@ namespace Nethermind.Evm.Tracing
 
         private IBlockTracer _otherTracer = NullBlockTracer.Instance;
 
+        public BlockReceiptsTracer(bool traceReceipts, bool traceWitness)
+        {
+            _isTracingReceipt = traceReceipts;
+            _isTracingVerkleWitness = traceWitness;
+        }
+
         public void MarkAsSuccess(Address recipient, long gasSpent, byte[] output, LogEntry[] logs, Keccak? stateRoot = null)
         {
-            _txReceipts.Add(BuildReceipt(recipient, gasSpent, StatusCode.Success, logs, stateRoot));
+            if(_isTracingReceipt) _txReceipts.Add(BuildReceipt(recipient, gasSpent, StatusCode.Success, logs, stateRoot));
 
             // hacky way to support nested receipt tracers
             if (_otherTracer is ITxTracer otherTxTracer)
@@ -49,7 +60,7 @@ namespace Nethermind.Evm.Tracing
 
         public void MarkAsFailed(Address recipient, long gasSpent, byte[] output, string error, Keccak? stateRoot = null)
         {
-            _txReceipts.Add(BuildFailedReceipt(recipient, gasSpent, error, stateRoot));
+            if(_isTracingReceipt) _txReceipts.Add(BuildFailedReceipt(recipient, gasSpent, error, stateRoot));
 
             // hacky way to support nested receipt tracers
             if (_otherTracer is ITxTracer otherTxTracer)
@@ -191,6 +202,23 @@ namespace Nethermind.Evm.Tracing
             }
         }
 
+        public void SetVerkleWitnessKeys(IReadOnlyList<byte[]> verkleWitnessKeys)
+        {
+            if(_isTracingVerkleWitness)
+                _witnessKeys.Add(verkleWitnessKeys);
+
+            // hacky way to support nested witness tracers
+            if (_otherTracer is ITxTracer otherTxTracer)
+            {
+                otherTxTracer.SetVerkleWitnessKeys(verkleWitnessKeys);
+            }
+
+            if (_currentTxTracer.IsTracingReceipt)
+            {
+                _currentTxTracer.SetVerkleWitnessKeys(verkleWitnessKeys);
+            }
+        }
+
         private ITxTracer _currentTxTracer = NullTxTracer.Instance;
         private int _currentIndex;
         private readonly List<TxReceipt> _txReceipts = new();
@@ -199,12 +227,23 @@ namespace Nethermind.Evm.Tracing
         public TxReceipt LastReceipt => _txReceipts[^1];
         public bool IsTracingRewards => _otherTracer.IsTracingRewards;
 
+        private readonly List<IReadOnlyList<byte[]>> _witnessKeys = new();
+        private SortedSet<byte[]> _aggregatedWitnessKeys = new(Bytes.Comparer);
+        public SortedSet<byte[]> WitnessKeys => _aggregatedWitnessKeys;
+        public IReadOnlyList<byte[]> LastWitness => _witnessKeys[^1];
+
         public ITxTracer InnerTracer => _currentTxTracer;
 
         public int TakeSnapshot() => _txReceipts.Count;
         public void Restore(int snapshot)
         {
             int numToRemove = _txReceipts.Count - snapshot;
+
+            for (int i = 0; i < numToRemove; i++)
+            {
+                _witnessKeys.RemoveAt(_witnessKeys.Count - 1);
+            }
+
 
             for (int i = 0; i < numToRemove; i++)
             {
@@ -227,6 +266,7 @@ namespace Nethermind.Evm.Tracing
             _block = block;
             _currentIndex = 0;
             _txReceipts.Clear();
+            _witnessKeys.Clear();
 
             _otherTracer.StartNewBlockTrace(block);
         }
@@ -247,6 +287,15 @@ namespace Nethermind.Evm.Tracing
         public void EndBlockTrace()
         {
             _otherTracer.EndBlockTrace();
+            if (_witnessKeys.Count > 0)
+            {
+                _aggregatedWitnessKeys = new SortedSet<byte[]>(Bytes.Comparer);
+                foreach (IReadOnlyList<byte[]>? keys in _witnessKeys)
+                {
+                    _aggregatedWitnessKeys.AddRange(keys);
+                }
+            }
+
             if (_txReceipts.Count > 0)
             {
                 Bloom blockBloom = new();

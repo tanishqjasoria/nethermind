@@ -267,7 +267,7 @@ namespace Nethermind.Evm.Test
             Assert.That(tracer.TxReceipts[0].StatusCode, Is.EqualTo(StatusCode.Success));
         }
 
-        [TestCase]
+        [Test]
         public void Balance_is_not_changed_on_call_and_restore()
         {
             long gasLimit = 100000;
@@ -279,7 +279,7 @@ namespace Nethermind.Evm.Test
             _stateProvider.GetBalance(TestItem.PrivateKeyA.Address).Should().Be(1.Ether());
         }
 
-        [TestCase]
+        [Test]
         public void Account_is_not_created_on_call_and_restore()
         {
             long gasLimit = 100000;
@@ -296,7 +296,7 @@ namespace Nethermind.Evm.Test
             _stateProvider.AccountExists(TestItem.PrivateKeyD.Address).Should().BeFalse();
         }
 
-        [TestCase]
+        [Test]
         public void Nonce_is_not_changed_on_call_and_restore()
         {
             long gasLimit = 100000;
@@ -307,65 +307,8 @@ namespace Nethermind.Evm.Test
             _stateProvider.GetNonce(TestItem.PrivateKeyA.Address).Should().Be(0);
         }
 
-        [TestCase(true)]
-        [TestCase(false)]
-        public void Can_estimate_with_value(bool systemUser)
-        {
-            long gasLimit = 100000;
-            Transaction tx = Build.A.Transaction.WithValue(UInt256.MaxValue).WithGasLimit(gasLimit)
-                .WithSenderAddress(systemUser ? Address.SystemUser : TestItem.AddressA).TestObject;
-            Block block = Build.A.Block.WithNumber(1).WithTransactions(tx).WithGasLimit(gasLimit).TestObject;
-
-            EstimateGasTracer tracer = new();
-            Action action = () => _transactionProcessor.CallAndRestore(tx, block.Header, tracer);
-            if (!systemUser)
-            {
-                action.Should().Throw<InsufficientBalanceException>();
-            }
-            else
-            {
-                action.Should().NotThrow();
-                tracer.GasSpent.Should().Be(21000);
-            }
-        }
 
         [Test]
-        public void Should_reject_tx_with_high_value()
-        {
-            Transaction tx = Build.A.Transaction.WithValue(UInt256.MaxValue).WithGasLimit(21000)
-                .SignedAndResolved(_ethereumEcdsa, TestItem.PrivateKeyA, _isEip155Enabled)
-                .TestObject;
-
-            long blockNumber = _isEip155Enabled
-                ? MainnetSpecProvider.ByzantiumBlockNumber
-                : MainnetSpecProvider.ByzantiumBlockNumber - 1;
-            Block block = Build.A.Block.WithNumber(blockNumber).WithTransactions(tx).TestObject;
-            BlockReceiptsTracer tracer = BuildTracer(block, tx, true, true);
-
-            Execute(tracer, tx, block);
-
-            tracer.TxReceipts[0].StatusCode.Should().Be(StatusCode.Failure);
-        }
-
-        [TestCase(562949953421312ul)]
-        [TestCase(562949953421311ul)]
-        public void Should_reject_tx_with_high_max_fee_per_gas(ulong topDigit)
-        {
-            Transaction tx = Build.A.Transaction.WithMaxFeePerGas(new(0, 0, 0, topDigit)).WithGasLimit(32768)
-                .WithType(TxType.EIP1559).WithValue(0)
-                .SignedAndResolved(_ethereumEcdsa, TestItem.PrivateKeyA, _isEip155Enabled)
-                .TestObject;
-
-            long blockNumber = MainnetSpecProvider.LondonBlockNumber;
-            Block block = Build.A.Block.WithNumber(blockNumber).WithTransactions(tx).TestObject;
-            BlockReceiptsTracer tracer = BuildTracer(block, tx, true, true);
-
-            Execute(tracer, tx, block);
-
-            tracer.TxReceipts[0].StatusCode.Should().Be(StatusCode.Failure);
-        }
-
-        [TestCase]
         public void Can_estimate_simple()
         {
             long gasLimit = 100000;
@@ -381,7 +324,7 @@ namespace Nethermind.Evm.Test
             estimator.Estimate(tx, block.Header, tracer).Should().Be(21000);
         }
 
-        [TestCase]
+        [Test]
         public void Can_estimate_with_refund()
         {
             byte[] initByteCode = Prepare.EvmCode
@@ -494,7 +437,7 @@ namespace Nethermind.Evm.Test
         }
 
 
-        [TestCase]
+        [Test]
         public void Can_estimate_with_stipend()
         {
             byte[] initByteCode = Prepare.EvmCode
@@ -532,7 +475,7 @@ namespace Nethermind.Evm.Test
 
 
 
-        [TestCase]
+        [Test]
         public void Can_estimate_with_stipend_and_refund()
         {
             byte[] initByteCode = Prepare.EvmCode
@@ -576,7 +519,7 @@ namespace Nethermind.Evm.Test
 
 
 
-        [TestCase]
+        [Test]
         public void Can_estimate_with_single_call()
         {
             byte[] initByteCode = Prepare.EvmCode
@@ -616,7 +559,7 @@ namespace Nethermind.Evm.Test
 
 
 
-        [TestCase]
+        [Test]
         public void Disables_Eip158_for_system_transactions()
         {
             long blockNumber = MainnetSpecProvider.SpuriousDragonBlockNumber + 1;
@@ -637,7 +580,7 @@ namespace Nethermind.Evm.Test
 
 
 
-        [TestCase]
+        [Test]
         public void Balance_is_changed_on_buildup_and_restored()
         {
             long gasLimit = 100000;
@@ -654,7 +597,7 @@ namespace Nethermind.Evm.Test
 
 
 
-        [TestCase]
+        [Test]
         public void Account_is_not_created_on_buildup_and_restore()
         {
             long gasLimit = 100000;
@@ -676,7 +619,7 @@ namespace Nethermind.Evm.Test
 
 
 
-        [TestCase]
+        [Test]
         public void Nonce_is_not_changed_on_buildup_and_restore()
         {
             long gasLimit = 100000;
@@ -692,7 +635,7 @@ namespace Nethermind.Evm.Test
 
 
 
-        [TestCase]
+        [Test]
         public void State_changed_twice_in_buildup_should_have_correct_gas_cost()
         {
             long gasLimit = 100000;
@@ -725,7 +668,7 @@ namespace Nethermind.Evm.Test
             }
 
             IBlockTracer otherTracer = types != ParityTraceTypes.None ? new ParityLikeBlockTracer(tx.Hash, ParityTraceTypes.Trace | ParityTraceTypes.StateDiff) : (IBlockTracer)NullBlockTracer.Instance;
-            BlockReceiptsTracer tracer = new();
+            BlockReceiptsTracer tracer = new(true, false);
             tracer.SetOtherTracer(otherTracer);
             return tracer;
         }

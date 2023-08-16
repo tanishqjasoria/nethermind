@@ -14,11 +14,24 @@ namespace Nethermind.Core.Collections
     /// <remarks>Due to snapshots <see cref="Remove"/> is not supported.</remarks>
     public class JournalSet<T> : IReadOnlySet<T>, ICollection<T>, IJournal<int>
     {
-        private readonly List<T> _items = new();
-        private readonly HashSet<T> _set = new();
+        private readonly List<T> _items;
+        private readonly HashSet<T> _set;
         public int TakeSnapshot() => Position;
 
         private int Position => Count - 1;
+
+        public JournalSet(IEqualityComparer<T> comparer)
+        {
+            _items = new List<T>();
+            _set = new HashSet<T>(comparer);
+        }
+
+        public JournalSet()
+        {
+            _items = new List<T>();
+            _set = new HashSet<T>();
+        }
+
 
         public void Restore(int snapshot)
         {

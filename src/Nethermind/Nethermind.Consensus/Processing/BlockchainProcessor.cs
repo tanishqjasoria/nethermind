@@ -498,7 +498,7 @@ namespace Nethermind.Consensus.Processing
                 TraceFailingBranch(
                     processingBranch,
                     options,
-                    new BlockReceiptsTracer(),
+                    new BlockReceiptsTracer(true, false),
                     DumpOptions.Receipts);
 
                 TraceFailingBranch(
