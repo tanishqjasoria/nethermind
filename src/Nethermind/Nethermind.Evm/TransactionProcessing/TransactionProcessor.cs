@@ -11,11 +11,13 @@ using Nethermind.Core.Specs;
 using Nethermind.Crypto;
 using Nethermind.Evm.CodeAnalysis;
 using Nethermind.Evm.Tracing;
+using Nethermind.Evm.Witness;
 using Nethermind.Int256;
 using Nethermind.Logging;
 using Nethermind.Specs;
 using Nethermind.State;
 using Nethermind.State.Tracing;
+using Nethermind.Verkle.Tree;
 using static Nethermind.Core.Extensions.MemoryExtensions;
 
 using static Nethermind.Evm.VirtualMachine;
@@ -26,6 +28,7 @@ namespace Nethermind.Evm.TransactionProcessing
     {
         private readonly EthereumEcdsa _ecdsa;
         private readonly ILogger _logger;
+        private readonly ILogManager? _logManager;
         private readonly ISpecProvider _specProvider;
         private readonly IWorldState _worldState;
         private readonly IVirtualMachine _virtualMachine;
@@ -65,6 +68,7 @@ namespace Nethermind.Evm.TransactionProcessing
             IVirtualMachine? virtualMachine,
             ILogManager? logManager)
         {
+            _logManager = logManager;
             _logger = logManager?.GetClassLogger() ?? throw new ArgumentNullException(nameof(logManager));
             _specProvider = specProvider ?? throw new ArgumentNullException(nameof(specProvider));
             _worldState = worldState ?? throw new ArgumentNullException(nameof(worldState));
@@ -95,9 +99,15 @@ namespace Nethermind.Evm.TransactionProcessing
             Execute(transaction, block, txTracer, ExecutionOptions.NoValidation);
         }
 
+        public ITransactionProcessor WithNewStateProvider(IWorldState worldState)
+        {
+            return new TransactionProcessor(_specProvider, worldState, _virtualMachine, _logManager);
+        }
+
         protected virtual void Execute(Transaction tx, BlockHeader header, ITxTracer tracer, ExecutionOptions opts)
         {
             IReleaseSpec spec = _specProvider.GetSpec(header);
+
             if (tx.IsSystem())
                 spec = new SystemTransactionReleaseSpec(spec);
 
@@ -114,7 +124,7 @@ namespace Nethermind.Evm.TransactionProcessing
             UInt256 effectiveGasPrice =
                 tx.CalculateEffectiveGasPrice(spec.IsEip1559Enabled, header.BaseFeePerGas);
 
-            if (opts == ExecutionOptions.Commit || opts == ExecutionOptions.None)
+            if (opts is ExecutionOptions.Commit or ExecutionOptions.None)
             {
                 decimal gasPrice = (decimal)effectiveGasPrice / 1_000_000_000m;
                 Metrics.MinGasPrice = Math.Min(gasPrice, Metrics.MinGasPrice);
@@ -146,9 +156,12 @@ namespace Nethermind.Evm.TransactionProcessing
             if (commit)
                 _worldState.Commit(spec, tracer.IsTracingState ? tracer : NullTxTracer.Instance);
 
-            ExecutionEnvironment env = BuildExecutionEnvironmnet(tx, header, spec, tracer, opts, effectiveGasPrice);
+            // declare the execution witness to collect witness and also charge gas
+            IWitness executionWitness = spec.IsVerkleTreeEipEnabled ? new VerkleExecWitness(_logManager) : new NoExecWitness();
+            ExecutionEnvironment env = BuildExecutionEnvironmnet(tx, header, spec, tracer, opts, executionWitness, effectiveGasPrice);
 
             long gasAvailable = tx.GasLimit - intrinsicGas;
+
             if (!ExecuteEVMCall(tx, header, spec, tracer, opts, gasAvailable, env, out TransactionSubstate? substate, out long spentGas, out byte statusCode))
                 return;
 
@@ -198,6 +211,8 @@ namespace Nethermind.Evm.TransactionProcessing
                     tracer.MarkAsSuccess(env.ExecutingAccount, spentGas, substate.Output.ToArray(), logs, stateRoot);
                 }
             }
+
+            if(tracer.IsTracingVerkleWitness) tracer.SetVerkleWitnessKeys(env.Witness.GetAccessedKeys());
         }
 
         private void QuickFail(Transaction tx, BlockHeader block, IReleaseSpec spec, ITxTracer txTracer, string? reason)
@@ -315,7 +330,7 @@ namespace Nethermind.Evm.TransactionProcessing
                     TraceLogInvalidTx(tx, $"SENDER_ACCOUNT_DOES_NOT_EXIST {tx.SenderAddress}");
                     if (!commit || noValidation || effectiveGasPrice == UInt256.Zero)
                     {
-                        deleteCallerAccount = !commit || restore;
+                        deleteCallerAccount = (!commit || restore) && !spec.IsVerkleTreeEipEnabled;
                         _worldState.CreateAccount(tx.SenderAddress, UInt256.Zero);
                     }
                 }
@@ -432,7 +447,7 @@ namespace Nethermind.Evm.TransactionProcessing
         }
 
         protected virtual ExecutionEnvironment BuildExecutionEnvironmnet(
-            Transaction tx, BlockHeader header, IReleaseSpec spec, ITxTracer tracer, ExecutionOptions opts,
+            Transaction tx, BlockHeader header, IReleaseSpec spec, ITxTracer tracer, ExecutionOptions opts, IWitness execWitness,
             in UInt256 effectiveGasPrice)
         {
             Address recipient = tx.GetRecipient(tx.IsContractCreation ? _worldState.GetNonce(tx.SenderAddress) : 0) ??
@@ -456,7 +471,8 @@ namespace Nethermind.Evm.TransactionProcessing
                 codeSource: recipient,
                 executingAccount: recipient,
                 inputData: inputData,
-                codeInfo: codeInfo
+                codeInfo: codeInfo,
+                witness: execWitness
             );
         }
 
@@ -482,8 +498,20 @@ namespace Nethermind.Evm.TransactionProcessing
 
             try
             {
+                if (!env.Witness.AccessAndChargeForTransaction(tx.SenderAddress!, tx.To!, !tx.Value.IsZero,
+                        ref unspentGas))
+                {
+                    throw new OutOfGasException();
+                }
+
                 if (tx.IsContractCreation)
                 {
+                    if (!env.Witness.AccessAndChargeForContractCreationInit(env.ExecutingAccount, !tx.Value.IsZero,
+                            ref unspentGas))
+                    {
+                        throw new OutOfGasException();
+                    }
+
                     // if transaction is a contract creation then recipient address is the contract deployment address
                     PrepareAccountForContractDeployment(env.ExecutingAccount, spec);
                 }
@@ -554,6 +582,11 @@ namespace Nethermind.Evm.TransactionProcessing
                             _worldState.InsertCode(env.ExecutingAccount, substate.Output, spec);
                             unspentGas -= codeDepositGasCost;
                         }
+
+                        if (!env.Witness.AccessAndChargeForContractCreated(env.ExecutingAccount, ref unspentGas))
+                        {
+                            throw new OutOfGasException();
+                        }
                     }
 
                     foreach (Address toBeDestroyed in substate.DestroyList)
@@ -571,6 +604,10 @@ namespace Nethermind.Evm.TransactionProcessing
                     statusCode = StatusCode.Success;
                 }
 
+                // if (!env.Witness.AccessAndChargeForGasBeneficiary(header.GasBeneficiary!, ref unspentGas))
+                // {
+                //     throw new OutOfGasException();
+                // }
                 spentGas = Refund(tx.GasLimit, unspentGas, substate, tx.SenderAddress, env.TxExecutionContext.GasPrice, opts, spec);
             }
             catch (Exception ex) when (ex is EvmException || ex is OverflowException) // TODO: OverflowException? still needed? hope not
@@ -622,16 +659,12 @@ namespace Nethermind.Evm.TransactionProcessing
                 // (but this would generally be a hash collision)
                 if (codeIsNotEmpty || accountNonceIsNotZero)
                 {
-                    if (_logger.IsTrace)
-                    {
-                        _logger.Trace($"Contract collision at {contractAddress}");
-                    }
-
+                    if (_logger.IsTrace) _logger.Trace($"Contract collision at {contractAddress}");
                     throw new TransactionCollisionException();
                 }
 
                 // we clean any existing storage (in case of a previously called self destruct)
-                _worldState.UpdateStorageRoot(contractAddress, Keccak.EmptyTreeHash);
+                if (!spec.IsVerkleTreeEipEnabled) _worldState.UpdateStorageRoot(contractAddress, Keccak.EmptyTreeHash);
             }
         }
 

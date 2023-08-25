@@ -109,8 +109,7 @@ public class InitializeNetwork : IStep
         SyncProgressResolver syncProgressResolver = new(
             _api.BlockTree,
             _api.ReceiptStorage!,
-            _api.DbProvider.StateDb,
-            _api.ReadOnlyTrieStore!,
+            _api.ReadOnlyVerkleTrieStore!,
             progressTracker,
             _syncConfig,
             _api.LogManager);
@@ -185,7 +184,7 @@ public class InitializeNetwork : IStep
         _api.DisposeStack.Push(_api.Synchronizer);
 
         ISyncServer syncServer = _api.SyncServer = new SyncServer(
-            _api.TrieStore!.AsKeyValueStore(),
+            _api.DbProvider.StateDb,
             _api.DbProvider.CodeDb,
             _api.BlockTree,
             _api.ReceiptStorage!,
