@@ -13,6 +13,10 @@ namespace Nethermind.Api
         public bool WebSocketsEnabled { get; set; } = true;
         public bool DiscoveryEnabled { get; set; } = true;
         public bool ProcessingEnabled { get; set; } = true;
+        public bool StatelessProcessingEnabled { get; set; } = false;
+        public bool ProofsInBlock { get; set; } = false;
+        public bool VerifyProofsInBlock { get; set; } = false;
+        public bool GenerateVerkleProofsForBlock { get; set; } = false;
         public bool PeerManagerEnabled { get; set; } = true;
         public bool IsMining { get; set; } = false;
         public string ChainSpecPath { get; set; } = "chainspec/foundation.json";

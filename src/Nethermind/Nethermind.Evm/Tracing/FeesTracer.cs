@@ -3,6 +3,8 @@
 
 using Nethermind.Core;
 using Nethermind.Int256;
+using Nethermind.Verkle.Tree;
+using Nethermind.Verkle.Tree.Utils;
 
 namespace Nethermind.Evm.Tracing;
 
@@ -22,6 +24,7 @@ public class FeesTracer : TxTracer, IBlockTracer
     public bool IsTracingRewards => false;
 
     public void ReportReward(Address author, string rewardType, UInt256 rewardValue) { }
+    public void ReportWithdrawalWitness(VerkleWitness witness) { }
 
     public void StartNewBlockTrace(Block block)
     {

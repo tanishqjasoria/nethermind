@@ -29,9 +29,10 @@ namespace Nethermind.Synchronization.Test
             IDb stateDb = new MemDb();
             SyncConfig syncConfig = new();
             syncConfig.PivotNumber = "1";
-            ProgressTracker progressTracker = new(blockTree, stateDb, LimboLogs.Instance);
+            SnapProgressTracker snapProgressTracker = new(blockTree, stateDb, LimboLogs.Instance);
+            TrieStore trieStore = new TrieStore(stateDb, LimboLogs.Instance);
 
-            SyncProgressResolver syncProgressResolver = new(blockTree, receiptStorage, stateDb, NullTrieNodeResolver.Instance, progressTracker, syncConfig, LimboLogs.Instance);
+            SyncProgressResolver syncProgressResolver = new(blockTree, receiptStorage, trieStore, snapProgressTracker, syncConfig, LimboLogs.Instance);
             blockTree.BestSuggestedHeader.Returns((BlockHeader)null);
             Assert.That(syncProgressResolver.FindBestHeader(), Is.EqualTo(0));
         }
@@ -44,9 +45,10 @@ namespace Nethermind.Synchronization.Test
             IDb stateDb = new MemDb();
             SyncConfig syncConfig = new();
             syncConfig.PivotNumber = "1";
-            ProgressTracker progressTracker = new(blockTree, stateDb, LimboLogs.Instance);
+            SnapProgressTracker snapProgressTracker = new(blockTree, stateDb, LimboLogs.Instance);
+            TrieStore trieStore = new TrieStore(stateDb, LimboLogs.Instance);
 
-            SyncProgressResolver syncProgressResolver = new(blockTree, receiptStorage, stateDb, NullTrieNodeResolver.Instance, progressTracker, syncConfig, LimboLogs.Instance);
+            SyncProgressResolver syncProgressResolver = new(blockTree, receiptStorage, trieStore, snapProgressTracker, syncConfig, LimboLogs.Instance);
             blockTree.BestSuggestedBody.Returns((Block)null);
             Assert.That(syncProgressResolver.FindBestFullBlock(), Is.EqualTo(0));
         }
@@ -59,9 +61,10 @@ namespace Nethermind.Synchronization.Test
             IDb stateDb = new MemDb();
             SyncConfig syncConfig = new();
             syncConfig.PivotNumber = "1";
-            ProgressTracker progressTracker = new(blockTree, stateDb, LimboLogs.Instance);
+            SnapProgressTracker snapProgressTracker = new(blockTree, stateDb, LimboLogs.Instance);
+            TrieStore trieStore = new TrieStore(stateDb, LimboLogs.Instance);
 
-            SyncProgressResolver syncProgressResolver = new(blockTree, receiptStorage, stateDb, NullTrieNodeResolver.Instance, progressTracker, syncConfig, LimboLogs.Instance);
+            SyncProgressResolver syncProgressResolver = new(blockTree, receiptStorage, trieStore, snapProgressTracker, syncConfig, LimboLogs.Instance);
             var head = Build.A.Block.WithHeader(Build.A.BlockHeader.WithNumber(5).WithStateRoot(TestItem.KeccakA).TestObject).TestObject;
             blockTree.Head.Returns(head);
             blockTree.BestSuggestedHeader.Returns(head.Header);
@@ -77,9 +80,10 @@ namespace Nethermind.Synchronization.Test
             IDb stateDb = new MemDb();
             SyncConfig syncConfig = new();
             syncConfig.PivotNumber = "1";
-            ProgressTracker progressTracker = new(blockTree, stateDb, LimboLogs.Instance);
+            SnapProgressTracker snapProgressTracker = new(blockTree, stateDb, LimboLogs.Instance);
+            TrieStore trieStore = new TrieStore(stateDb, LimboLogs.Instance);
 
-            SyncProgressResolver syncProgressResolver = new(blockTree, receiptStorage, stateDb, NullTrieNodeResolver.Instance, progressTracker, syncConfig, LimboLogs.Instance);
+            SyncProgressResolver syncProgressResolver = new(blockTree, receiptStorage, trieStore, snapProgressTracker, syncConfig, LimboLogs.Instance);
             var head = Build.A.Block.WithHeader(Build.A.BlockHeader.WithNumber(5).WithStateRoot(TestItem.KeccakA).TestObject).TestObject;
             var suggested = Build.A.BlockHeader.WithNumber(6).WithStateRoot(TestItem.KeccakB).TestObject;
             blockTree.Head.Returns(head);
@@ -99,9 +103,10 @@ namespace Nethermind.Synchronization.Test
             IDb stateDb = new MemDb();
             SyncConfig syncConfig = new();
             syncConfig.PivotNumber = "1";
-            ProgressTracker progressTracker = new(blockTree, stateDb, LimboLogs.Instance);
+            SnapProgressTracker snapProgressTracker = new(blockTree, stateDb, LimboLogs.Instance);
+            TrieStore trieStore = new TrieStore(stateDb, LimboLogs.Instance);
 
-            SyncProgressResolver syncProgressResolver = new(blockTree, receiptStorage, stateDb, NullTrieNodeResolver.Instance, progressTracker, syncConfig, LimboLogs.Instance);
+            SyncProgressResolver syncProgressResolver = new(blockTree, receiptStorage, trieStore, snapProgressTracker, syncConfig, LimboLogs.Instance);
             var head = Build.A.Block.WithHeader(Build.A.BlockHeader.WithNumber(5).WithStateRoot(TestItem.KeccakA).TestObject).TestObject;
             var suggested = Build.A.BlockHeader.WithNumber(6).WithStateRoot(TestItem.KeccakB).TestObject;
             blockTree.Head.Returns(head);
@@ -121,9 +126,10 @@ namespace Nethermind.Synchronization.Test
             SyncConfig syncConfig = new();
             syncConfig.FastBlocks = false;
             syncConfig.PivotNumber = "1";
-            ProgressTracker progressTracker = new(blockTree, stateDb, LimboLogs.Instance);
+            SnapProgressTracker snapProgressTracker = new(blockTree, stateDb, LimboLogs.Instance);
+            TrieStore trieStore = new TrieStore(stateDb, LimboLogs.Instance);
 
-            SyncProgressResolver syncProgressResolver = new(blockTree, receiptStorage, stateDb, NullTrieNodeResolver.Instance, progressTracker, syncConfig, LimboLogs.Instance);
+            SyncProgressResolver syncProgressResolver = new(blockTree, receiptStorage, trieStore, snapProgressTracker, syncConfig, LimboLogs.Instance);
             Assert.True(syncProgressResolver.IsFastBlocksHeadersFinished());
             Assert.True(syncProgressResolver.IsFastBlocksBodiesFinished());
             Assert.True(syncProgressResolver.IsFastBlocksReceiptsFinished());
@@ -141,11 +147,12 @@ namespace Nethermind.Synchronization.Test
             syncConfig.DownloadBodiesInFastSync = true;
             syncConfig.DownloadReceiptsInFastSync = true;
             syncConfig.PivotNumber = "1";
-            ProgressTracker progressTracker = new(blockTree, stateDb, LimboLogs.Instance);
+            SnapProgressTracker snapProgressTracker = new(blockTree, stateDb, LimboLogs.Instance);
+            TrieStore trieStore = new TrieStore(stateDb, LimboLogs.Instance);
 
             blockTree.LowestInsertedHeader.Returns(Build.A.BlockHeader.WithNumber(2).WithStateRoot(TestItem.KeccakA).TestObject);
 
-            SyncProgressResolver syncProgressResolver = new(blockTree, receiptStorage, stateDb, NullTrieNodeResolver.Instance, progressTracker, syncConfig, LimboLogs.Instance);
+            SyncProgressResolver syncProgressResolver = new(blockTree, receiptStorage, trieStore, snapProgressTracker, syncConfig, LimboLogs.Instance);
             Assert.False(syncProgressResolver.IsFastBlocksHeadersFinished());
         }
 
@@ -161,12 +168,13 @@ namespace Nethermind.Synchronization.Test
             syncConfig.DownloadBodiesInFastSync = true;
             syncConfig.DownloadReceiptsInFastSync = true;
             syncConfig.PivotNumber = "1";
-            ProgressTracker progressTracker = new(blockTree, stateDb, LimboLogs.Instance);
+            SnapProgressTracker snapProgressTracker = new(blockTree, stateDb, LimboLogs.Instance);
+            TrieStore trieStore = new TrieStore(stateDb, LimboLogs.Instance);
 
             blockTree.LowestInsertedHeader.Returns(Build.A.BlockHeader.WithNumber(1).WithStateRoot(TestItem.KeccakA).TestObject);
             blockTree.LowestInsertedBodyNumber.Returns(2);
 
-            SyncProgressResolver syncProgressResolver = new(blockTree, receiptStorage, stateDb, NullTrieNodeResolver.Instance, progressTracker, syncConfig, LimboLogs.Instance);
+            SyncProgressResolver syncProgressResolver = new(blockTree, receiptStorage, trieStore, snapProgressTracker, syncConfig, LimboLogs.Instance);
             Assert.False(syncProgressResolver.IsFastBlocksBodiesFinished());
         }
 
@@ -182,14 +190,15 @@ namespace Nethermind.Synchronization.Test
             syncConfig.DownloadBodiesInFastSync = true;
             syncConfig.DownloadReceiptsInFastSync = true;
             syncConfig.PivotNumber = "1";
-            ProgressTracker progressTracker = new(blockTree, stateDb, LimboLogs.Instance);
+            SnapProgressTracker snapProgressTracker = new(blockTree, stateDb, LimboLogs.Instance);
 
             blockTree.LowestInsertedHeader.Returns(Build.A.BlockHeader.WithNumber(1).WithStateRoot(TestItem.KeccakA).TestObject);
             blockTree.LowestInsertedBodyNumber.Returns(1);
             receiptStorage.LowestInsertedReceiptBlockNumber.Returns(2);
+            TrieStore trieStore = new TrieStore(stateDb, LimboLogs.Instance);
 
             SyncProgressResolver syncProgressResolver = new(
-                blockTree, receiptStorage, stateDb, NullTrieNodeResolver.Instance, progressTracker, syncConfig, LimboLogs.Instance);
+                blockTree, receiptStorage, trieStore, snapProgressTracker, syncConfig, LimboLogs.Instance);
             Assert.False(syncProgressResolver.IsFastBlocksReceiptsFinished());
         }
 
@@ -204,13 +213,14 @@ namespace Nethermind.Synchronization.Test
             syncConfig.DownloadBodiesInFastSync = false;
             syncConfig.DownloadReceiptsInFastSync = true;
             syncConfig.PivotNumber = "1";
-            ProgressTracker progressTracker = new(blockTree, stateDb, LimboLogs.Instance);
+            SnapProgressTracker snapProgressTracker = new(blockTree, stateDb, LimboLogs.Instance);
 
             blockTree.LowestInsertedHeader.Returns(Build.A.BlockHeader.WithNumber(1).WithStateRoot(TestItem.KeccakA).TestObject);
             blockTree.LowestInsertedBodyNumber.Returns(2);
             receiptStorage.LowestInsertedReceiptBlockNumber.Returns(1);
+            TrieStore trieStore = new TrieStore(stateDb, LimboLogs.Instance);
 
-            SyncProgressResolver syncProgressResolver = new(blockTree, receiptStorage, stateDb, NullTrieNodeResolver.Instance, progressTracker, syncConfig, LimboLogs.Instance);
+            SyncProgressResolver syncProgressResolver = new(blockTree, receiptStorage, trieStore, snapProgressTracker, syncConfig, LimboLogs.Instance);
             Assert.True(syncProgressResolver.IsFastBlocksBodiesFinished());
         }
 
@@ -225,14 +235,15 @@ namespace Nethermind.Synchronization.Test
             syncConfig.DownloadBodiesInFastSync = true;
             syncConfig.DownloadReceiptsInFastSync = false;
             syncConfig.PivotNumber = "1";
-            ProgressTracker progressTracker = new(blockTree, stateDb, LimboLogs.Instance);
+            SnapProgressTracker snapProgressTracker = new(blockTree, stateDb, LimboLogs.Instance);
 
             blockTree.LowestInsertedHeader.Returns(Build.A.BlockHeader.WithNumber(1).WithStateRoot(TestItem.KeccakA).TestObject);
             blockTree.LowestInsertedBodyNumber.Returns(1);
             receiptStorage.LowestInsertedReceiptBlockNumber.Returns(2);
+            TrieStore trieStore = new TrieStore(stateDb, LimboLogs.Instance);
 
             SyncProgressResolver syncProgressResolver = new(
-                blockTree, receiptStorage, stateDb, NullTrieNodeResolver.Instance, progressTracker, syncConfig, LimboLogs.Instance);
+                blockTree, receiptStorage, trieStore, snapProgressTracker, syncConfig, LimboLogs.Instance);
             Assert.True(syncProgressResolver.IsFastBlocksReceiptsFinished());
         }
     }

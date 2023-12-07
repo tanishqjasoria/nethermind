@@ -54,6 +54,7 @@ public class DebugTracer : ITxTracer, ITxTracerWrapper, IDisposable
     public bool IsTracingAccess => InnerTracer.IsTracingAccess;
 
     public bool IsTracingFees => InnerTracer.IsTracingFees;
+    public bool IsTracingAccessWitness => InnerTracer.IsTracingAccessWitness;
 
     public bool IsTracingState => InnerTracer.IsTracingState;
 
@@ -217,6 +218,9 @@ public class DebugTracer : ITxTracer, ITxTracerWrapper, IDisposable
 
     public void SetOperationStorage(Address address, UInt256 storageIndex, ReadOnlySpan<byte> newValue, ReadOnlySpan<byte> currentValue)
         => InnerTracer.SetOperationStorage(address, storageIndex, newValue, currentValue);
+
+    public void ReportAccessWitness(IReadOnlyList<byte[]> verkleWitnessKeys) =>
+        InnerTracer.ReportAccessWitness(verkleWitnessKeys);
 
     public void LoadOperationStorage(Address address, UInt256 storageIndex, ReadOnlySpan<byte> value)
         => InnerTracer.LoadOperationStorage(address, storageIndex, value);

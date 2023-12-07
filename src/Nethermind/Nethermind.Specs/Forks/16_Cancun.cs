@@ -13,12 +13,13 @@ namespace Nethermind.Specs.Forks
         protected Cancun()
         {
             Name = "Cancun";
-            IsEip1153Enabled = true;
-            IsEip5656Enabled = true;
-            IsEip4844Enabled = true;
-            IsEip6780Enabled = true;
+            // TODO: temp fix for the verkle testnet
+            IsEip1153Enabled = false;
+            IsEip5656Enabled = false;
+            IsEip4844Enabled = false;
+            IsEip6780Enabled = false;
         }
 
-        public new static IReleaseSpec Instance => LazyInitializer.EnsureInitialized(ref _instance, () => new Cancun());
+        public static new IReleaseSpec Instance => LazyInitializer.EnsureInitialized(ref _instance, () => new Cancun());
     }
 }

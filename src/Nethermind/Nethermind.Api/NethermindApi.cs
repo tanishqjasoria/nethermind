@@ -55,6 +55,11 @@ using Nethermind.Wallet;
 using Nethermind.Sockets;
 using Nethermind.Synchronization.SnapSync;
 using Nethermind.Synchronization.Blocks;
+using Nethermind.Synchronization.VerkleSync;
+using Nethermind.Verkle;
+using Nethermind.Verkle.Tree;
+using Nethermind.Verkle.Tree.History.V2;
+using Nethermind.Verkle.Tree.TrieStore;
 
 namespace Nethermind.Api
 {
@@ -77,13 +82,15 @@ namespace Nethermind.Api
             ReadOnlyBlockTree readOnlyTree = BlockTree!.AsReadOnly();
             LazyInitializer.EnsureInitialized(ref _readOnlyDbProvider, () => new ReadOnlyDbProvider(DbProvider, false));
 
-            // TODO: reuse the same trie cache here
-            ReadOnlyTxProcessingEnv readOnlyTxProcessingEnv = new(
-                _readOnlyDbProvider,
-                ReadOnlyTrieStore,
-                readOnlyTree,
-                SpecProvider,
-                LogManager);
+            ReadOnlyTxProcessingEnv readOnlyTxProcessingEnv = SpecProvider!.GenesisSpec.IsVerkleTreeEipEnabled switch
+            {
+                true =>
+                    // TODO: reuse the same trie cache here
+                    new ReadOnlyTxProcessingEnv(_readOnlyDbProvider, ReadOnlyVerkleTrieStore, readOnlyTree, SpecProvider, LogManager),
+                false =>
+                    // TODO: reuse the same trie cache here
+                    new ReadOnlyTxProcessingEnv(_readOnlyDbProvider, ReadOnlyTrieStore, readOnlyTree, SpecProvider, LogManager)
+            };
 
             IMiningConfig miningConfig = ConfigProvider.GetConfig<IMiningConfig>();
             IBlocksConfig blocksConfig = ConfigProvider.GetConfig<IBlocksConfig>();
@@ -133,6 +140,10 @@ namespace Nethermind.Api
 
         public IManualBlockProductionTrigger ManualBlockProductionTrigger { get; set; } =
             new BuildBlocksWhenRequested();
+
+        public VerkleStateStore? VerkleTrieStore { get; set; }
+        public ReadOnlyVerkleStateStore? ReadOnlyVerkleTrieStore { get; set; }
+        public VerkleArchiveStore? VerkleArchiveStore { get; set; }
 
         public IIPResolver? IpResolver { get; set; }
         public IJsonSerializer EthereumJsonSerializer { get; set; }
@@ -231,6 +242,7 @@ namespace Nethermind.Api
         public IList<IPublisher> Publishers { get; } = new List<IPublisher>(); // this should be called publishers
         public CompositePruningTrigger PruningTrigger { get; } = new();
         public ISnapProvider? SnapProvider { get; set; }
+        public IVerkleSyncProvider? VerkleProvider { get; set; }
         public IProcessExitSource? ProcessExit { get; set; }
         public CompositeTxGossipPolicy TxGossipPolicy { get; } = new();
     }

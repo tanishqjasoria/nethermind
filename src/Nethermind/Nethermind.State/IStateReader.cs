@@ -13,9 +13,12 @@ namespace Nethermind.State
         Account? GetAccount(Keccak stateRoot, Address address);
 
         byte[]? GetStorage(Keccak storageRoot, in UInt256 index);
+        byte[]? GetStorage(Keccak stateRoot, in StorageCell cell);
 
         byte[]? GetCode(Keccak codeHash);
 
         void RunTreeVisitor(ITreeVisitor treeVisitor, Keccak stateRoot, VisitingOptions? visitingOptions = null);
+
+        bool HashStateForStateRoot(Keccak stateRoot);
     }
 }

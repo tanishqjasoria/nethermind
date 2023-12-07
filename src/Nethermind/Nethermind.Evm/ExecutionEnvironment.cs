@@ -4,6 +4,7 @@
 using System;
 using Nethermind.Core;
 using Nethermind.Evm.CodeAnalysis;
+using Nethermind.Evm.Witness;
 using Nethermind.Int256;
 
 namespace Nethermind.Evm
@@ -20,7 +21,8 @@ namespace Nethermind.Evm
             TxExecutionContext txExecutionContext,
             UInt256 transferValue,
             UInt256 value,
-            int callDepth = 0)
+            int callDepth = 0,
+            IWitness? witness = null)
         {
             CodeInfo = codeInfo;
             ExecutingAccount = executingAccount;
@@ -31,12 +33,15 @@ namespace Nethermind.Evm
             TransferValue = transferValue;
             Value = value;
             CallDepth = callDepth;
+            Witness = witness;
         }
 
         /// <summary>
         /// Parsed bytecode for the current call.
         /// </summary>
         public readonly CodeInfo CodeInfo;
+
+        public readonly IWitness Witness;
 
         /// <summary>
         /// Currently executing account (in DELEGATECALL this will be equal to caller).

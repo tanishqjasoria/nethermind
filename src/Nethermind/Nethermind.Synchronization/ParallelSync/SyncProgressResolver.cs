@@ -10,6 +10,7 @@ using Nethermind.Core.Crypto;
 using Nethermind.Db;
 using Nethermind.Int256;
 using Nethermind.Logging;
+using Nethermind.Synchronization.RangeSync;
 using Nethermind.Synchronization.SnapSync;
 using Nethermind.Trie;
 using Nethermind.Trie.Pruning;
@@ -25,9 +26,8 @@ namespace Nethermind.Synchronization.ParallelSync
 
         private readonly IBlockTree _blockTree;
         private readonly IReceiptStorage _receiptStorage;
-        private readonly IDb _stateDb;
-        private readonly ITrieNodeResolver _trieNodeResolver;
-        private readonly ProgressTracker _progressTracker;
+        private readonly ISyncTrieStore _trieNodeResolver;
+        private readonly IRangeFinishTracker _rangeProgressTracker;
         private readonly ISyncConfig _syncConfig;
 
         // ReSharper disable once NotAccessedField.Local
@@ -38,40 +38,20 @@ namespace Nethermind.Synchronization.ParallelSync
 
         public SyncProgressResolver(IBlockTree blockTree,
             IReceiptStorage receiptStorage,
-            IDb stateDb,
-            ITrieNodeResolver trieNodeResolver,
-            ProgressTracker progressTracker,
+            ISyncTrieStore trieNodeResolver,
+            IRangeFinishTracker rangeProgressTracker,
             ISyncConfig syncConfig,
             ILogManager logManager)
         {
             _logger = logManager?.GetClassLogger() ?? throw new ArgumentNullException(nameof(logManager));
             _blockTree = blockTree ?? throw new ArgumentNullException(nameof(blockTree));
             _receiptStorage = receiptStorage ?? throw new ArgumentNullException(nameof(receiptStorage));
-            _stateDb = stateDb ?? throw new ArgumentNullException(nameof(stateDb));
             _trieNodeResolver = trieNodeResolver ?? throw new ArgumentNullException(nameof(trieNodeResolver));
-            _progressTracker = progressTracker ?? throw new ArgumentNullException(nameof(progressTracker));
+            _rangeProgressTracker = rangeProgressTracker ?? throw new ArgumentNullException(nameof(rangeProgressTracker));
             _syncConfig = syncConfig ?? throw new ArgumentNullException(nameof(syncConfig));
 
             _bodiesBarrier = _syncConfig.AncientBodiesBarrierCalc;
             _receiptsBarrier = _syncConfig.AncientReceiptsBarrierCalc;
-        }
-
-        private bool IsFullySynced(Keccak stateRoot)
-        {
-            if (stateRoot == Keccak.EmptyTreeHash)
-            {
-                return true;
-            }
-
-            TrieNode trieNode = _trieNodeResolver.FindCachedOrUnknown(stateRoot);
-            bool stateRootIsInMemory = trieNode.NodeType != NodeType.Unknown;
-            // We check whether one of below happened:
-            //   1) the block has been processed but not yet persisted (pruning) OR
-            //   2) the block has been persisted and removed from cache already OR
-            //   3) the full block state has been synced in the state nodes sync (fast sync)
-            // In 2) and 3) the state root will be saved in the database.
-            // In fast sync we never save the state root unless all the descendant nodes have been stored in the DB.
-            return stateRootIsInMemory || _stateDb.Get(stateRoot) is not null;
         }
 
         public long FindBestFullState()
@@ -116,7 +96,7 @@ namespace Nethermind.Synchronization.ParallelSync
                     break;
                 }
 
-                if (IsFullySynced(startHeader.StateRoot!))
+                if (_trieNodeResolver.IsFullySynced(startHeader.StateRoot!))
                 {
                     bestFullState = startHeader.Number;
                     break;
@@ -170,7 +150,7 @@ namespace Nethermind.Synchronization.ParallelSync
                                                                                .LowestInsertedReceiptBlockNumber ??
                                                                            long.MaxValue) <= _receiptsBarrier);
 
-        public bool IsSnapGetRangesFinished() => _progressTracker.IsSnapGetRangesFinished();
+        public bool IsGetRangesFinished() => _rangeProgressTracker.IsGetRangesFinished();
 
         public void RecalculateProgressPointers() => _blockTree.RecalculateTreeLevels();
 

@@ -374,6 +374,11 @@ namespace Nethermind.Facade
             _processingEnv.StateReader.RunTreeVisitor(treeVisitor, stateRoot);
         }
 
+        public bool HashStateForStateRoot(Keccak stateRoot)
+        {
+            return _processingEnv.StateReader.HashStateForStateRoot(stateRoot);
+        }
+
         public IEnumerable<FilterLog> FindLogs(LogFilter filter, CancellationToken cancellationToken = default)
         {
             return _logFinder.FindLogs(filter, cancellationToken);
