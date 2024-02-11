@@ -22,6 +22,7 @@ using Nethermind.Synchronization.FastBlocks;
 using Nethermind.Synchronization.ParallelSync;
 using Nethermind.Synchronization.Peers;
 using Nethermind.Synchronization.SnapSync;
+using Nethermind.Synchronization.VerkleSync;
 using NSubstitute;
 using NUnit.Framework;
 using No = Nethermind.Synchronization.No;
@@ -940,6 +941,7 @@ public partial class EngineModuleTests
             Substitute.For<ISyncFeed<BodiesSyncBatch?>>(),
             Substitute.For<ISyncFeed<ReceiptsSyncBatch?>>(),
             Substitute.For<ISyncFeed<SnapSyncBatch?>>(),
+            Substitute.For<ISyncFeed<VerkleSyncBatch?>>(),
             LimboLogs.Instance);
 
         MultiSyncModeSelector multiSyncModeSelector = new(syncProgressResolver,

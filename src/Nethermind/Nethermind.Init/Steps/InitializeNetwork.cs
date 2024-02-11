@@ -40,6 +40,7 @@ using Nethermind.Synchronization.Peers;
 using Nethermind.Synchronization.Reporting;
 using Nethermind.Synchronization.SnapSync;
 using Nethermind.Synchronization.Trie;
+using Nethermind.Synchronization.VerkleSync;
 using Nethermind.TxPool;
 
 namespace Nethermind.Init.Steps;
@@ -166,7 +167,7 @@ public class InitializeNetwork : IStep
         _api.DisposeStack.Push(_api.Synchronizer);
 
         ISyncServer syncServer = _api.SyncServer = new SyncServer(
-            _api.TrieStore!.AsKeyValueStore(),
+            _api.DbProvider.StateDb,
             _api.DbProvider.CodeDb,
             _api.BlockTree,
             _api.ReceiptStorage!,
@@ -183,6 +184,8 @@ public class InitializeNetwork : IStep
 
         _ = syncServer.BuildCHT();
         _api.DisposeStack.Push(syncServer);
+
+        _api.VerkleSyncServer = new VerkleSyncServer(_api.VerkleTreeStore!, _api.LogManager);
 
         InitDiscovery();
         if (cancellationToken.IsCancellationRequested)
@@ -206,6 +209,11 @@ public class InitializeNetwork : IStep
             // no longer available). Eth67 should be added if snap is enabled OR sync is finished OR in archive nodes (no state sync)
             _api.ProtocolsManager!.AddSupportedCapability(new Capability(Protocol.Eth, 67));
             _api.ProtocolsManager!.AddSupportedCapability(new Capability(Protocol.Eth, 68));
+        }
+
+        if (_syncConfig.VerkleSync)
+        {
+            _api.ProtocolsManager!.AddSupportedCapability(new Capability(Protocol.Verkle, 1));
         }
         else if (_logger.IsDebug) _logger.Debug("Skipped enabling eth67 & eth68 capabilities");
 
@@ -511,6 +519,7 @@ public class InitializeNetwork : IStep
         _api.ProtocolsManager = new ProtocolsManager(
             _api.SyncPeerPool!,
             syncServer,
+            _api.VerkleSyncServer,
             _api.TxPool,
             pooledTxsRequestor,
             _api.DiscoveryApp!,

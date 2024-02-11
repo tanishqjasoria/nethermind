@@ -15,6 +15,7 @@ using Nethermind.Serialization.Rlp;
 using Nethermind.State.Proofs;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Nethermind.Core.Verkle;
 
 namespace Nethermind.Merge.Plugin.Data;
 
@@ -41,9 +42,12 @@ public class ExecutionPayload : IForkValidator, IExecutionPayloadParams
         Timestamp = block.Timestamp;
         BaseFeePerGas = block.BaseFeePerGas;
         Withdrawals = block.Withdrawals;
+        ExecutionWitness = block.ExecutionWitness!;
 
         SetTransactions(block.Transactions);
     }
+
+    public ExecutionWitness ExecutionWitness { get; set; } = new ();
 
     public UInt256 BaseFeePerGas { get; set; }
 
@@ -152,7 +156,7 @@ public class ExecutionPayload : IForkValidator, IExecutionPayloadParams
                 WithdrawalsRoot = Withdrawals is null ? null : new WithdrawalTrie(Withdrawals).RootHash,
             };
 
-            block = new(header, transactions, Array.Empty<BlockHeader>(), Withdrawals);
+            block = new(header, transactions, Array.Empty<BlockHeader>(), Withdrawals, ExecutionWitness);
 
             return true;
         }

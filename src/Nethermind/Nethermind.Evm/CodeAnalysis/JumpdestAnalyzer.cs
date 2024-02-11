@@ -2,17 +2,19 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System.Collections;
+using System.Threading;
+using Nethermind.Evm.Precompiles;
 
 namespace Nethermind.Evm.CodeAnalysis
 {
     public class JumpdestAnalyzer : ICodeInfoAnalyzer
     {
-        private byte[] MachineCode { get; set; }
+        private ICode MachineCode { get; set; }
 
         private BitArray? _validJumpDestinations;
         private BitArray? _validJumpSubDestinations;
 
-        public JumpdestAnalyzer(byte[] code)
+        public JumpdestAnalyzer(ICode code)
         {
             MachineCode = code;
         }

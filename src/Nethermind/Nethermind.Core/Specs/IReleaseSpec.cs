@@ -279,6 +279,14 @@ namespace Nethermind.Core.Specs
         bool IsEip6780Enabled { get; }
 
         /// <summary>
+        /// State - Verkle Trees
+        /// </summary>
+        bool IsVerkleTreeEipEnabled { get; }
+
+        bool IsEip2935Enabled { get; }
+        Address Eip2935ContractAddress { get; }
+
+        /// <summary>
         /// Should transactions be validated against chainId.
         /// </summary>
         /// <remarks>Backward compatibility for early Kovan blocks.</remarks>
@@ -287,8 +295,9 @@ namespace Nethermind.Core.Specs
         public ulong WithdrawalTimestamp { get; }
 
         public ulong Eip4844TransitionTimestamp { get; }
+        public ulong Eip6800TransitionTimeStamp { get; }
 
-        // STATE related 
+        // STATE related
         public bool ClearEmptyAccountWhenTouched => IsEip158Enabled;
 
         // VM

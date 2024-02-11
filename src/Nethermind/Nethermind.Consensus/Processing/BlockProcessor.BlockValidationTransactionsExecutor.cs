@@ -32,22 +32,27 @@ namespace Nethermind.Consensus.Processing
 
             public event EventHandler<TxProcessedEventArgs>? TransactionProcessed;
 
-            public TxReceipt[] ProcessTransactions(Block block, ProcessingOptions processingOptions, BlockReceiptsTracer receiptsTracer, IReleaseSpec spec)
+            public IBlockProcessor.IBlockTransactionsExecutor WithNewStateProvider(IWorldState worldState)
+            {
+                return new BlockValidationTransactionsExecutor(_transactionProcessor, worldState);
+            }
+
+            public TxReceipt[] ProcessTransactions(Block block, ProcessingOptions processingOptions, BlockExecutionTracer executionTracer, IReleaseSpec spec)
             {
                 Evm.Metrics.ResetBlockStats();
                 BlockExecutionContext blkCtx = new(block.Header);
                 for (int i = 0; i < block.Transactions.Length; i++)
                 {
                     Transaction currentTx = block.Transactions[i];
-                    ProcessTransaction(blkCtx, currentTx, i, receiptsTracer, processingOptions);
+                    ProcessTransaction(blkCtx, currentTx, i, executionTracer, processingOptions);
                 }
-                return receiptsTracer.TxReceipts.ToArray();
+                return executionTracer.TxReceipts.ToArray();
             }
 
-            private void ProcessTransaction(BlockExecutionContext blkCtx, Transaction currentTx, int index, BlockReceiptsTracer receiptsTracer, ProcessingOptions processingOptions)
+            private void ProcessTransaction(BlockExecutionContext blkCtx, Transaction currentTx, int index, BlockExecutionTracer executionTracer, ProcessingOptions processingOptions)
             {
-                _transactionProcessor.ProcessTransaction(blkCtx, currentTx, receiptsTracer, processingOptions, _stateProvider);
-                TransactionProcessed?.Invoke(this, new TxProcessedEventArgs(index, currentTx, receiptsTracer.TxReceipts[index]));
+                _transactionProcessor.ProcessTransaction(blkCtx, currentTx, executionTracer, processingOptions, _stateProvider);
+                TransactionProcessed?.Invoke(this, new TxProcessedEventArgs(index, currentTx, executionTracer.TxReceipts[index]));
             }
         }
     }

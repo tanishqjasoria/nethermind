@@ -150,7 +150,7 @@ namespace Nethermind.JsonRpc.Modules.Eth
             ExampleResponse = "0x")]
         ResultWrapper<UInt256?> eth_estimateGas([JsonRpcParameter(ExampleValue = "[\"{\"from\": \"0x0001020304050607080910111213141516171819\", \"gasPrice\": \"1048576\", \"to\": \"0x0d8775f648430679a709e98d2b0cb6250d2887ef\"}\"]")] TransactionForRpc transactionCall, BlockParameter? blockParameter = null);
 
-        [JsonRpcMethod(IsImplemented = true,
+        [JsonRpcMethod(IsImplemented = false,
             Description = "Creates an [EIP2930](https://eips.ethereum.org/EIPS/eip-2930) type AccessList for the given transaction",
             EdgeCaseHint = "If your transaction has code executed, then you can generate transaction access list with eth_createAccessList. If you send it with your transaction then it will lower your gas cost on Ethereum",
             IsSharable = false,

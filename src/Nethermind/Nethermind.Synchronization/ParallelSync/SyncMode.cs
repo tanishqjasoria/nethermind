@@ -62,6 +62,10 @@ namespace Nethermind.Synchronization.ParallelSync
         /// Waiting for Forkchoice message from Consensus Layer to update pivot block
         /// </summary>
         UpdatingPivot = 8192,
+        /// <summary>
+        /// Stage of snap sync that state is being downloaded (accounts, storages, code, proofs)
+        /// </summary>
+        VerkleSync = 16384,
 
         All = WaitingForBlock | Disconnected | FastBlocks | FastSync | StateNodes | StateNodes | Full | DbLoad |
               FastHeaders | FastBodies | FastReceipts | SnapSync | BeaconHeaders | UpdatingPivot

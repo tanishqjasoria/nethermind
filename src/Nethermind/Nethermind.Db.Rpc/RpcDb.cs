@@ -115,5 +115,11 @@ namespace Nethermind.Db.Rpc
         public void DangerousReleaseMemory(in Span<byte> span)
         {
         }
+
+        public IEnumerable<KeyValuePair<byte[], byte[]>> GetIterator() => throw new NotImplementedException();
+
+        public IEnumerable<KeyValuePair<byte[], byte[]>> GetIterator(byte[] start) => throw new NotImplementedException();
+
+        public IEnumerable<KeyValuePair<byte[], byte[]>> GetIterator(byte[] start, byte[] end) => throw new NotImplementedException();
     }
 }

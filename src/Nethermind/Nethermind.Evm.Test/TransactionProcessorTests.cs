@@ -70,7 +70,7 @@ public class TransactionProcessorTests
 
         Block block = Build.A.Block.WithNumber(1).WithTransactions(tx).TestObject;
 
-        BlockReceiptsTracer tracer = BuildTracer(block, tx, withStateDiff, withTrace);
+        BlockExecutionTracer tracer = BuildTracer(block, tx, withStateDiff, withTrace);
         Execute(tracer, tx, block);
 
         Assert.That(tracer.TxReceipts[0].StatusCode, Is.EqualTo(StatusCode.Success));
@@ -89,7 +89,7 @@ public class TransactionProcessorTests
             : MainnetSpecProvider.ByzantiumBlockNumber - 1;
         Block block = Build.A.Block.WithNumber(blockNumber).WithTransactions(tx).TestObject;
 
-        BlockReceiptsTracer tracer = BuildTracer(block, tx, withStateDiff, withTrace);
+        BlockExecutionTracer tracer = BuildTracer(block, tx, withStateDiff, withTrace);
         Execute(tracer, tx, block);
 
         if (_isEip155Enabled) // we use eip155 check just as a proxy on 658
@@ -112,7 +112,7 @@ public class TransactionProcessorTests
 
         Block block = Build.A.Block.WithNumber(1).WithTransactions(tx).TestObject;
 
-        BlockReceiptsTracer tracer = BuildTracer(block, tx, withStateDiff, withTrace);
+        BlockExecutionTracer tracer = BuildTracer(block, tx, withStateDiff, withTrace);
         Execute(tracer, tx, block);
 
         Assert.That(tracer.TxReceipts[0].StatusCode, Is.EqualTo(StatusCode.Failure));
@@ -128,7 +128,7 @@ public class TransactionProcessorTests
 
         Block block = Build.A.Block.WithNumber(1).WithTransactions(tx).TestObject;
 
-        BlockReceiptsTracer tracer = BuildTracer(block, tx, withStateDiff, withTrace);
+        BlockExecutionTracer tracer = BuildTracer(block, tx, withStateDiff, withTrace);
         Execute(tracer, tx, block);
 
         Assert.That(tracer.TxReceipts[0].StatusCode, Is.EqualTo(StatusCode.Failure));
@@ -144,7 +144,7 @@ public class TransactionProcessorTests
 
         Block block = Build.A.Block.WithNumber(1).WithTransactions(tx).TestObject;
 
-        BlockReceiptsTracer tracer = BuildTracer(block, tx, withStateDiff, withTrace);
+        BlockExecutionTracer tracer = BuildTracer(block, tx, withStateDiff, withTrace);
         Execute(tracer, tx, block);
 
         Assert.That(tracer.TxReceipts[0].StatusCode, Is.EqualTo(StatusCode.Failure));
@@ -160,7 +160,7 @@ public class TransactionProcessorTests
 
         Block block = Build.A.Block.WithNumber(1).WithTransactions(tx).TestObject;
 
-        BlockReceiptsTracer tracer = BuildTracer(block, tx, withStateDiff, withTrace);
+        BlockExecutionTracer tracer = BuildTracer(block, tx, withStateDiff, withTrace);
         Execute(tracer, tx, block);
 
         Assert.That(tracer.TxReceipts[0].StatusCode, Is.EqualTo(StatusCode.Failure));
@@ -188,7 +188,7 @@ public class TransactionProcessorTests
 
         Block block = Build.A.Block.WithNumber(MainnetSpecProvider.BerlinBlockNumber).WithTransactions(tx).TestObject;
 
-        BlockReceiptsTracer tracer = BuildTracer(block, tx, withStateDiff, withTrace);
+        BlockExecutionTracer tracer = BuildTracer(block, tx, withStateDiff, withTrace);
         Execute(tracer, tx, block);
 
         Assert.That(tracer.TxReceipts[0].StatusCode, Is.EqualTo(StatusCode.Failure));
@@ -209,7 +209,7 @@ public class TransactionProcessorTests
 
         Block block = Build.A.Block.WithNumber(MainnetSpecProvider.BerlinBlockNumber).WithTransactions(tx).TestObject;
 
-        BlockReceiptsTracer tracer = BuildTracer(block, tx, withStateDiff, withTrace);
+        BlockExecutionTracer tracer = BuildTracer(block, tx, withStateDiff, withTrace);
         Execute(tracer, tx, block);
 
         Assert.That(tracer.TxReceipts[0].StatusCode, Is.EqualTo(StatusCode.Failure));
@@ -229,7 +229,7 @@ public class TransactionProcessorTests
 
         Block block = Build.A.Block.WithNumber(MainnetSpecProvider.LondonBlockNumber).WithTransactions(tx).TestObject;
 
-        BlockReceiptsTracer tracer = BuildTracer(block, tx, withStateDiff, withTrace);
+        BlockExecutionTracer tracer = BuildTracer(block, tx, withStateDiff, withTrace);
         Execute(tracer, tx, block);
 
         Assert.That(tracer.TxReceipts[0].StatusCode, Is.EqualTo(StatusCode.Failure));
@@ -245,7 +245,7 @@ public class TransactionProcessorTests
 
         Block block = Build.A.Block.WithNumber(1).WithTransactions(tx).WithGasLimit(20000).TestObject;
 
-        BlockReceiptsTracer tracer = BuildTracer(block, tx, withTrace, withTrace);
+        BlockExecutionTracer tracer = BuildTracer(block, tx, withTrace, withTrace);
         Execute(tracer, tx, block);
 
         Assert.That(tracer.TxReceipts[0].StatusCode, Is.EqualTo(StatusCode.Failure));
@@ -261,7 +261,7 @@ public class TransactionProcessorTests
 
         Block block = Build.A.Block.WithNumber(1).WithTransactions(tx).WithGasLimit(20000).TestObject;
 
-        BlockReceiptsTracer tracer = BuildTracer(block, tx, withTrace, withTrace);
+        BlockExecutionTracer tracer = BuildTracer(block, tx, withTrace, withTrace);
         CallAndRestore(tracer, tx, block);
 
         Assert.That(tracer.TxReceipts[0].StatusCode, Is.EqualTo(StatusCode.Success));
@@ -340,7 +340,7 @@ public class TransactionProcessorTests
             ? MainnetSpecProvider.ByzantiumBlockNumber
             : MainnetSpecProvider.ByzantiumBlockNumber - 1;
         Block block = Build.A.Block.WithNumber(blockNumber).WithTransactions(tx).TestObject;
-        BlockReceiptsTracer tracer = BuildTracer(block, tx, true, true);
+        BlockExecutionTracer tracer = BuildTracer(block, tx, true, true);
 
         Execute(tracer, tx, block);
 
@@ -358,7 +358,7 @@ public class TransactionProcessorTests
 
         long blockNumber = MainnetSpecProvider.LondonBlockNumber;
         Block block = Build.A.Block.WithNumber(blockNumber).WithTransactions(tx).TestObject;
-        BlockReceiptsTracer tracer = BuildTracer(block, tx, true, true);
+        BlockExecutionTracer tracer = BuildTracer(block, tx, true, true);
 
         Execute(tracer, tx, block);
 
@@ -630,7 +630,7 @@ public class TransactionProcessorTests
 
         Block block = Build.A.Block.WithNumber(blockNumber).WithTransactions(tx).TestObject;
 
-        BlockReceiptsTracer tracer = BuildTracer(block, tx, false, false);
+        BlockExecutionTracer tracer = BuildTracer(block, tx, false, false);
         Execute(tracer, tx, block);
         _stateProvider.AccountExists(tx.SenderAddress).Should().BeTrue();
     }
@@ -711,7 +711,7 @@ public class TransactionProcessorTests
         _stateProvider.GetBalance(TestItem.PrivateKeyA.Address).Should().Be(1.Ether());
     }
 
-    private BlockReceiptsTracer BuildTracer(Block block, Transaction tx, bool stateDiff, bool trace)
+    private BlockExecutionTracer BuildTracer(Block block, Transaction tx, bool stateDiff, bool trace)
     {
         ParityTraceTypes types = ParityTraceTypes.None;
         if (stateDiff)
@@ -730,7 +730,7 @@ public class TransactionProcessorTests
         return tracer;
     }
 
-    private void Execute(BlockReceiptsTracer tracer, Transaction tx, Block block)
+    private void Execute(BlockExecutionTracer tracer, Transaction tx, Block block)
     {
         tracer.StartNewBlockTrace(block);
         tracer.StartNewTxTrace(tx);
@@ -739,7 +739,7 @@ public class TransactionProcessorTests
         tracer.EndBlockTrace();
     }
 
-    private void CallAndRestore(BlockReceiptsTracer tracer, Transaction tx, Block block)
+    private void CallAndRestore(BlockExecutionTracer tracer, Transaction tx, Block block)
     {
         tracer.StartNewBlockTrace(block);
         tracer.StartNewTxTrace(tx);

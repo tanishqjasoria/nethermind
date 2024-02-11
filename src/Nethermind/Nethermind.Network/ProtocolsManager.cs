@@ -22,12 +22,14 @@ using Nethermind.Network.P2P.Subprotocols.Eth.V68;
 using Nethermind.Network.P2P.Subprotocols.Les;
 using Nethermind.Network.P2P.Subprotocols.NodeData;
 using Nethermind.Network.P2P.Subprotocols.Snap;
+using Nethermind.Network.P2P.Subprotocols.Verkle;
 using Nethermind.Network.P2P.Subprotocols.Wit;
 using Nethermind.Network.Rlpx;
 using Nethermind.Stats;
 using Nethermind.Stats.Model;
 using Nethermind.Synchronization;
 using Nethermind.Synchronization.Peers;
+using Nethermind.Synchronization.VerkleSync;
 using Nethermind.TxPool;
 using ShouldGossip = Nethermind.TxPool.ShouldGossip;
 
@@ -43,6 +45,7 @@ namespace Nethermind.Network
         private readonly ConcurrentDictionary<Guid, ISession> _sessions = new();
         private readonly ISyncPeerPool _syncPool;
         private readonly ISyncServer _syncServer;
+        private readonly VerkleSyncServer? _verkleSyncServer;
         private readonly ITxPool _txPool;
         private readonly IPooledTxsRequestor _pooledTxsRequestor;
         private readonly IDiscoveryApp _discoveryApp;
@@ -65,6 +68,7 @@ namespace Nethermind.Network
         public ProtocolsManager(
             ISyncPeerPool syncPeerPool,
             ISyncServer syncServer,
+            VerkleSyncServer? verkleSyncServer,
             ITxPool txPool,
             IPooledTxsRequestor pooledTxsRequestor,
             IDiscoveryApp discoveryApp,
@@ -81,6 +85,7 @@ namespace Nethermind.Network
         {
             _syncPool = syncPeerPool ?? throw new ArgumentNullException(nameof(syncPeerPool));
             _syncServer = syncServer ?? throw new ArgumentNullException(nameof(syncServer));
+            _verkleSyncServer = verkleSyncServer;
             _txPool = txPool ?? throw new ArgumentNullException(nameof(txPool));
             _pooledTxsRequestor = pooledTxsRequestor ?? throw new ArgumentNullException(nameof(pooledTxsRequestor));
             _discoveryApp = discoveryApp ?? throw new ArgumentNullException(nameof(discoveryApp));
@@ -214,6 +219,17 @@ namespace Nethermind.Network
                     {
                         1 => new SnapProtocolHandler(session, _stats, _serializer, _logManager),
                         _ => throw new NotSupportedException($"{Protocol.Snap}.{version} is not supported.")
+                    };
+                    InitSatelliteProtocol(session, handler);
+
+                    return handler;
+                },
+                [Protocol.Verkle] = (session, version) =>
+                {
+                    VerkleProtocolHandler? handler = version switch
+                    {
+                        1 => new VerkleProtocolHandler(session, _verkleSyncServer, _stats, _serializer, _logManager),
+                        _ => throw new NotSupportedException($"{Protocol.Verkle}.{version} is not supported.")
                     };
                     InitSatelliteProtocol(session, handler);
 

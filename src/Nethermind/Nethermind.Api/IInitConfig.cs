@@ -23,6 +23,18 @@ public interface IInitConfig : IConfig
     [ConfigItem(Description = "Whether to download/process new blocks.", DefaultValue = "true")]
     bool ProcessingEnabled { get; set; }
 
+    [ConfigItem(Description = "If 'true' then the node processes the block in a stateless fashion", DefaultValue = "false")]
+    bool StatelessProcessingEnabled { get; set; }
+
+    [ConfigItem(Description = "If 'true' then the verkle proof in included in the block", DefaultValue = "true")]
+    bool ProofsInBlock { get; set; }
+
+    [ConfigItem(Description = "If 'true' then the verkle proof in blocks are verified while block processing", DefaultValue = "false")]
+    bool VerifyProofsInBlock { get; set; }
+
+    [ConfigItem(Description = "If 'true' then the verkle proof in blocks are verified while block processing", DefaultValue = "false")]
+    bool GenerateVerkleProofsForBlock { get; set; }
+
     [ConfigItem(Description = "Whether to connect to newly discovered peers.", DefaultValue = "true")]
     bool PeerManagerEnabled { get; set; }
 

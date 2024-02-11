@@ -62,6 +62,7 @@ namespace Nethermind.JsonRpc.Modules
             Witness,
             AccountAbstraction,
             Rpc,
+            Debug,
         };
 
         public static IEnumerable<string> DefaultModules { get; } = new List<string>()

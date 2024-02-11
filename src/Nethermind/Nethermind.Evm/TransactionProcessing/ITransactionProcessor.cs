@@ -3,6 +3,7 @@
 
 using Nethermind.Core;
 using Nethermind.Evm.Tracing;
+using Nethermind.State;
 
 namespace Nethermind.Evm.TransactionProcessing;
 
@@ -28,4 +29,6 @@ public interface ITransactionProcessor
     /// Will NOT charge gas from sender account, so stateDiff will miss gas fee
     /// </summary>
     void Trace(Transaction transaction, BlockExecutionContext blCtx, ITxTracer txTracer);
+
+    ITransactionProcessor WithNewStateProvider(IWorldState worldState);
 }

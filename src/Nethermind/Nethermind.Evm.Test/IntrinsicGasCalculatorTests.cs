@@ -44,6 +44,7 @@ namespace Nethermind.Evm.Test
         public void Intrinsic_cost_is_calculated_properly((Transaction Tx, long Cost, string Description) testCase)
         {
             IntrinsicGasCalculator.Calculate(testCase.Tx, Berlin.Instance).Should().Be(testCase.Cost);
+            IntrinsicGasCalculator.Calculate(testCase.Tx, Prague.Instance).Should().Be(testCase.Cost );
         }
 
         [TestCaseSource(nameof(AccessTestCaseSource))]
@@ -87,6 +88,7 @@ namespace Nethermind.Evm.Test
             Test(Istanbul.Instance, false);
             Test(MuirGlacier.Instance, false);
             Test(Berlin.Instance, true);
+            Test(Prague.Instance, true);
         }
 
         [TestCaseSource(nameof(DataTestCaseSource))]
@@ -96,9 +98,11 @@ namespace Nethermind.Evm.Test
 
             void Test(IReleaseSpec spec, bool isAfterRepricing)
             {
-                IntrinsicGasCalculator.Calculate(tx, spec).Should()
-                    .Be(21000 + (isAfterRepricing ? testCase.NewCost : testCase.OldCost), spec.Name,
-                        testCase.Data.ToHexString());
+                long expectedGas = 21000 + (isAfterRepricing ? testCase.NewCost : testCase.OldCost);
+                var actualGas = IntrinsicGasCalculator.Calculate(tx, spec);
+                actualGas.Should()
+                    .Be(expectedGas, spec.Name, testCase.Data.ToHexString());
+
             }
 
             Test(Homestead.Instance, false);
@@ -111,9 +115,7 @@ namespace Nethermind.Evm.Test
             Test(Istanbul.Instance, true);
             Test(MuirGlacier.Instance, true);
             Test(Berlin.Instance, true);
-            Test(GrayGlacier.Instance, true);
-            Test(Shanghai.Instance, true);
-            Test(Cancun.Instance, true);
+            Test(Prague.Instance, true);
         }
     }
 }

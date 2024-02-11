@@ -134,6 +134,18 @@ namespace Nethermind.Core.Crypto
 
         public ref readonly ValueHash256 ValueHash256 => ref _hash256;
 
+        /// <returns>
+        ///     <string>0x0000000000000000000000000000000000000000000000000000000000000000</string>
+        /// </returns>
+        public static readonly Hash256 Zero = new(new byte[Size]);
+
+        /// <summary>
+        ///     <string>0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff</string>
+        /// </summary>
+        public static Hash256 MaxValue { get; } = new("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+
+
+
         public Span<byte> Bytes => MemoryMarshal.AsBytes(MemoryMarshal.CreateSpan(ref Unsafe.AsRef(in _hash256), 1));
 
         public Hash256(string hexString)
@@ -203,6 +215,11 @@ namespace Nethermind.Core.Crypto
         public override int GetHashCode()
         {
             return _hash256.GetHashCode();
+        }
+
+        public static explicit operator Hash256(byte[] bytes)
+        {
+            return new Hash256(bytes);
         }
 
         public static bool operator ==(Hash256? a, Hash256? b)

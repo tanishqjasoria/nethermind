@@ -11,6 +11,7 @@ using Nethermind.Core.Specs;
 using Nethermind.Crypto;
 using Nethermind.Evm.CodeAnalysis;
 using Nethermind.Evm.Tracing;
+using Nethermind.Evm.Witness;
 using Nethermind.Int256;
 using Nethermind.Logging;
 using Nethermind.Specs;
@@ -26,6 +27,7 @@ namespace Nethermind.Evm.TransactionProcessing
     {
         protected EthereumEcdsa Ecdsa { get; private init; }
         protected ILogger Logger { get; private init; }
+        protected  ILogManager? LogManager { get; private init; }
         protected ISpecProvider SpecProvider { get; private init; }
         protected IWorldState WorldState { get; private init; }
         protected IVirtualMachine VirtualMachine { get; private init; }
@@ -65,11 +67,17 @@ namespace Nethermind.Evm.TransactionProcessing
             IVirtualMachine? virtualMachine,
             ILogManager? logManager)
         {
+            LogManager = logManager;
             Logger = logManager?.GetClassLogger() ?? throw new ArgumentNullException(nameof(logManager));
             SpecProvider = specProvider ?? throw new ArgumentNullException(nameof(specProvider));
             WorldState = worldState ?? throw new ArgumentNullException(nameof(worldState));
             VirtualMachine = virtualMachine ?? throw new ArgumentNullException(nameof(virtualMachine));
             Ecdsa = new EthereumEcdsa(specProvider.ChainId, logManager);
+        }
+
+        public ITransactionProcessor WithNewStateProvider(IWorldState worldState)
+        {
+            return new TransactionProcessor(SpecProvider, worldState, VirtualMachine, LogManager);
         }
 
         public void CallAndRestore(Transaction transaction, BlockExecutionContext blCtx, ITxTracer txTracer)
@@ -147,7 +155,10 @@ namespace Nethermind.Evm.TransactionProcessing
             if (commit)
                 WorldState.Commit(spec, tracer.IsTracingState ? tracer : NullTxTracer.Instance);
 
-            ExecutionEnvironment env = BuildExecutionEnvironmnet(tx, blCtx, spec, tracer, opts, effectiveGasPrice);
+            // declare the execution witness to collect witness and also charge gas
+            IWitness executionWitness = spec.IsVerkleTreeEipEnabled ? new VerkleExecWitness(LogManager) : new NoExecWitness();
+            executionWitness.AccessForTransaction(tx.SenderAddress!, tx.To!, !tx.Value.IsZero);
+            ExecutionEnvironment env = BuildExecutionEnvironmnet(tx, header, spec, tracer, opts, executionWitness, effectiveGasPrice);
 
             long gasAvailable = tx.GasLimit - intrinsicGas;
             if (!ExecuteEVMCall(tx, header, spec, tracer, opts, gasAvailable, env, out TransactionSubstate? substate, out long spentGas, out byte statusCode))
@@ -199,6 +210,7 @@ namespace Nethermind.Evm.TransactionProcessing
                     tracer.MarkAsSuccess(env.ExecutingAccount, spentGas, substate.Output.ToArray(), logs, stateRoot);
                 }
             }
+            if(tracer.IsTracingAccessWitness) tracer.ReportAccessWitness(env.Witness.GetAccessedKeys());
         }
 
         protected void QuickFail(Transaction tx, BlockHeader block, IReleaseSpec spec, ITxTracer txTracer, string? reason)
@@ -316,7 +328,7 @@ namespace Nethermind.Evm.TransactionProcessing
                     TraceLogInvalidTx(tx, $"SENDER_ACCOUNT_DOES_NOT_EXIST {tx.SenderAddress}");
                     if (!commit || noValidation || effectiveGasPrice == UInt256.Zero)
                     {
-                        deleteCallerAccount = !commit || restore;
+                        deleteCallerAccount = (!commit || restore) && !spec.IsVerkleTreeEipEnabled;
                         WorldState.CreateAccount(tx.SenderAddress, UInt256.Zero);
                     }
                 }
@@ -433,7 +445,7 @@ namespace Nethermind.Evm.TransactionProcessing
         }
 
         protected virtual ExecutionEnvironment BuildExecutionEnvironmnet(
-            Transaction tx, BlockExecutionContext blCtx, IReleaseSpec spec, ITxTracer tracer, ExecutionOptions opts,
+            Transaction tx, BlockExecutionContext blCtx, IReleaseSpec spec, ITxTracer tracer, ExecutionOptions opts, IWitness execWitness,
             in UInt256 effectiveGasPrice)
         {
             Address recipient = tx.GetRecipient(tx.IsContractCreation ? WorldState.GetNonce(tx.SenderAddress) : 0) ??
@@ -457,7 +469,8 @@ namespace Nethermind.Evm.TransactionProcessing
                 codeSource: recipient,
                 executingAccount: recipient,
                 inputData: inputData,
-                codeInfo: codeInfo
+                codeInfo: codeInfo,
+                witness: execWitness
             );
         }
 
@@ -485,6 +498,12 @@ namespace Nethermind.Evm.TransactionProcessing
             {
                 if (tx.IsContractCreation)
                 {
+                    if (!env.Witness.AccessAndChargeForContractCreationInit(env.ExecutingAccount, !tx.Value.IsZero,
+                            ref unspentGas))
+                    {
+                        throw new OutOfGasException();
+                    }
+
                     // if transaction is a contract creation then recipient address is the contract deployment address
                     PrepareAccountForContractDeployment(env.ExecutingAccount, spec);
                 }
@@ -555,16 +574,21 @@ namespace Nethermind.Evm.TransactionProcessing
                             WorldState.InsertCode(env.ExecutingAccount, substate.Output, spec);
                             unspentGas -= codeDepositGasCost;
                         }
+
+                        if (!env.Witness.AccessAndChargeForContractCreated(env.ExecutingAccount, ref unspentGas))
+                        {
+                            throw new OutOfGasException();
+                        }
                     }
 
                     foreach (Address toBeDestroyed in substate.DestroyList)
                     {
-                        if (Logger.IsTrace)
-                            Logger.Trace($"Destroying account {toBeDestroyed}");
-
-                        WorldState.ClearStorage(toBeDestroyed);
+                        Logger.Info($"Destroying account {toBeDestroyed}");
+                        if (!spec.IsVerkleTreeEipEnabled) WorldState.ClearStorage(toBeDestroyed);
+                        // we already have the EIP6780 enabled, that only adds address to the DestroyList if it was
+                        // created in the same transaction - so we can call delete on that account even in the
+                        // verkle context - because it technically does not remove anything from the tree
                         WorldState.DeleteAccount(toBeDestroyed);
-
                         if (tracer.IsTracingRefunds)
                             tracer.ReportRefund(RefundOf.Destroy(spec.IsEip3529Enabled));
                     }
@@ -632,7 +656,7 @@ namespace Nethermind.Evm.TransactionProcessing
                 }
 
                 // we clean any existing storage (in case of a previously called self destruct)
-                WorldState.UpdateStorageRoot(contractAddress, Keccak.EmptyTreeHash);
+                if (!spec.IsVerkleTreeEipEnabled) WorldState.UpdateStorageRoot(contractAddress, Keccak.EmptyTreeHash);
             }
         }
 

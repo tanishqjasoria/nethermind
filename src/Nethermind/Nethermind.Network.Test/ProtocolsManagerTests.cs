@@ -103,6 +103,7 @@ namespace Nethermind.Network.Test
                 _manager = new ProtocolsManager(
                     _syncPeerPool,
                     _syncServer,
+                    null,
                     _txPool,
                     _pooledTxsRequestor,
                     _discoveryApp,

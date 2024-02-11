@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
@@ -14,5 +14,9 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Nethermind.Logging\Nethermind.Logging.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Nethermind.Verkle" />
   </ItemGroup>
 </Project>

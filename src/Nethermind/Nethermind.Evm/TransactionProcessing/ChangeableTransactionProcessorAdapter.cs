@@ -3,6 +3,7 @@
 
 using Nethermind.Core;
 using Nethermind.Evm.Tracing;
+using Nethermind.State;
 
 namespace Nethermind.Evm.TransactionProcessing
 {
@@ -25,6 +26,11 @@ namespace Nethermind.Evm.TransactionProcessing
         public void Execute(Transaction transaction, BlockExecutionContext blkCtx, ITxTracer txTracer)
         {
             CurrentAdapter.Execute(transaction, blkCtx, txTracer);
+        }
+
+        public ITransactionProcessorAdapter WithNewStateProvider(IWorldState worldState)
+        {
+            return new BuildUpTransactionProcessorAdapter(TransactionProcessor.WithNewStateProvider(worldState));
         }
     }
 }

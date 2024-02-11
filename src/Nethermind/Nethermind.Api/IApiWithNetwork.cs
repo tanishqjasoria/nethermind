@@ -16,8 +16,7 @@ using Nethermind.Stats;
 using Nethermind.Synchronization;
 using Nethermind.Synchronization.Peers;
 using Nethermind.Sockets;
-using Nethermind.Synchronization.Blocks;
-using Nethermind.Synchronization.SnapSync;
+using Nethermind.Synchronization.VerkleSync;
 
 namespace Nethermind.Api
 {
@@ -48,6 +47,7 @@ namespace Nethermind.Api
         ISyncPeerPool? SyncPeerPool { get; set; }
         IPeerDifficultyRefreshPool? PeerDifficultyRefreshPool { get; set; }
         ISyncServer? SyncServer { get; set; }
+        VerkleSyncServer? VerkleSyncServer { get; set; }
         IWebSocketsManager WebSocketsManager { get; set; }
         ISubscriptionFactory? SubscriptionFactory { get; set; }
     }

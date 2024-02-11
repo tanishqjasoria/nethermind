@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using Nethermind.Core;
 using Nethermind.Core.Eip2930;
 using Nethermind.Core.Specs;
 using Nethermind.Int256;
+using Nethermind.Verkle.Tree.Utils;
 
 namespace Nethermind.Evm;
 
@@ -21,6 +21,7 @@ public static class IntrinsicGasCalculator
         result += AccessListCost(transaction, releaseSpec);
         return result;
     }
+
 
     private static long CreateCost(Transaction transaction, IReleaseSpec releaseSpec)
     {
