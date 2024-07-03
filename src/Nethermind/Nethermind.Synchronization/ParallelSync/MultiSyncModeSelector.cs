@@ -28,7 +28,7 @@ namespace Nethermind.Synchronization.ParallelSync
     ///     - Their are enabled based on <see cref="IBeaconSyncStrategy.ShouldBeInBeaconHeaders"/> and <see cref="IBeaconSyncStrategy.ShouldBeInBeaconModeControl"/>.
     /// * When <see cref="ISyncConfig.FastSync"/> is enabled:
     ///     - Beacon modes are exclusive with <see cref="SyncMode.FastSync"/>, <see cref="SyncMode.Full"/>, <see cref="SyncMode.StateNodes"/> and <see cref="SyncMode.SnapSync"/>.
-    ///     - Beacon modes can run parallel with syncing old state (<see cref="SyncMode.FastHeaders"/>, <see cref="SyncMode.FastBlocks"/> and <see cref="SyncMode.FastReceipts"/>).
+    ///     - Beacon modes can run parallel with syncing old state (<see cref="SyncMode.FastHeaders"/>, <see cref="SyncMode.FastBlocks"/> (the default and always on) and <see cref="SyncMode.FastReceipts"/>).
     /// * When <see cref="ISyncConfig.FastSync"/> is disabled:
     ///     - Beacon modes are allied directly.
     ///     - If no Beacon mode is applied and we have good peers on the network we apply <see cref="SyncMode.Full"/>,.
@@ -57,10 +57,10 @@ namespace Nethermind.Synchronization.ParallelSync
         private long _pivotNumber;
         private bool FastSyncEnabled => _syncConfig.FastSync;
         private bool SnapSyncEnabled => _syncConfig.SnapSync && !_isSnapSyncDisabledAfterAnyStateSync;
-        private bool FastBlocksEnabled => _syncConfig.FastSync && _syncConfig.FastBlocks;
-        private bool FastBodiesEnabled => FastBlocksEnabled && _syncConfig.DownloadBodiesInFastSync;
-        private bool FastReceiptsEnabled => FastBlocksEnabled && _syncConfig.DownloadReceiptsInFastSync;
-        private bool FastBlocksHeadersFinished => !FastBlocksEnabled || _syncProgressResolver.IsFastBlocksHeadersFinished();
+        private bool VerkleSyncEnabled => _syncConfig.VerkleSync;
+        private bool FastBodiesEnabled => FastSyncEnabled && _syncConfig.DownloadBodiesInFastSync;
+        private bool FastReceiptsEnabled => FastSyncEnabled && _syncConfig.DownloadReceiptsInFastSync;
+        private bool FastBlocksHeadersFinished => !FastSyncEnabled || _syncProgressResolver.IsFastBlocksHeadersFinished();
         private bool FastBlocksBodiesFinished => !FastBodiesEnabled || _syncProgressResolver.IsFastBlocksBodiesFinished();
         private bool FastBlocksReceiptsFinished => !FastReceiptsEnabled || _syncProgressResolver.IsFastBlocksReceiptsFinished();
         private long FastSyncCatchUpHeightDelta => _syncConfig.FastSyncCatchUpHeightDelta ?? FastSyncLag;
@@ -105,7 +105,7 @@ namespace Nethermind.Synchronization.ParallelSync
 
         private async Task StartAsync(CancellationToken cancellationToken)
         {
-            PeriodicTimer timer = new(TimeSpan.FromSeconds(1));
+            PeriodicTimer timer = new(TimeSpan.FromMilliseconds(_syncConfig.MultiSyncModeSelectorLoopTimerMs));
             try
             {
                 while (await timer.WaitForNextTickAsync(cancellationToken))
@@ -201,6 +201,7 @@ namespace Nethermind.Synchronization.ParallelSync
                             best.IsInStateSync = ShouldBeInStateSyncMode(best);
                             best.IsInStateNodes = ShouldBeInStateNodesMode(best);
                             best.IsInSnapRanges = ShouldBeBeInSnapRangesPhase(best);
+                            best.IsInVerkleRanges = ShouldBeBeInVerkleRangesPhase(best);
                             best.IsInFastHeaders = ShouldBeInFastHeadersMode(best);
                             best.IsInFastBodies = ShouldBeInFastBodiesMode(best);
                             best.IsInFastReceipts = ShouldBeInFastReceiptsMode(best);
@@ -218,6 +219,7 @@ namespace Nethermind.Synchronization.ParallelSync
                             CheckAddFlag(best.IsInFullSync, SyncMode.Full, ref newModes);
                             CheckAddFlag(best.IsInStateNodes, SyncMode.StateNodes, ref newModes);
                             CheckAddFlag(best.IsInSnapRanges, SyncMode.SnapSync, ref newModes);
+                            CheckAddFlag(best.IsInVerkleRanges, SyncMode.VerkleSync, ref newModes);
                             CheckAddFlag(best.IsInDisconnected, SyncMode.Disconnected, ref newModes);
                             CheckAddFlag(best.IsInWaitingForBlock, SyncMode.WaitingForBlock, ref newModes);
                             SyncMode current = Current;
@@ -383,7 +385,7 @@ namespace Nethermind.Synchronization.ParallelSync
                 return false;
             }
 
-            if (_syncConfig.FastBlocks && _pivotNumber != 0 && best.Header == 0)
+            if (_pivotNumber != 0 && best.Header == 0)
             {
                 // do not start fast sync until at least one header is downloaded or we would start from zero
                 // we are fine to start from zero if we do not use fast blocks
@@ -628,16 +630,21 @@ namespace Nethermind.Synchronization.ParallelSync
         {
             bool isInStateSync = best.IsInStateSync;
             bool snapSyncDisabled = !SnapSyncEnabled;
+            bool verkleSyncDisabled = !VerkleSyncEnabled;
             bool snapRangesFinished = _syncProgressResolver.IsSnapGetRangesFinished();
+            bool verkleRangesFinished = _syncProgressResolver.IsVerkleGetRangesFinished();
 
-            bool result = isInStateSync && (snapSyncDisabled || snapRangesFinished);
+            bool result = isInStateSync && (snapSyncDisabled || snapRangesFinished) && (verkleSyncDisabled || verkleRangesFinished);
 
             if (_logger.IsTrace)
             {
                 LogDetailedSyncModeChecks("STATE_NODES",
                     (nameof(isInStateSync), isInStateSync),
                     (nameof(snapSyncDisabled), snapSyncDisabled),
-                    (nameof(snapRangesFinished), snapRangesFinished));
+                    (nameof(snapRangesFinished), snapRangesFinished),
+                    (nameof(verkleSyncDisabled), verkleSyncDisabled),
+                    (nameof(verkleRangesFinished), verkleRangesFinished)
+                );
             }
 
             return result;
@@ -662,6 +669,27 @@ namespace Nethermind.Synchronization.ParallelSync
                 && isInStateSync
                 && isCloseToHead
                 && snapNotFinished;
+        }
+
+        private bool ShouldBeBeInVerkleRangesPhase(Snapshot best)
+        {
+            bool isInStateSync = best.IsInStateSync;
+            bool isCloseToHead = best.TargetBlock >= best.Header && (best.TargetBlock - best.Header) < Constants.MaxDistanceFromHead;
+            bool verkleRangesNotFinished = !_syncProgressResolver.IsVerkleGetRangesFinished();
+
+            if (_logger.IsTrace)
+            {
+                LogDetailedSyncModeChecks("VERKLE_RANGES",
+                    (nameof(VerkleSyncEnabled), VerkleSyncEnabled),
+                    (nameof(isInStateSync), isInStateSync),
+                    (nameof(isCloseToHead), isCloseToHead),
+                    (nameof(verkleRangesNotFinished), verkleRangesNotFinished));
+            }
+
+            return VerkleSyncEnabled
+                   && isInStateSync
+                   && isCloseToHead
+                   && verkleRangesNotFinished;
         }
 
         private bool HasJustStartedFullSync(Snapshot best) =>
@@ -807,7 +835,7 @@ namespace Nethermind.Synchronization.ParallelSync
                 IsInBeaconControl = isInBeaconControl;
                 TargetBlock = targetBlock;
 
-                IsInWaitingForBlock = IsInDisconnected = IsInFastReceipts = IsInFastBodies = IsInFastHeaders
+                IsInWaitingForBlock = IsInDisconnected = IsInFastReceipts = IsInFastBodies = IsInFastHeaders = IsInVerkleRanges
                     = IsInFastSync = IsInFullSync = IsInStateSync = IsInStateNodes = IsInSnapRanges = IsInBeaconHeaders = IsInUpdatingPivot = false;
             }
 
@@ -819,6 +847,7 @@ namespace Nethermind.Synchronization.ParallelSync
             public bool IsInStateSync { get; set; }
             public bool IsInStateNodes { get; set; }
             public bool IsInSnapRanges { get; set; }
+            public bool IsInVerkleRanges { get; set; }
             public bool IsInFullSync { get; set; }
             public bool IsInDisconnected { get; set; }
             public bool IsInWaitingForBlock { get; set; }

@@ -10,6 +10,7 @@ using Nethermind.Int256;
 using Nethermind.Logging;
 using Nethermind.Synchronization.FastBlocks;
 using Nethermind.Synchronization.SnapSync;
+using Nethermind.Synchronization.VerkleSync;
 
 namespace Nethermind.Synchronization.ParallelSync
 {
@@ -27,6 +28,7 @@ namespace Nethermind.Synchronization.ParallelSync
         private readonly ISyncFeed<BodiesSyncBatch?>? _bodiesSyncFeed;
         private readonly ISyncFeed<ReceiptsSyncBatch?>? _receiptsSyncFeed;
         private readonly ISyncFeed<SnapSyncBatch?>? _snapSyncFeed;
+        private readonly ISyncFeed<VerkleSyncBatch?>? _verkleSyncFeed;
 
         public SyncProgressResolver(
             IBlockTree blockTree,
@@ -36,6 +38,7 @@ namespace Nethermind.Synchronization.ParallelSync
             ISyncFeed<BodiesSyncBatch?>? bodiesSyncFeed,
             ISyncFeed<ReceiptsSyncBatch?>? receiptsSyncFeed,
             ISyncFeed<SnapSyncBatch?>? snapSyncFeed,
+            ISyncFeed<VerkleSyncBatch?>? verkleSyncFeed,
             ILogManager logManager)
         {
             _logger = logManager?.GetClassLogger() ?? throw new ArgumentNullException(nameof(logManager));
@@ -47,6 +50,7 @@ namespace Nethermind.Synchronization.ParallelSync
             _bodiesSyncFeed = bodiesSyncFeed;
             _receiptsSyncFeed = receiptsSyncFeed;
             _snapSyncFeed = snapSyncFeed;
+            _verkleSyncFeed = verkleSyncFeed;
         }
 
         public long FindBestFullState()
@@ -83,30 +87,19 @@ namespace Nethermind.Synchronization.ParallelSync
             return _blockTree.FindHeader(blockHash)?.TotalDifficulty == 0 ? null : _blockTree.FindHeader(blockHash)?.TotalDifficulty;
         }
 
-        public bool IsFastBlocksHeadersFinished() => !IsFastBlocks() || (!_syncConfig.DownloadHeadersInFastSync ||
-                                                                         (_headersSyncFeed?.IsFinished == true));
+        public bool IsFastBlocksHeadersFinished() => !IsFastBlocks() || !_syncConfig.DownloadHeadersInFastSync || _headersSyncFeed?.IsFinished == true;
 
-        public bool IsFastBlocksBodiesFinished() => !IsFastBlocks() || (!_syncConfig.DownloadBodiesInFastSync ||
-                                                                        (_bodiesSyncFeed?.IsFinished == true));
+        public bool IsFastBlocksBodiesFinished() => !IsFastBlocks() || !_syncConfig.DownloadBodiesInFastSync || _bodiesSyncFeed?.IsFinished == true;
 
-        public bool IsFastBlocksReceiptsFinished() => !IsFastBlocks() || (!_syncConfig.DownloadReceiptsInFastSync ||
-                                                                          (_receiptsSyncFeed?.IsFinished == true));
+        public bool IsFastBlocksReceiptsFinished() => !IsFastBlocks() || !_syncConfig.DownloadReceiptsInFastSync || _receiptsSyncFeed?.IsFinished == true;
 
         public bool IsSnapGetRangesFinished() => _snapSyncFeed?.IsFinished ?? true;
+        public bool IsVerkleGetRangesFinished() => _verkleSyncFeed?.IsFinished ?? true;
 
         public void RecalculateProgressPointers() => _blockTree.RecalculateTreeLevels();
 
-        private bool IsFastBlocks()
-        {
-            bool isFastBlocks = _syncConfig.FastBlocks;
+        private bool IsFastBlocks() => _syncConfig.FastSync && _syncConfig.PivotNumberParsed != 0L; // if pivot number is 0 then it is equivalent to fast blocks disabled
 
-            // if pivot number is 0 then it is equivalent to fast blocks disabled
-            if (!isFastBlocks || _syncConfig.PivotNumberParsed == 0L)
-            {
-                return false;
-            }
 
-            return true;
-        }
     }
 }

@@ -23,20 +23,22 @@ namespace Nethermind.Evm.TransactionProcessing
             _stateProvider.StateRoot = startState ?? throw new ArgumentNullException(nameof(startState));
         }
 
-        public void Execute(Transaction transaction, in BlockExecutionContext blCtx, ITxTracer txTracer) =>
+        public TransactionResult Execute(Transaction transaction, in BlockExecutionContext blCtx, ITxTracer txTracer) =>
             _transactionProcessor.Execute(transaction, in blCtx, txTracer);
 
-        public void CallAndRestore(Transaction transaction, in BlockExecutionContext blCtx, ITxTracer txTracer) =>
+        public TransactionResult CallAndRestore(Transaction transaction, in BlockExecutionContext blCtx, ITxTracer txTracer) =>
             _transactionProcessor.CallAndRestore(transaction, in blCtx, txTracer);
 
-        public void BuildUp(Transaction transaction, in BlockExecutionContext blCtx, ITxTracer txTracer) =>
+        public TransactionResult BuildUp(Transaction transaction, in BlockExecutionContext blCtx, ITxTracer txTracer) =>
             _transactionProcessor.BuildUp(transaction, in blCtx, txTracer);
 
-        public void Trace(Transaction transaction, in BlockExecutionContext blCtx, ITxTracer txTracer) =>
+        public TransactionResult Trace(Transaction transaction, in BlockExecutionContext blCtx, ITxTracer txTracer) =>
             _transactionProcessor.Trace(transaction, in blCtx, txTracer);
 
 
         public bool IsContractDeployed(Address address) => _stateProvider.IsContract(address);
+
+        public ITransactionProcessor WithNewStateProvider(IWorldState worldState) => _transactionProcessor.WithNewStateProvider(worldState);
 
         public void Dispose()
         {

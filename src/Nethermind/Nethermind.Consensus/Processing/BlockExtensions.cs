@@ -18,8 +18,8 @@ namespace Nethermind.Consensus.Processing
     {
         public static Block CreateCopy(this Block block, BlockHeader header) =>
             block is BlockToProduce blockToProduce
-                ? new BlockToProduce(header, blockToProduce.Transactions, blockToProduce.Uncles, blockToProduce.Withdrawals)
-                : new Block(header, block.Transactions, block.Uncles, block.Withdrawals);
+                ? new BlockToProduce(header, blockToProduce.Transactions, blockToProduce.Uncles, blockToProduce.Withdrawals, blockToProduce.ExecutionWitness)
+                : new Block(header, block.Transactions, block.Uncles, block.Withdrawals, block.ExecutionWitness);
 
         public static IEnumerable<Transaction> GetTransactions(this Block block) =>
             block is BlockToProduce blockToProduce
@@ -39,16 +39,11 @@ namespace Nethermind.Consensus.Processing
             return false;
         }
 
-        public static bool IsByNethermindNode(this Block block)
-        {
-            try
-            {
-                return Encoding.ASCII.GetString(block.ExtraData).Contains(BlocksConfig.DefaultExtraData, StringComparison.InvariantCultureIgnoreCase);
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-        }
+        public static bool IsByNethermindNode(this Block block) => block.Header.IsByNethermindNode();
+
+        public static bool IsByNethermindNode(this BlockHeader block) =>
+            Ascii.IsValid(block.ExtraData)
+            && Encoding.ASCII.GetString(block.ExtraData ?? Array.Empty<byte>())
+                .Contains(BlocksConfig.DefaultExtraData, StringComparison.InvariantCultureIgnoreCase);
     }
 }

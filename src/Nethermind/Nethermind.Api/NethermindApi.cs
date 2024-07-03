@@ -3,7 +3,6 @@
 
 using System.Collections.Generic;
 using System.IO.Abstractions;
-using System.Threading;
 using Nethermind.Abi;
 using Nethermind.Api.Extensions;
 using Nethermind.Blockchain;
@@ -55,8 +54,10 @@ using Nethermind.Trie.Pruning;
 using Nethermind.TxPool;
 using Nethermind.Wallet;
 using Nethermind.Sockets;
-using Nethermind.Synchronization.SnapSync;
-using Nethermind.Synchronization.Blocks;
+using Nethermind.Trie;
+using Nethermind.Synchronization.VerkleSync;
+using Nethermind.Verkle.Tree.History.V2;
+using Nethermind.Verkle.Tree.TreeStore;
 
 namespace Nethermind.Api
 {
@@ -210,6 +211,7 @@ namespace Nethermind.Api
 
         public IEthSyncingInfo? EthSyncingInfo { get; set; }
         public IBlockProductionPolicy? BlockProductionPolicy { get; set; }
+        public INodeStorageFactory NodeStorageFactory { get; set; } = null!;
         public BackgroundTaskScheduler BackgroundTaskScheduler { get; set; } = null!;
         public IWallet? Wallet { get; set; }
         public IBlockStore? BadBlocksStore { get; set; }
@@ -231,5 +233,9 @@ namespace Nethermind.Api
         public CompositePruningTrigger PruningTrigger { get; } = new();
         public IProcessExitSource? ProcessExit { get; set; }
         public CompositeTxGossipPolicy TxGossipPolicy { get; } = new();
+        public VerkleSyncServer? VerkleSyncServer { get; set; }
+        public IVerkleTreeStore? VerkleTreeStore { get; set; }
+        public IReadOnlyVerkleTreeStore? ReadOnlyVerkleTrieStore { get; set; }
+        public VerkleArchiveStore? VerkleArchiveStore { get; set; }
     }
 }

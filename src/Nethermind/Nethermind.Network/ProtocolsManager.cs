@@ -23,12 +23,15 @@ using Nethermind.Network.P2P.Subprotocols.Eth.V68;
 using Nethermind.Network.P2P.Subprotocols.Les;
 using Nethermind.Network.P2P.Subprotocols.NodeData;
 using Nethermind.Network.P2P.Subprotocols.Snap;
+using Nethermind.Network.P2P.Subprotocols.Verkle;
 using Nethermind.Network.P2P.Subprotocols.Wit;
 using Nethermind.Network.Rlpx;
 using Nethermind.Stats;
 using Nethermind.Stats.Model;
 using Nethermind.Synchronization;
 using Nethermind.Synchronization.Peers;
+using Nethermind.Synchronization.SnapSync;
+using Nethermind.Synchronization.VerkleSync;
 using Nethermind.TxPool;
 using ShouldGossip = Nethermind.TxPool.ShouldGossip;
 
@@ -44,6 +47,7 @@ namespace Nethermind.Network
         private readonly ConcurrentDictionary<Guid, ISession> _sessions = new();
         private readonly ISyncPeerPool _syncPool;
         private readonly ISyncServer _syncServer;
+        private readonly VerkleSyncServer? _verkleSyncServer;
         private readonly ITxPool _txPool;
         private readonly IPooledTxsRequestor _pooledTxsRequestor;
         private readonly IDiscoveryApp _discoveryApp;
@@ -62,12 +66,14 @@ namespace Nethermind.Network
         private readonly HashSet<Capability> _capabilities = new();
         private readonly Regex? _clientIdPattern;
         private readonly IBackgroundTaskScheduler _backgroundTaskScheduler;
+        private readonly ISnapServer? _snapServer;
         public event EventHandler<ProtocolInitializedEventArgs>? P2PProtocolInitialized;
 
         public ProtocolsManager(
             ISyncPeerPool syncPeerPool,
             ISyncServer syncServer,
             IBackgroundTaskScheduler backgroundTaskScheduler,
+            VerkleSyncServer? verkleSyncServer,
             ITxPool txPool,
             IPooledTxsRequestor pooledTxsRequestor,
             IDiscoveryApp discoveryApp,
@@ -79,12 +85,14 @@ namespace Nethermind.Network
             ForkInfo forkInfo,
             IGossipPolicy gossipPolicy,
             INetworkConfig networkConfig,
+            ISnapServer? snapServer,
             ILogManager logManager,
             ITxGossipPolicy? transactionsGossipPolicy = null)
         {
             _syncPool = syncPeerPool ?? throw new ArgumentNullException(nameof(syncPeerPool));
             _syncServer = syncServer ?? throw new ArgumentNullException(nameof(syncServer));
             _backgroundTaskScheduler = backgroundTaskScheduler ?? throw new ArgumentNullException(nameof(backgroundTaskScheduler));
+            _verkleSyncServer = verkleSyncServer;
             _txPool = txPool ?? throw new ArgumentNullException(nameof(txPool));
             _pooledTxsRequestor = pooledTxsRequestor ?? throw new ArgumentNullException(nameof(pooledTxsRequestor));
             _discoveryApp = discoveryApp ?? throw new ArgumentNullException(nameof(discoveryApp));
@@ -98,6 +106,7 @@ namespace Nethermind.Network
             _txGossipPolicy = transactionsGossipPolicy ?? ShouldGossip.Instance;
             _logManager = logManager ?? throw new ArgumentNullException(nameof(logManager));
             _networkConfig = networkConfig ?? throw new ArgumentNullException(nameof(networkConfig));
+            _snapServer = snapServer;
             _logger = _logManager?.GetClassLogger() ?? throw new ArgumentNullException(nameof(logManager));
 
             if (networkConfig.ClientIdMatcher is not null)
@@ -214,10 +223,21 @@ namespace Nethermind.Network
                 },
                 [Protocol.Snap] = (session, version) =>
                 {
-                    var handler = version switch
+                    SnapProtocolHandler? handler = version switch
                     {
-                        1 => new SnapProtocolHandler(session, _stats, _serializer, _logManager),
+                        1 => new SnapProtocolHandler(session, _stats, _serializer, _backgroundTaskScheduler, _logManager, _snapServer),
                         _ => throw new NotSupportedException($"{Protocol.Snap}.{version} is not supported.")
+                    };
+                    InitSatelliteProtocol(session, handler);
+
+                    return handler;
+                },
+                [Protocol.Verkle] = (session, version) =>
+                {
+                    VerkleProtocolHandler? handler = version switch
+                    {
+                        1 => new VerkleProtocolHandler(session, _verkleSyncServer, _stats, _serializer, _logManager),
+                        _ => throw new NotSupportedException($"{Protocol.Verkle}.{version} is not supported.")
                     };
                     InitSatelliteProtocol(session, handler);
 
@@ -321,7 +341,7 @@ namespace Nethermind.Network
                 _stats.ReportP2PInitializationEvent(session.Node, new P2PNodeDetails
                 {
                     ClientId = typedArgs.ClientId,
-                    Capabilities = typedArgs.Capabilities.ToArray(),
+                    Capabilities = typedArgs.Capabilities,
                     P2PVersion = typedArgs.P2PVersion,
                     ListenPort = typedArgs.ListenPort
                 });
@@ -438,17 +458,14 @@ namespace Nethermind.Network
             AddCapabilityMessage message = new(capability);
             foreach ((Guid _, ISession session) in _sessions)
             {
-                if (session.HasAgreedCapability(capability))
+                if (!session.HasAgreedCapability(capability) && session.HasAvailableCapability(capability))
                 {
-                    continue;
+                    session.DeliverMessage(message);
                 }
-
-                if (!session.HasAvailableCapability(capability))
+                else
                 {
-                    continue;
+                    message.Dispose();
                 }
-
-                session.DeliverMessage(message);
             }
         }
     }

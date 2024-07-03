@@ -23,13 +23,11 @@ namespace Nethermind.Consensus.AuRa
 {
     public class AuRaBlockProcessor : BlockProcessor
     {
-        private readonly ISpecProvider _specProvider;
         private readonly IBlockTree _blockTree;
         private readonly AuRaContractGasLimitOverride? _gasLimitOverride;
         private readonly ContractRewriter? _contractRewriter;
         private readonly ITxFilter _txFilter;
         private readonly ILogger _logger;
-        private IAuRaValidator? _auRaValidator;
 
         public AuRaBlockProcessor(
             ISpecProvider specProvider,
@@ -41,6 +39,7 @@ namespace Nethermind.Consensus.AuRa
             ILogManager logManager,
             IBlockTree blockTree,
             IWithdrawalProcessor withdrawalProcessor,
+            IAuRaValidator? auRaValidator,
             ITxFilter? txFilter = null,
             AuRaContractGasLimitOverride? gasLimitOverride = null,
             ContractRewriter? contractRewriter = null)
@@ -52,26 +51,23 @@ namespace Nethermind.Consensus.AuRa
                 stateProvider,
                 receiptStorage,
                 NullWitnessCollector.Instance,
+                blockTree,
                 logManager,
                 withdrawalProcessor)
         {
-            _specProvider = specProvider;
             _blockTree = blockTree ?? throw new ArgumentNullException(nameof(blockTree));
             _logger = logManager?.GetClassLogger<AuRaBlockProcessor>() ?? throw new ArgumentNullException(nameof(logManager));
             _txFilter = txFilter ?? NullTxFilter.Instance;
             _gasLimitOverride = gasLimitOverride;
             _contractRewriter = contractRewriter;
+            AuRaValidator = auRaValidator ?? new NullAuRaValidator();
             if (blockTransactionsExecutor is IBlockProductionTransactionsExecutor produceBlockTransactionsStrategy)
             {
                 produceBlockTransactionsStrategy.AddingTransaction += OnAddingTransaction;
             }
         }
 
-        public IAuRaValidator AuRaValidator
-        {
-            get => _auRaValidator ?? new NullAuRaValidator();
-            set => _auRaValidator = value;
-        }
+        public IAuRaValidator AuRaValidator { get; }
 
         protected override TxReceipt[] ProcessBlock(Block block, IBlockTracer blockTracer, ProcessingOptions options)
         {
@@ -108,8 +104,9 @@ namespace Nethermind.Consensus.AuRa
             BlockHeader parentHeader = GetParentHeader(block);
             if (_gasLimitOverride?.IsGasLimitValid(parentHeader, block.GasLimit, out long? expectedGasLimit) == false)
             {
-                if (_logger.IsWarn) _logger.Warn($"Invalid gas limit for block {block.Number}, hash {block.Hash}, expected value from contract {expectedGasLimit}, but found {block.GasLimit}.");
-                throw new InvalidBlockException(block);
+                string reason = $"Invalid gas limit, expected value from contract {expectedGasLimit}, but found {block.GasLimit}";
+                if (_logger.IsWarn) _logger.Warn($"Proposed block is not valid {block.ToString(Block.Format.FullHashAndNumber)}. {reason}.");
+                throw new InvalidBlockException(block, reason);
             }
         }
 
@@ -121,8 +118,9 @@ namespace Nethermind.Consensus.AuRa
                 AddingTxEventArgs args = CheckTxPosdaoRules(new AddingTxEventArgs(i, tx, block, block.Transactions));
                 if (args.Action != TxAction.Add)
                 {
-                    if (_logger.IsWarn) _logger.Warn($"Proposed block is not valid {block.ToString(Block.Format.FullHashAndNumber)}. {tx.ToShortString()} doesn't have required permissions. Reason: {args.Reason}.");
-                    throw new InvalidBlockException(block);
+                    string reason = $"{tx.ToShortString()} doesn't have required permissions: {args.Reason}";
+                    if (_logger.IsWarn) _logger.Warn($"Proposed block is not valid {block.ToString(Block.Format.FullHashAndNumber)}. {reason}.");
+                    throw new InvalidBlockException(block, reason);
                 }
             }
         }

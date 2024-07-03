@@ -131,6 +131,7 @@ public class AuRaMergeEngineModuleTests : EngineModuleTests
                 State,
                 ReceiptStorage,
                 NullWitnessCollector.Instance,
+                BlockTree,
                 LogManager,
                 WithdrawalProcessor);
 
@@ -156,8 +157,6 @@ public class AuRaMergeEngineModuleTests : EngineModuleTests
 
             AuRaMergeBlockProducerEnvFactory blockProducerEnvFactory = new(
                 _api!,
-                new AuRaConfig(),
-                new DisposableStack(),
                 WorldStateManager,
                 BlockTree,
                 SpecProvider,

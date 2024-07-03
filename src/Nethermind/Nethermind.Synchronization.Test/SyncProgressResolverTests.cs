@@ -6,13 +6,12 @@ using Nethermind.Blockchain.Synchronization;
 using Nethermind.Core;
 using Nethermind.Core.Crypto;
 using Nethermind.Core.Test.Builders;
-using Nethermind.Db;
 using Nethermind.Logging;
 using Nethermind.State;
 using Nethermind.Synchronization.FastBlocks;
 using Nethermind.Synchronization.ParallelSync;
 using Nethermind.Synchronization.SnapSync;
-using Nethermind.Trie.Pruning;
+using Nethermind.Synchronization.VerkleSync;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using NUnit.Framework;
@@ -115,13 +114,13 @@ namespace Nethermind.Synchronization.Test
         }
 
         [Test]
-        public void Is_fast_block_finished_returns_true_when_no_fast_block_sync_is_used()
+        public void Is_fast_block_finished_returns_true_when_no_fast_sync_is_used()
         {
             IBlockTree blockTree = Substitute.For<IBlockTree>();
             IStateReader stateReader = Substitute.For<IStateReader>();
             SyncConfig syncConfig = new()
             {
-                FastBlocks = false,
+                FastSync = false,
                 PivotNumber = "1",
             };
 
@@ -138,7 +137,6 @@ namespace Nethermind.Synchronization.Test
             IStateReader stateReader = Substitute.For<IStateReader>();
             SyncConfig syncConfig = new()
             {
-                FastBlocks = true,
                 FastSync = true,
                 DownloadBodiesInFastSync = true,
                 DownloadReceiptsInFastSync = true,
@@ -159,7 +157,7 @@ namespace Nethermind.Synchronization.Test
             IStateReader stateReader = Substitute.For<IStateReader>();
             SyncConfig syncConfig = new()
             {
-                FastBlocks = true,
+                FastSync = true,
                 DownloadBodiesInFastSync = true,
                 DownloadReceiptsInFastSync = false,
                 PivotNumber = "1",
@@ -186,6 +184,7 @@ namespace Nethermind.Synchronization.Test
                 Substitute.For<ISyncFeed<BodiesSyncBatch?>>(),
                 receiptFeed,
                 Substitute.For<ISyncFeed<SnapSyncBatch?>>(),
+                Substitute.For<ISyncFeed<VerkleSyncBatch?>>(),
                 limboLogs
             );
         }

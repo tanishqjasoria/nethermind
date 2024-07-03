@@ -21,10 +21,12 @@ public enum DisconnectReason : byte
     SessionAlreadyExist,
     ReplacingSessionWithOppositeDirection,
     OppositeDirectionCleanup,
+    BackgroundTaskFailure,
     Exception,
 
     // Non sync, non connection related disconnect
     SnapServerNotImplemented,
+    VerkleSyncServerNotImplemented,
     IncompatibleP2PVersion,
     InvalidNetworkId,
     InvalidGenesis,

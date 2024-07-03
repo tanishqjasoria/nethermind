@@ -18,6 +18,7 @@ using Nethermind.Core.Specs;
 using Nethermind.Core.Test.Builders;
 using Nethermind.Db;
 using Nethermind.Evm.Tracing.GethStyle;
+using Nethermind.Evm.Tracing.GethStyle.Custom;
 using Nethermind.Int256;
 using Nethermind.JsonRpc.Data;
 using Nethermind.JsonRpc.Modules.DebugModule;
@@ -37,7 +38,7 @@ public class DebugModuleTests
     private readonly IJsonRpcConfig jsonRpcConfig = new JsonRpcConfig();
     private readonly ISpecProvider specProvider = Substitute.For<ISpecProvider>();
     private readonly IDebugBridge debugBridge = Substitute.For<IDebugBridge>();
-    private MemDb _blocksDb = new();
+    private readonly MemDb _blocksDb = new();
 
     [Test]
     public async Task Get_from_db()
@@ -221,7 +222,7 @@ public class DebugModuleTests
     [Test]
     public async Task Get_js_trace()
     {
-        GethLikeTxTrace trace = new() { CustomTracerResult = new GethLikeJavaScriptTrace() { Value = new { CustomProperty = 1 } } };
+        GethLikeTxTrace trace = new() { CustomTracerResult = new GethLikeCustomTrace() { Value = new { CustomProperty = 1 } } };
 
         debugBridge.GetTransactionTrace(Arg.Any<Hash256>(), Arg.Any<CancellationToken>(), Arg.Any<GethTraceOptions>()).Returns(trace);
 

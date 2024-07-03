@@ -3,6 +3,7 @@
 
 using Nethermind.Config;
 using Nethermind.Consensus.Processing;
+using Nethermind.Trie;
 
 namespace Nethermind.Api;
 
@@ -83,11 +84,24 @@ public interface IInitConfig : IConfig
     [ConfigItem(Description = "[TECHNICAL] Disable setting malloc options. Set to true if using different memory allocator or manually setting malloc opts.", DefaultValue = "false", HiddenFromDocs = true)]
     bool DisableMallocOpts { get; set; }
 
+    [ConfigItem(Description = "[TECHNICAL] Key scheme for state db. Only effect new db.", DefaultValue = "Current", HiddenFromDocs = true)]
+    INodeStorage.KeyScheme StateDbKeyScheme { get; set; }
+
     [ConfigItem(Description = "[TECHNICAL] Exit when block number is reached. Useful for scripting and testing.", DefaultValue = "null", HiddenFromDocs = true)]
     long? ExitOnBlockNumber { get; set; }
 
     [ConfigItem(Description = "[TECHNICAL] Specify concurrency limit for background task.", DefaultValue = "1", HiddenFromDocs = true)]
     int BackgroundTaskConcurrency { get; set; }
+
+    [ConfigItem(Description = "If 'true' then the node processes the block in a stateless fashion", DefaultValue = "false")]
+    bool StatelessProcessingEnabled { get; set; }
+
+    [ConfigItem(Description = "If 'true' then the verkle proof in blocks are verified while block processing", DefaultValue = "false")]
+    bool VerifyProofsInBlock { get; set; }
+
+    [ConfigItem(Description = "If 'true' then the verkle proof in blocks are verified while block processing", DefaultValue = "false")]
+    bool GenerateVerkleProofsForBlock { get; set; }
+
 }
 
 public enum DiagnosticMode

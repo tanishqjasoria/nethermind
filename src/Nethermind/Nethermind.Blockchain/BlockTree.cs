@@ -15,6 +15,7 @@ using Nethermind.Blockchain.Synchronization;
 using Nethermind.Core;
 using Nethermind.Core.Attributes;
 using Nethermind.Core.Caching;
+using Nethermind.Core.Collections;
 using Nethermind.Core.Crypto;
 using Nethermind.Core.Extensions;
 using Nethermind.Core.Specs;
@@ -536,40 +537,40 @@ namespace Nethermind.Blockchain
             return GetBlockHashOnMainOrBestDifficultyHash(number);
         }
 
-        public BlockHeader[] FindHeaders(Hash256? blockHash, int numberOfBlocks, int skip, bool reverse)
+        public IOwnedReadOnlyList<BlockHeader> FindHeaders(Hash256? blockHash, int numberOfBlocks, int skip, bool reverse)
         {
             if (numberOfBlocks == 0)
             {
-                return Array.Empty<BlockHeader>();
+                return ArrayPoolList<BlockHeader>.Empty();
             }
 
             if (blockHash is null)
             {
-                return new BlockHeader[numberOfBlocks];
+                return new ArrayPoolList<BlockHeader>(numberOfBlocks, numberOfBlocks);
             }
 
             BlockHeader startHeader = FindHeader(blockHash, BlockTreeLookupOptions.TotalDifficultyNotNeeded);
             if (startHeader is null)
             {
-                return new BlockHeader[numberOfBlocks];
+                return new ArrayPoolList<BlockHeader>(numberOfBlocks, numberOfBlocks);
             }
 
             if (numberOfBlocks == 1)
             {
-                return new[] { startHeader };
+                return new ArrayPoolList<BlockHeader>(1) { startHeader };
             }
 
             if (skip == 0)
             {
-                static BlockHeader[] FindHeadersReversedFast(BlockTree tree, BlockHeader startHeader, int numberOfBlocks, bool reverse = false)
+                static ArrayPoolList<BlockHeader> FindHeadersReversedFast(BlockTree tree, BlockHeader startHeader, int numberOfBlocks, bool reverse = false)
                 {
                     ArgumentNullException.ThrowIfNull(startHeader);
                     if (numberOfBlocks == 1)
                     {
-                        return new[] { startHeader };
+                        return new ArrayPoolList<BlockHeader>(1) { startHeader };
                     }
 
-                    BlockHeader[] result = new BlockHeader[numberOfBlocks];
+                    ArrayPoolList<BlockHeader> result = new ArrayPoolList<BlockHeader>(numberOfBlocks, numberOfBlocks);
 
                     BlockHeader current = startHeader;
                     int responseIndex = reverse ? 0 : numberOfBlocks - 1;
@@ -606,7 +607,7 @@ namespace Nethermind.Blockchain
                 }
             }
 
-            BlockHeader[] result = new BlockHeader[numberOfBlocks];
+            ArrayPoolList<BlockHeader> result = new ArrayPoolList<BlockHeader>(numberOfBlocks, numberOfBlocks);
             BlockHeader current = startHeader;
             int directionMultiplier = reverse ? -1 : 1;
             int responseIndex = 0;
@@ -1082,9 +1083,6 @@ namespace Nethermind.Blockchain
                 ? FindBlock(hashOfThePreviousMainBlock, BlockTreeLookupOptions.TotalDifficultyNotNeeded, blockNumber: block.Number)
                 : null;
 
-            if (_logger.IsTrace) _logger.Trace($"Block added to main {block}, block TD {block.TotalDifficulty}");
-            BlockAddedToMain?.Invoke(this, new BlockReplacementEventArgs(block, previous));
-
             if (forceUpdateHeadBlock || block.IsGenesis || HeadImprovementRequirementsSatisfied(block.Header))
             {
                 if (block.Number == 0)
@@ -1102,6 +1100,10 @@ namespace Nethermind.Blockchain
                     UpdateHeadBlock(block);
                 }
             }
+
+            if (_logger.IsTrace) _logger.Trace($"Block added to main {block}, block TD {block.TotalDifficulty}");
+
+            BlockAddedToMain?.Invoke(this, new BlockReplacementEventArgs(block, previous));
 
             if (_logger.IsTrace) _logger.Trace($"Block {block.ToString(Block.Format.Short)}, TD: {block.TotalDifficulty} added to main chain");
         }

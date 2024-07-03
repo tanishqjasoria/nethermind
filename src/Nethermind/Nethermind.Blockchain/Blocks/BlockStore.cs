@@ -22,7 +22,7 @@ public class BlockStore : IBlockStore
 
     private readonly LruCache<ValueHash256, Block>
         _blockCache = new(CacheSize, CacheSize, "blocks");
-    private long? _maxSize;
+    private readonly long? _maxSize;
 
     public BlockStore(IDb blockDb, long? maxSize = null)
     {
@@ -91,16 +91,22 @@ public class BlockStore : IBlockStore
         return _blockDb.Get(blockHash, _blockDecoder, _blockCache, rlpBehaviors, shouldCache);
     }
 
+    public byte[]? GetRaw(long blockNumber, Hash256 blockHash)
+    {
+        Span<byte> dbKey = stackalloc byte[40];
+        KeyValueStoreExtensions.GetBlockNumPrefixedKey(blockNumber, blockHash, dbKey);
+        var b = _blockDb.Get(dbKey);
+        if (b is not null) return b;
+        return _blockDb.Get(blockHash);
+    }
+
     public ReceiptRecoveryBlock? GetReceiptRecoveryBlock(long blockNumber, Hash256 blockHash)
     {
         Span<byte> keyWithBlockNumber = stackalloc byte[40];
         GetBlockNumPrefixedKey(blockNumber, blockHash, keyWithBlockNumber);
 
         MemoryManager<byte>? memoryOwner = _blockDb.GetOwnedMemory(keyWithBlockNumber);
-        if (memoryOwner is null)
-        {
-            memoryOwner = _blockDb.GetOwnedMemory(blockHash.Bytes);
-        }
+        memoryOwner ??= _blockDb.GetOwnedMemory(blockHash.Bytes);
 
         return BlockDecoder.DecodeToReceiptRecoveryBlock(memoryOwner, memoryOwner?.Memory ?? Memory<byte>.Empty, RlpBehaviors.None);
     }
@@ -114,4 +120,5 @@ public class BlockStore : IBlockStore
     {
         return _blockDb.GetAllValues(true).Select(bytes => _blockDecoder.Decode(bytes.AsRlpStream()));
     }
+
 }

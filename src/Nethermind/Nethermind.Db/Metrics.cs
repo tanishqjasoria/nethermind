@@ -146,6 +146,70 @@ namespace Nethermind.Db
         [Description("_Deprecated._ Number of BlobTransactions DB writes.")]
         public static long BlobTransactionsDbWrites { get; set; }
 
+        [CounterMetric]
+        [Description("Number of Leaf DB reads.")]
+        public static long LeafDbReads { get; set; }
+
+        [CounterMetric]
+        [Description("Number of Leaf DB writes.")]
+        public static long LeafDbWrites { get; set; }
+
+        [CounterMetric]
+        [Description("Number of Stem DB reads.")]
+        public static long StemDbReads { get; set; }
+
+        [CounterMetric]
+        [Description("Number of Stem DB writes.")]
+        public static long StemDbWrites { get; set; }
+
+        [CounterMetric]
+        [Description("Number of Branch DB reads.")]
+        public static long BranchDbReads { get; set; }
+
+        [CounterMetric]
+        [Description("Number of Branch DB writes.")]
+        public static long BranchDbWrites { get; set; }
+
+        [CounterMetric]
+        [Description("Number of ForwardDiff DB reads.")]
+        public static long ForwardDiffDbReads { get; set; }
+
+        [CounterMetric]
+        [Description("Number of ForwardDiff DB writes.")]
+        public static long ForwardDiffDbWrites { get; set; }
+
+        [CounterMetric]
+        [Description("Number of ReverseDiff DB reads.")]
+        public static long ReverseDiffDbReads { get; set; }
+
+        [CounterMetric]
+        [Description("Number of ReverseDiff DB writes.")]
+        public static long ReverseDiffDbWrites { get; set; }
+
+        [CounterMetric]
+        [Description("Number of StateRootToBlock DB reads.")]
+        public static long StateRootToBlockDbReads { get; set; }
+
+        [CounterMetric]
+        [Description("Number of StateRootToBlock DB writes.")]
+        public static long StateRootToBlockDbWrites { get; set; }
+
+        [CounterMetric]
+        [Description("Number of Preimages DB reads.")]
+        public static long PreimagesDbReads { get; set; }
+
+        [CounterMetric]
+        [Description("Number of Preimages DB writes.")]
+        public static long PreimagesDbWrites { get; set; }
+
+        [CounterMetric]
+        [Description("Number of HistoryOfAccounts DB reads.")]
+        public static long HistoryOfAccountsDbReads { get; set; }
+
+        [CounterMetric]
+        [Description("Number of HistoryOfAccounts DB writes.")]
+        public static long HistoryOfAccountsDbWrites { get; set; }
+
         [GaugeMetric]
         [Description("_Deprecated._ Indicator if StadeDb is being pruned.")]
         public static int StateDbPruning { get; set; }
@@ -209,35 +273,39 @@ namespace Nethermind.Db
         [GaugeMetric]
         [Description("Database reads per database")]
         [KeyIsLabel("db")]
-        public static IDictionary<string, long> DbReads { get; set; } = new ConcurrentDictionary<string, long>();
+        public static NonBlocking.ConcurrentDictionary<string, long> DbReads { get; } = new();
 
         [GaugeMetric]
         [Description("Database writes per database")]
         [KeyIsLabel("db")]
-        public static IDictionary<string, long> DbWrites { get; set; } = new ConcurrentDictionary<string, long>();
+        public static NonBlocking.ConcurrentDictionary<string, long> DbWrites { get; } = new();
 
         [GaugeMetric]
         [Description("Database size per database")]
         [KeyIsLabel("db")]
-        public static IDictionary<string, long> DbSize { get; set; } = new ConcurrentDictionary<string, long>();
+        public static NonBlocking.ConcurrentDictionary<string, long> DbSize { get; } = new();
 
         [GaugeMetric]
         [Description("Database memtable per database")]
         [KeyIsLabel("db")]
-        public static IDictionary<string, long> DbMemtableSize { get; set; } = new ConcurrentDictionary<string, long>();
+        public static NonBlocking.ConcurrentDictionary<string, long> DbMemtableSize { get; } = new();
 
         [GaugeMetric]
         [Description("Database block cache size per database")]
         [KeyIsLabel("db")]
-        public static IDictionary<string, long> DbBlockCacheSize { get; set; } = new ConcurrentDictionary<string, long>();
+        public static NonBlocking.ConcurrentDictionary<string, long> DbBlockCacheSize { get; } = new();
 
         [GaugeMetric]
         [Description("Database index and filter size per database")]
         [KeyIsLabel("db")]
-        public static IDictionary<string, long> DbIndexFilterSize { get; set; } = new ConcurrentDictionary<string, long>();
+        public static NonBlocking.ConcurrentDictionary<string, long> DbIndexFilterSize { get; } = new();
 
         [Description("Metrics extracted from RocksDB Compaction Stats and DB Statistics")]
         [KeyIsLabel("db", "metric")]
-        public static IDictionary<(string, string), double> DbStats { get; set; } = new ConcurrentDictionary<(string, string), double>();
+        public static NonBlocking.ConcurrentDictionary<(string, string), double> DbStats { get; } = new();
+
+        [Description("Metrics extracted from RocksDB Compaction Stats")]
+        [KeyIsLabel("db", "level", "metric")]
+        public static NonBlocking.ConcurrentDictionary<(string, int, string), double> DbCompactionStats { get; } = new();
     }
 }

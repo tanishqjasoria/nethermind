@@ -30,6 +30,7 @@ namespace Nethermind.Db.Test
     public class DbOnTheRocksTests
     {
         string DbPath => "testdb/" + TestContext.CurrentContext.Test.Name;
+        public static Random Random { get; } = new();
 
         [SetUp]
         public void Setup()
@@ -183,6 +184,34 @@ namespace Nethermind.Db.Test
             file.Received().Delete(markerFile);
         }
 
+        [Test]
+        public void RangeIteratorTest()
+        {
+            IDbConfig config = new DbConfig();
+            DbOnTheRocks db = new("testRangeIterator1", GetRocksDbSettings("testRangeIterator1", "TestRangeIterator1"),
+                config, LimboLogs.Instance);
+
+            byte[] key = new byte[32];
+            byte[] value = new byte[32];
+
+            Random.NextBytes(key);
+            Random.NextBytes(value);
+
+            for (int i = 0; i < 10000; i++)
+            {
+                Random.NextBytes(key);
+                Random.NextBytes(value);
+                db.Set(key, value.AsSpan().ToArray());
+            }
+
+            IEnumerable<KeyValuePair<byte[], byte[]?>>? xx = db.GetIterator();
+
+            foreach (KeyValuePair<byte[], byte[]> x in xx)
+            {
+                Console.WriteLine($"Key:{x.Key.ToHexString()} Value:{x.Value.ToHexString()}");
+            }
+        }
+
         private static DbSettings GetRocksDbSettings(string dbPath, string dbName)
         {
             return new(dbName, dbPath)
@@ -290,6 +319,17 @@ namespace Nethermind.Db.Test
         {
             _db[new byte[] { 1, 2, 3 }] = new byte[] { 4, 5, 6 };
             Assert.That(_db.Get(new byte[] { 1, 2, 3 }, ReadFlags.HintReadAhead), Is.EqualTo(new byte[] { 4, 5, 6 }));
+        }
+
+        [Test]
+        public void Smoke_test_many_readahead()
+        {
+            _db[new byte[] { 1, 2, 3 }] = new byte[] { 4, 5, 6 };
+            // Attempt to trigger auto dispose iterator on many usage
+            for (int i = 0; i < 1200000; i++)
+            {
+                Assert.That(_db.Get(new byte[] { 1, 2, 3 }, ReadFlags.HintReadAhead), Is.EqualTo(new byte[] { 4, 5, 6 }));
+            }
         }
 
         [Test]
