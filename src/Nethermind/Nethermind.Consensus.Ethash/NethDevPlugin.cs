@@ -72,16 +72,14 @@ namespace Nethermind.Consensus.Ethash
                 getFromApi.SpecProvider,
                 getFromApi.LogManager);
 
-            IReadOnlyTxProcessingScope scope = producerEnv.Build(Keccak.EmptyTreeHash);
-
             BlockProcessor producerProcessor = new(
                 getFromApi!.SpecProvider,
                 getFromApi!.BlockValidator,
                 NoBlockRewards.Instance,
-                new BlockProcessor.BlockProductionTransactionsExecutor(scope, getFromApi!.SpecProvider, getFromApi.LogManager),
-                scope.WorldState,
+                new BlockProcessor.BlockProductionTransactionsExecutor(producerEnv.TransactionProcessor, getFromApi!.SpecProvider, getFromApi.LogManager),
+                getFromApi.WorldStateManager,
                 NullReceiptStorage.Instance,
-                new BlockhashStore(getFromApi.SpecProvider, scope.WorldState),
+                new BlockhashStore(getFromApi.SpecProvider),
                 getFromApi.LogManager);
 
             IBlockchainProcessor producerChainProcessor = new BlockchainProcessor(
@@ -95,7 +93,7 @@ namespace Nethermind.Consensus.Ethash
             IBlockProducer blockProducer = new DevBlockProducer(
                 additionalTxSource.Then(txPoolTxSource).ServeTxsOneByOne(),
                 producerChainProcessor,
-                scope.WorldState,
+                producerEnv.WorldStateManager,
                 getFromApi.BlockTree,
                 getFromApi.Timestamper,
                 getFromApi.SpecProvider,

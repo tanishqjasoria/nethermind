@@ -102,18 +102,17 @@ namespace Nethermind.Consensus.Clique
                 getFromApi.SpecProvider,
                 getFromApi.LogManager);
 
-            IReadOnlyTxProcessingScope scope = producerEnv.Build(Keccak.EmptyTreeHash);
 
             BlockProcessor producerProcessor = new(
                 getFromApi!.SpecProvider,
                 getFromApi!.BlockValidator,
                 NoBlockRewards.Instance,
-                getFromApi.BlockProducerEnvFactory.TransactionsExecutorFactory.Create(scope),
-                scope.WorldState,
+                getFromApi.BlockProducerEnvFactory.TransactionsExecutorFactory.Create(producerEnv.TransactionProcessor),
+                getFromApi.WorldStateManager,
                 NullReceiptStorage.Instance,
-                new BlockhashStore(getFromApi.SpecProvider, scope.WorldState),
+                new BlockhashStore(getFromApi.SpecProvider),
                 getFromApi.LogManager,
-                new BlockProductionWithdrawalProcessor(new WithdrawalProcessor(scope.WorldState, getFromApi.LogManager)));
+                new BlockProductionWithdrawalProcessor(new WithdrawalProcessor(getFromApi.LogManager)));
 
             IBlockchainProcessor producerChainProcessor = new BlockchainProcessor(
                 readOnlyBlockTree,
@@ -124,7 +123,6 @@ namespace Nethermind.Consensus.Clique
                 BlockchainProcessor.Options.NoReceipts);
 
             OneTimeChainProcessor chainProcessor = new(
-                scope.WorldState,
                 producerChainProcessor);
 
             ITxFilterPipeline txFilterPipeline =
@@ -145,7 +143,7 @@ namespace Nethermind.Consensus.Clique
             CliqueBlockProducer blockProducer = new(
                 additionalTxSource.Then(txPoolTxSource),
                 chainProcessor,
-                scope.WorldState,
+                producerEnv.WorldStateManager,
                 getFromApi.Timestamper,
                 getFromApi.CryptoRandom,
                 _snapshotManager!,

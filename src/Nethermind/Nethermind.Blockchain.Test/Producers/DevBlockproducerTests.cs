@@ -56,8 +56,10 @@ namespace Nethermind.Blockchain.Test.Producers
                 trieStore,
                 dbProvider.RegisteredDbs[DbNames.Code],
                 LimboLogs.Instance);
+            var worldStateManager =
+                new WorldStateManager(stateProvider, trieStore, dbProvider, LimboLogs.Instance);
             StateReader stateReader = new(trieStore, dbProvider.GetDb<IDb>(DbNames.State), LimboLogs.Instance);
-            BlockhashProvider blockhashProvider = new(blockTree, specProvider, stateProvider, LimboLogs.Instance);
+            BlockhashProvider blockhashProvider = new(blockTree, specProvider, LimboLogs.Instance);
             CodeInfoRepository codeInfoRepository = new();
             VirtualMachine virtualMachine = new(
                 blockhashProvider,
@@ -66,7 +68,6 @@ namespace Nethermind.Blockchain.Test.Producers
                 LimboLogs.Instance);
             TransactionProcessor txProcessor = new(
                 specProvider,
-                stateProvider,
                 virtualMachine,
                 codeInfoRepository,
                 LimboLogs.Instance);
@@ -74,10 +75,10 @@ namespace Nethermind.Blockchain.Test.Producers
                 specProvider,
                 Always.Valid,
                 NoBlockRewards.Instance,
-                new BlockProcessor.BlockValidationTransactionsExecutor(txProcessor, stateProvider),
-                stateProvider,
+                new BlockProcessor.BlockValidationTransactionsExecutor(txProcessor),
+                worldStateManager,
                 NullReceiptStorage.Instance,
-                new BlockhashStore(specProvider, stateProvider),
+                new BlockhashStore(specProvider),
                 LimboLogs.Instance);
             BlockchainProcessor blockchainProcessor = new(
                 blockTree,
@@ -91,7 +92,7 @@ namespace Nethermind.Blockchain.Test.Producers
             DevBlockProducer devBlockProducer = new(
                 EmptyTxSource.Instance,
                 blockchainProcessor,
-                stateProvider,
+                worldStateManager,
                 blockTree,
                 timestamper,
                 specProvider,

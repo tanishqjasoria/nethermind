@@ -58,9 +58,6 @@ namespace Nethermind.Blockchain.Contracts
             protected Transaction GenerateTransaction(CallInfo callInfo) =>
                 _contract.GenerateTransaction<SystemTransaction>(callInfo.ContractAddress, callInfo.FunctionName, callInfo.Sender, DefaultConstantContractGasLimit, callInfo.ParentHeader, callInfo.Arguments);
 
-            protected byte[] CallCore(CallInfo callInfo, ITransactionProcessor readOnlyTransactionProcessor, Transaction transaction) =>
-                _contract.CallCore(readOnlyTransactionProcessor, callInfo.ParentHeader, callInfo.FunctionName, transaction, true);
-
             protected object[] DecodeReturnData(string functionName, byte[] data) => _contract.DecodeReturnData(functionName, data);
 
             public abstract object[] Call(CallInfo callInfo);
@@ -85,17 +82,18 @@ namespace Nethermind.Blockchain.Contracts
 
                 lock (_readOnlyTxProcessorSource)
                 {
-                    using var scope = _readOnlyTxProcessorSource.Build(GetState(callInfo.ParentHeader));
+                    using IReadOnlyTxProcessingScope? scope =
+                        _readOnlyTxProcessorSource.Build(GetState(callInfo.ParentHeader), callInfo.ParentHeader);
                     return CallRaw(callInfo, scope);
                 }
             }
 
             protected virtual object[] CallRaw(CallInfo callInfo, IReadOnlyTxProcessingScope scope)
             {
-                var transaction = GenerateTransaction(callInfo);
+                Transaction? transaction = GenerateTransaction(callInfo);
                 if (_contract.ContractAddress is not null && scope.WorldState.IsContract(_contract.ContractAddress))
                 {
-                    var result = CallCore(callInfo, scope.TransactionProcessor, transaction);
+                    var result = _contract.CallCore(scope.TransactionProcessor, callInfo.ParentHeader, callInfo.FunctionName, transaction, scope.WorldState, true);
                     return callInfo.Result = _contract.DecodeReturnData(callInfo.FunctionName, result);
                 }
                 else if (callInfo.MissingContractResult is not null)

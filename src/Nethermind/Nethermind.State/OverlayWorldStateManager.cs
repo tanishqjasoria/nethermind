@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System;
+using Nethermind.Core;
+using Nethermind.Core.Crypto;
 using Nethermind.Db;
 using Nethermind.Logging;
 using Nethermind.Trie;
@@ -12,9 +14,12 @@ namespace Nethermind.State;
 public class OverlayWorldStateManager(
     IReadOnlyDbProvider dbProvider,
     OverlayTrieStore overlayTrieStore,
-    ILogManager? logManager)
+    ILogManager logManager,
+    PreBlockCaches? caches = null)
     : IWorldStateManager
 {
+    public PreBlockCaches? Caches { get; } = caches;
+
     private readonly IDb _codeDb = dbProvider.GetDb<IDb>(DbNames.Code);
 
     private readonly StateReader _reader = new(overlayTrieStore, dbProvider.GetDb<IDb>(DbNames.Code), logManager);
@@ -27,19 +32,20 @@ public class OverlayWorldStateManager(
 
     public IReadOnlyTrieStore TrieStore { get; } = overlayTrieStore.AsReadOnly();
 
-    public IWorldState CreateResettableWorldState(IWorldState? forWarmup = null)
+    public IScopedWorldStateManager CreateResettableWorldStateManager()
     {
-        PreBlockCaches? preBlockCaches = (forWarmup as IPreBlockCaches)?.Caches;
-        return preBlockCaches is not null
+        WorldState? worldState = Caches is not null
             ? new WorldState(
-                new PreCachedTrieStore(overlayTrieStore, preBlockCaches.RlpCache),
+                new PreCachedTrieStore(overlayTrieStore, Caches.RlpCache),
                 _codeDb,
                 logManager,
-                preBlockCaches)
+                Caches)
             : new WorldState(
                 overlayTrieStore,
                 _codeDb,
                 logManager);
+
+        return new ScopedReadOnlyWorldStateManager(worldState, dbProvider, overlayTrieStore, logManager, Caches);
     }
 
     public event EventHandler<ReorgBoundaryReached>? ReorgBoundaryReached
@@ -47,4 +53,9 @@ public class OverlayWorldStateManager(
         add => overlayTrieStore.ReorgBoundaryReached += value;
         remove => overlayTrieStore.ReorgBoundaryReached -= value;
     }
+
+    public IWorldState GetGlobalWorldState(BlockHeader blockHeader) => GlobalWorldState;
+    public bool ClearCache() => Caches.Clear();
+
+    public bool HasStateRoot(Hash256 root) => GlobalStateReader.HasStateForRoot(root);
 }

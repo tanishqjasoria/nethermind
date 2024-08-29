@@ -19,14 +19,14 @@ namespace Nethermind.Optimism;
 /// Not thread safe.
 /// </summary>
 public class OptimismReadOnlyChainProcessingEnv(
-    IReadOnlyTxProcessingScope txEnv,
+    ReadOnlyTxProcessingEnv txEnv,
     IBlockValidator blockValidator,
     IBlockPreprocessorStep recoveryStep,
     IRewardCalculator rewardCalculator,
     IReceiptStorage receiptStorage,
     ISpecProvider specProvider,
     IBlockTree blockTree,
-    IStateReader stateReader,
+    IWorldStateManager worldStateManager,
     ILogManager logManager,
     IOptimismSpecHelper opSpecHelper,
     Create2DeployerContractRewriter contractRewriter,
@@ -39,30 +39,28 @@ public class OptimismReadOnlyChainProcessingEnv(
     receiptStorage,
     specProvider,
     blockTree,
-    stateReader,
+    worldStateManager.GlobalStateReader,
     logManager,
     blockTransactionsExecutor)
 {
 
-    protected override IBlockProcessor CreateBlockProcessor(
-        IReadOnlyTxProcessingScope scope,
+    protected override IBlockProcessor CreateBlockProcessor(ReadOnlyTxProcessingEnv scope,
         IBlockTree blockTree,
         IBlockValidator blockValidator,
         IRewardCalculator rewardCalculator,
         IReceiptStorage receiptStorage,
         ISpecProvider specProvider,
         ILogManager logManager,
-        IBlockProcessor.IBlockTransactionsExecutor transactionsExecutor
-    )
+        IBlockProcessor.IBlockTransactionsExecutor transactionsExecutor)
     {
         return new OptimismBlockProcessor(
             specProvider,
             blockValidator,
             rewardCalculator,
             transactionsExecutor,
-            scope.WorldState,
+            worldStateManager,
             receiptStorage,
-            new BlockhashStore(specProvider, scope.WorldState),
+            new BlockhashStore(specProvider),
             logManager,
             opSpecHelper,
             contractRewriter,

@@ -54,32 +54,30 @@ public class TraceRpcModuleTests
             IReceiptFinder receiptFinder = new FullInfoReceiptFinder(Blockchain.ReceiptStorage, receiptsRecovery, Blockchain.BlockFinder);
             ReadOnlyTxProcessingEnv txProcessingEnv =
                 new(Blockchain.WorldStateManager, Blockchain.BlockTree.AsReadOnly(), Blockchain.SpecProvider, Blockchain.LogManager);
-            IReadOnlyTxProcessingScope scope = txProcessingEnv.Build(Keccak.EmptyTreeHash);
 
             RewardCalculator rewardCalculatorSource = new(Blockchain.SpecProvider);
 
-            IRewardCalculator rewardCalculator = rewardCalculatorSource.Get(scope.TransactionProcessor);
+            IRewardCalculator rewardCalculator = rewardCalculatorSource.Get(txProcessingEnv.TransactionProcessor);
 
-            RpcBlockTransactionsExecutor rpcBlockTransactionsExecutor = new(scope.TransactionProcessor, scope.WorldState);
-            BlockProcessor.BlockValidationTransactionsExecutor executeBlockTransactionsExecutor = new(scope.TransactionProcessor,
-                scope.WorldState);
+            RpcBlockTransactionsExecutor rpcBlockTransactionsExecutor = new(txProcessingEnv.TransactionProcessor);
+            BlockProcessor.BlockValidationTransactionsExecutor executeBlockTransactionsExecutor = new(txProcessingEnv.TransactionProcessor);
 
             ReadOnlyChainProcessingEnv CreateChainProcessingEnv(IBlockProcessor.IBlockTransactionsExecutor transactionsExecutor) => new(
-                scope,
+                txProcessingEnv,
                 Always.Valid,
                 Blockchain.BlockPreprocessorStep,
                 rewardCalculator,
                 Blockchain.ReceiptStorage,
                 Blockchain.SpecProvider,
                 Blockchain.BlockTree,
-                Blockchain.StateReader,
+                Blockchain.WorldStateManager.GlobalStateReader,
                 Blockchain.LogManager,
                 transactionsExecutor);
 
             ReadOnlyChainProcessingEnv traceProcessingEnv = CreateChainProcessingEnv(rpcBlockTransactionsExecutor);
             ReadOnlyChainProcessingEnv executeProcessingEnv = CreateChainProcessingEnv(executeBlockTransactionsExecutor);
 
-            Tracer tracer = new(scope.WorldState, traceProcessingEnv.ChainProcessor, executeProcessingEnv.ChainProcessor);
+            Tracer tracer = new(txProcessingEnv.WorldStateManager, traceProcessingEnv.ChainProcessor, executeProcessingEnv.ChainProcessor);
             TraceRpcModule = new TraceRpcModule(receiptFinder, tracer, Blockchain.BlockFinder, JsonRpcConfig, txProcessingEnv.StateReader);
 
             for (int i = 1; i < 10; i++)

@@ -3,7 +3,7 @@
 
 namespace Nethermind.State;
 
-public interface IPreBlockCaches
+public interface IScopedWorldStateManager: IWorldStateManager
 {
-    PreBlockCaches? Caches { get; }
+
 }

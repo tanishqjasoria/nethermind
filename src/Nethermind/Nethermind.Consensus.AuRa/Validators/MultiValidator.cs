@@ -12,6 +12,7 @@ using Nethermind.Consensus.Transactions;
 using Nethermind.Core;
 using Nethermind.Logging;
 using Nethermind.Specs.ChainSpecStyle;
+using Nethermind.State;
 
 namespace Nethermind.Consensus.AuRa.Validators
 {
@@ -100,7 +101,8 @@ namespace Nethermind.Consensus.AuRa.Validators
             }
         }
 
-        public void OnBlockProcessingStart(Block block, ProcessingOptions options = ProcessingOptions.None)
+        public void OnBlockProcessingStart(Block block, IWorldState worldState,
+            ProcessingOptions options = ProcessingOptions.None)
         {
             if (!block.IsGenesis)
             {
@@ -139,14 +141,15 @@ namespace Nethermind.Consensus.AuRa.Validators
                 }
             }
 
-            _currentValidator?.OnBlockProcessingStart(block, options);
+            _currentValidator?.OnBlockProcessingStart(block, worldState, options);
         }
 
         private bool TryGetValidator(long blockNumber, out AuRaParameters.Validator validator) => _validators.TryGetValue(blockNumber, out validator);
 
-        public void OnBlockProcessingEnd(Block block, TxReceipt[] receipts, ProcessingOptions options = ProcessingOptions.None)
+        public void OnBlockProcessingEnd(Block block, TxReceipt[] receipts, IWorldState worldState,
+            ProcessingOptions options = ProcessingOptions.None)
         {
-            _currentValidator?.OnBlockProcessingEnd(block, receipts, options);
+            _currentValidator?.OnBlockProcessingEnd(block, receipts, worldState, options);
 
             if (!block.IsGenesis)
             {
@@ -208,9 +211,10 @@ namespace Nethermind.Consensus.AuRa.Validators
         private IAuRaValidator CreateValidator(long finalizedAtBlockNumber, AuRaParameters.Validator validatorPrototype, BlockHeader parentHeader) =>
             _validatorFactory.CreateValidatorProcessor(validatorPrototype, parentHeader, finalizedAtBlockNumber + 1);
 
-        public void ReportMalicious(Address validator, long blockNumber, byte[] proof, IReportingValidator.MaliciousCause cause)
+        public void ReportMalicious(Address validator, long blockNumber, byte[] proof,
+            IReportingValidator.MaliciousCause cause, IWorldState worldState)
         {
-            _currentValidator.GetReportingValidator().ReportMalicious(validator, blockNumber, proof, cause);
+            _currentValidator.GetReportingValidator().ReportMalicious(validator, blockNumber, proof, cause, worldState);
         }
 
         public void ReportBenign(Address validator, long blockNumber, IReportingValidator.BenignCause cause)

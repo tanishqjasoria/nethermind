@@ -186,8 +186,8 @@ public class TestBlockchain : IDisposable
         _trieStoreWatcher = new TrieStoreBoundaryWatcher(WorldStateManager, BlockTree, LogManager);
         CodeInfoRepository codeInfoRepository = new();
         ReceiptStorage = new InMemoryReceiptStorage(blockTree: BlockTree);
-        VirtualMachine virtualMachine = new(new BlockhashProvider(BlockTree, SpecProvider, State, LogManager), SpecProvider, codeInfoRepository, LogManager);
-        TxProcessor = new TransactionProcessor(SpecProvider, State, virtualMachine, codeInfoRepository, LogManager);
+        VirtualMachine virtualMachine = new(new BlockhashProvider(BlockTree, SpecProvider, LogManager), SpecProvider, codeInfoRepository, LogManager);
+        TxProcessor = new TransactionProcessor(SpecProvider, virtualMachine, codeInfoRepository, LogManager);
 
         BlockPreprocessorStep = new RecoverSignatures(EthereumEcdsa, TxPool, SpecProvider, LogManager);
         HeaderValidator = new HeaderValidator(BlockTree, Always.Valid, SpecProvider, LogManager);
@@ -293,7 +293,7 @@ public class TestBlockchain : IDisposable
         return new TestBlockProducer(
             env.TxSource,
             env.ChainProcessor,
-            env.ReadOnlyStateProvider,
+            env.ReadOnlyWorldStateManager,
             sealer,
             BlockTree,
             Timestamper,
@@ -373,10 +373,10 @@ public class TestBlockchain : IDisposable
             SpecProvider,
             BlockValidator,
             NoBlockRewards.Instance,
-            new BlockProcessor.BlockValidationTransactionsExecutor(TxProcessor, State),
-            State,
+            new BlockProcessor.BlockValidationTransactionsExecutor(TxProcessor),
+            WorldStateManager,
             ReceiptStorage,
-            new BlockhashStore(SpecProvider, State),
+            new BlockhashStore(SpecProvider),
             LogManager);
 
     public async Task WaitForNewHead()

@@ -271,7 +271,7 @@ namespace Nethermind.Blockchain.Test
             specProvider.GetSpec(Arg.Any<ForkActivation>()).Returns(spec);
 
             ITransactionProcessor transactionProcessor = Substitute.For<ITransactionProcessor>();
-            transactionProcessor.When(t => t.BuildUp(Arg.Any<Transaction>(), Arg.Any<BlockExecutionContext>(), Arg.Any<ITxTracer>()))
+            transactionProcessor.When(t => t.BuildUp(Arg.Any<IWorldState>(), Arg.Any<Transaction>(), Arg.Any<BlockExecutionContext>(), Arg.Any<ITxTracer>()))
                 .Do(info =>
                 {
                     Transaction tx = info.Arg<Transaction>();
@@ -317,7 +317,6 @@ namespace Nethermind.Blockchain.Test
             BlockProcessor.BlockProductionTransactionsExecutor txExecutor =
                 new(
                     transactionProcessor,
-                    stateProvider,
                     specProvider,
                     LimboLogs.Instance);
 
@@ -326,7 +325,7 @@ namespace Nethermind.Blockchain.Test
             BlockReceiptsTracer receiptsTracer = new();
             receiptsTracer.StartNewBlockTrace(blockToProduce);
 
-            txExecutor.ProcessTransactions(blockToProduce, ProcessingOptions.ProducingBlock, receiptsTracer, spec);
+            txExecutor.ProcessTransactions(stateProvider, blockToProduce, ProcessingOptions.ProducingBlock, receiptsTracer, spec);
             blockToProduce.Transactions.Should().BeEquivalentTo(testCase.ExpectedSelectedTransactions);
         }
     }

@@ -165,14 +165,13 @@ public class InitializeStateDb : IStep
             worldState,
             trieStore,
             getApi.DbProvider,
-            getApi.LogManager);
+            getApi.LogManager, preBlockCaches);
 
         // TODO: Don't forget this
         TrieStoreBoundaryWatcher trieStoreBoundaryWatcher = new(stateManager, _api.BlockTree!, _api.LogManager);
         getApi.DisposeStack.Push(trieStoreBoundaryWatcher);
         getApi.DisposeStack.Push(mainWorldTrieStore);
 
-        setApi.WorldState = stateManager.GlobalWorldState;
         setApi.StateReader = stateManager.GlobalStateReader;
         setApi.ChainHeadStateProvider = new ChainHeadReadOnlyStateProvider(getApi.BlockTree, stateManager.GlobalStateReader);
 

@@ -39,7 +39,7 @@ namespace Nethermind.AuRa.Test.Contract
             _stateProvider = Substitute.For<IWorldState>();
             _stateProvider.StateRoot.Returns(TestItem.KeccakA);
             _readOnlyTxProcessorSource = Substitute.For<IReadOnlyTxProcessorSource>();
-            _readOnlyTxProcessorSource.Build(TestItem.KeccakA).Returns(new ReadOnlyTxProcessingScope(_transactionProcessor, _stateProvider, Keccak.EmptyTreeHash));
+            _readOnlyTxProcessorSource.Build(TestItem.KeccakA, _block.Header).Returns(new ReadOnlyTxProcessingScope(_transactionProcessor, _stateProvider, Keccak.EmptyTreeHash));
         }
 
         [Test]
@@ -50,7 +50,6 @@ namespace Nethermind.AuRa.Test.Contract
                     _transactionProcessor,
                     AbiEncoder.Instance,
                     null,
-                    _stateProvider,
                     _readOnlyTxProcessorSource,
                     new Signer(0, TestItem.PrivateKeyD, LimboLogs.Instance));
             action.Should().Throw<ArgumentNullException>();
@@ -76,13 +75,13 @@ namespace Nethermind.AuRa.Test.Contract
                 _transactionProcessor,
                 AbiEncoder.Instance,
                 _contractAddress,
-                _stateProvider,
                 _readOnlyTxProcessorSource,
                 new Signer(0, TestItem.PrivateKeyD, LimboLogs.Instance));
 
-            contract.FinalizeChange(_block.Header);
+            contract.FinalizeChange(_block.Header, _stateProvider);
 
             _transactionProcessor.Received().Execute(
+                Arg.Any<IWorldState>(),
                 Arg.Is<Transaction>(t => IsEquivalentTo(expectation, t)), Arg.Is<BlockExecutionContext>(blkCtx => blkCtx.Header.Equals(_block.Header)), Arg.Any<ITxTracer>());
         }
 

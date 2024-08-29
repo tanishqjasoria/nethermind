@@ -128,10 +128,10 @@ public class AuRaMergeEngineModuleTests : EngineModuleTests
                 SpecProvider,
                 BlockValidator,
                 NoBlockRewards.Instance,
-                new BlockProcessor.BlockValidationTransactionsExecutor(TxProcessor, State),
-                State,
+                new BlockProcessor.BlockValidationTransactionsExecutor(TxProcessor),
+                WorldStateManager,
                 ReceiptStorage,
-                new BlockhashStore(SpecProvider, State),
+                new BlockhashStore(SpecProvider),
                 LogManager,
                 WithdrawalProcessor);
 
@@ -188,7 +188,7 @@ public class AuRaMergeEngineModuleTests : EngineModuleTests
             AuRaBlockProducer preMergeBlockProducer = new(
                 txPoolTxSource,
                 blockProducerEnvFactory.Create().ChainProcessor,
-                State,
+                WorldStateManager,
                 sealer,
                 BlockTree,
                 Timestamper,

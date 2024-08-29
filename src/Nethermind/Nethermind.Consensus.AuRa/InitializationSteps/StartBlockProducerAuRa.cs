@@ -88,7 +88,7 @@ public class StartBlockProducerAuRa
         IBlockProducer blockProducer = new AuRaBlockProducer(
             producerEnv.TxSource,
             producerEnv.ChainProcessor,
-            producerEnv.ReadOnlyStateProvider,
+            producerEnv.ReadOnlyWorldStateManager,
             _api.Sealer,
             _api.BlockTree,
             _api.Timestamper,
@@ -103,7 +103,7 @@ public class StartBlockProducerAuRa
         return blockProducer;
     }
 
-    private BlockProcessor CreateBlockProcessor(IReadOnlyTxProcessingScope changeableTxProcessingEnv)
+    private BlockProcessor CreateBlockProcessor(ITransactionProcessor txnProcessor)
     {
         if (_api.RewardCalculatorSource is null) throw new StepDependencyException(nameof(_api.RewardCalculatorSource));
         if (_api.ValidatorStore is null) throw new StepDependencyException(nameof(_api.ValidatorStore));
@@ -120,8 +120,7 @@ public class StartBlockProducerAuRa
             new LocalTxFilter(_api.EngineSigner));
 
         _validator = new AuRaValidatorFactory(_api.AbiEncoder,
-                changeableTxProcessingEnv.WorldState,
-                changeableTxProcessingEnv.TransactionProcessor,
+                txnProcessor,
                 _api.BlockTree,
                 _api.CreateReadOnlyTransactionProcessorSource(),
                 _api.ReceiptStorage,
@@ -150,9 +149,9 @@ public class StartBlockProducerAuRa
         return new AuRaBlockProcessor(
             _api.SpecProvider,
             _api.BlockValidator,
-            _api.RewardCalculatorSource.Get(changeableTxProcessingEnv.TransactionProcessor),
-            _api.BlockProducerEnvFactory.TransactionsExecutorFactory.Create(changeableTxProcessingEnv),
-            changeableTxProcessingEnv.WorldState,
+            _api.RewardCalculatorSource.Get(txnProcessor),
+            _api.BlockProducerEnvFactory.TransactionsExecutorFactory.Create(txnProcessor),
+            _api.WorldStateManager!,
             _api.ReceiptStorage,
             _api.LogManager,
             _api.BlockTree,
@@ -226,8 +225,7 @@ public class StartBlockProducerAuRa
             ReadOnlyBlockTree readOnlyBlockTree = _api.BlockTree.AsReadOnly();
 
             ReadOnlyTxProcessingEnv txProcessingEnv = _api.CreateReadOnlyTransactionProcessorSource();
-            IReadOnlyTxProcessingScope scope = txProcessingEnv.Build(Keccak.EmptyTreeHash);
-            BlockProcessor blockProcessor = CreateBlockProcessor(scope);
+            BlockProcessor blockProcessor = CreateBlockProcessor(txProcessingEnv.TransactionProcessor);
 
             IBlockchainProcessor blockchainProcessor =
                 new BlockchainProcessor(
@@ -239,14 +237,13 @@ public class StartBlockProducerAuRa
                     BlockchainProcessor.Options.NoReceipts);
 
             OneTimeChainProcessor chainProcessor = new(
-                scope.WorldState,
                 blockchainProcessor);
 
             return new BlockProducerEnv()
             {
                 BlockTree = readOnlyBlockTree,
                 ChainProcessor = chainProcessor,
-                ReadOnlyStateProvider = scope.WorldState,
+                ReadOnlyWorldStateManager = txProcessingEnv.WorldStateManager,
                 TxSource = CreateTxSourceForProducer(additionalTxSource),
                 ReadOnlyTxProcessingEnv = _api.CreateReadOnlyTransactionProcessorSource(),
             };

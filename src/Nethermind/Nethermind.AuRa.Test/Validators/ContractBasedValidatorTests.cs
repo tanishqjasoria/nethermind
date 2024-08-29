@@ -80,7 +80,7 @@ public class ContractBasedValidatorTests
         _stateProvider.IsContract(_contractAddress).Returns(true);
 
         _readOnlyTxProcessorSource = Substitute.For<IReadOnlyTxProcessorSource>();
-        _readOnlyTxProcessorSource.Build(Arg.Any<Hash256>()).Returns(new ReadOnlyTxProcessingScope(_transactionProcessor, _stateProvider, Keccak.EmptyTreeHash));
+        _readOnlyTxProcessorSource.Build(Arg.Any<Hash256>(), Arg.Any<BlockHeader>()).Returns(new ReadOnlyTxProcessingScope(_transactionProcessor, _stateProvider, Keccak.EmptyTreeHash));
         _blockTree.Head.Returns(_block);
 
         _abiEncoder
@@ -91,7 +91,7 @@ public class ContractBasedValidatorTests
             .Encode(AbiEncodingStyle.IncludeSignature, Arg.Is<AbiSignature>(s => s.Name == "finalizeChange"), Arg.Any<object[]>())
             .Returns(_finalizeChangeData.TransactionData);
 
-        _validatorContract = new ValidatorContract(_transactionProcessor, _abiEncoder, _contractAddress, _stateProvider, _readOnlyTxProcessorSource, new Signer(0, TestItem.PrivateKeyD, LimboLogs.Instance));
+        _validatorContract = new ValidatorContract(_transactionProcessor, _abiEncoder, _contractAddress, _readOnlyTxProcessorSource, new Signer(0, TestItem.PrivateKeyD, LimboLogs.Instance));
     }
 
     [TearDown]
@@ -136,7 +136,7 @@ public class ContractBasedValidatorTests
         _block.Header.Beneficiary = initialValidator;
         ContractBasedValidator validator = new(_validatorContract, _blockTree, _receiptsStorage, _validatorStore, _validSealerStrategy, _blockFinalizationManager, default, _logManager, 1);
 
-        validator.OnBlockProcessingStart(_block);
+        validator.OnBlockProcessingStart(_block, _stateProvider);
 
         _stateProvider.Received(1).CreateAccount(Address.SystemUser, UInt256.Zero);
         _stateProvider.Received(1).Commit(Homestead.Instance);
@@ -180,18 +180,19 @@ public class ContractBasedValidatorTests
             validator.Validators = new[] { TestItem.AddressD };
         }
 
-        validator.OnBlockProcessingStart(block);
+        validator.OnBlockProcessingStart(block, _stateProvider);
 
         // getValidators should have been called
         _transactionProcessor.Received()
             .CallAndRestore(
+                Arg.Any<IWorldState>(),
                 Arg.Is<Transaction>(t => CheckTransaction(t, _getValidatorsData)),
                 Arg.Is<BlockExecutionContext>(blkCtx => blkCtx.Header.Equals(_parentHeader)),
                 Arg.Is<ITxTracer>(t => t is CallOutputTracer));
 
         // finalizeChange should be called
         _transactionProcessor.Received(finalizeChangeCalled ? 1 : 0)
-            .Execute(Arg.Is<Transaction>(t => CheckTransaction(t, _finalizeChangeData)),
+            .Execute(Arg.Any<IWorldState>(), Arg.Is<Transaction>(t => CheckTransaction(t, _finalizeChangeData)),
                 Arg.Is<BlockExecutionContext>(blkCtx => blkCtx.Header.Equals(block.Header)),
                 Arg.Is<ITxTracer>(t => t is CallOutputTracer));
 
@@ -521,9 +522,9 @@ public class ContractBasedValidatorTests
 
             _blockTree.FindBlock(_block.Header.Hash, Arg.Any<BlockTreeLookupOptions>()).Returns(new Block(_block.Header.Clone()));
 
-            Action preProcess = () => validator.OnBlockProcessingStart(_block);
+            Action preProcess = () => validator.OnBlockProcessingStart(_block, _stateProvider);
             preProcess.Should().NotThrow<InvalidOperationException>(test.TestName);
-            validator.OnBlockProcessingEnd(_block, txReceipts);
+            validator.OnBlockProcessingEnd(_block, txReceipts, _stateProvider);
             int finalizedNumber = blockNumber - validator.Validators.MinSealersForFinalization() + 1;
             _blockFinalizationManager.GetLastLevelFinalizedBy(_block.Header.Hash).Returns(finalizedNumber);
             _blockFinalizationManager.BlocksFinalized += Raise.EventWith(
@@ -587,7 +588,7 @@ public class ContractBasedValidatorTests
 
         _blockFinalizationManager.GetLastLevelFinalizedBy(blockTree.Head.ParentHash).Returns(lastLevelFinalized);
 
-        validator.OnBlockProcessingStart(blockTree.FindBlock(blockTree.Head.Hash, BlockTreeLookupOptions.None));
+        validator.OnBlockProcessingStart(blockTree.FindBlock(blockTree.Head.Hash, BlockTreeLookupOptions.None), _stateProvider);
 
         PendingValidators pendingValidators = null;
         if (expectedBlockValidators.HasValue)
@@ -604,7 +605,7 @@ public class ContractBasedValidatorTests
     {
         // finalizeChange should be called or not based on test spec
         _transactionProcessor.Received(chain.ExpectedFinalizationCount)
-            .Execute(Arg.Is<Transaction>(t => CheckTransaction(t, _finalizeChangeData)),
+            .Execute(Arg.Any<IWorldState>(), Arg.Is<Transaction>(t => CheckTransaction(t, _finalizeChangeData)),
                 Arg.Is<BlockExecutionContext>(blkCtx => blkCtx.Header.Equals(_block.Header)),
                 Arg.Is<ITxTracer>(t => t is CallOutputTracer));
 
@@ -635,6 +636,7 @@ public class ContractBasedValidatorTests
         }
 
         _transactionProcessor.When(x => x.CallAndRestore(
+                Arg.Any<IWorldState>(),
                 Arg.Is<Transaction>(t => CheckTransaction(t, _getValidatorsData)),
                 Arg.Any<BlockExecutionContext>(),
                 Arg.Is<ITxTracer>(t => t is CallOutputTracer)))

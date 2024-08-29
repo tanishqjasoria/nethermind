@@ -25,7 +25,7 @@ public class AuRaMergeBlockProcessor : AuRaBlockProcessor
         IBlockValidator blockValidator,
         IRewardCalculator rewardCalculator,
         IBlockProcessor.IBlockTransactionsExecutor blockTransactionsExecutor,
-        IWorldState stateProvider,
+        IWorldStateManager worldStateManager,
         IReceiptStorage receiptStorage,
         ILogManager logManager,
         IBlockTree blockTree,
@@ -40,7 +40,7 @@ public class AuRaMergeBlockProcessor : AuRaBlockProcessor
             blockValidator,
             rewardCalculator,
             blockTransactionsExecutor,
-            stateProvider,
+            worldStateManager,
             receiptStorage,
             logManager,
             blockTree,
@@ -53,8 +53,9 @@ public class AuRaMergeBlockProcessor : AuRaBlockProcessor
         )
     { }
 
-    protected override TxReceipt[] ProcessBlock(Block block, IBlockTracer blockTracer, ProcessingOptions options) =>
+    protected override TxReceipt[] ProcessBlock(IWorldState worldState, Block block, IBlockTracer blockTracer,
+        ProcessingOptions options) =>
         block.IsPostMerge
-            ? PostMergeProcessBlock(block, blockTracer, options)
-            : base.ProcessBlock(block, blockTracer, options);
+            ? PostMergeProcessBlock(worldState, block, blockTracer, options)
+            : base.ProcessBlock(worldState, block, blockTracer, options);
 }

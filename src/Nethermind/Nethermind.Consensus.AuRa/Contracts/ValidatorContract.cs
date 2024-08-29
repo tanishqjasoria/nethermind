@@ -8,6 +8,8 @@ using Nethermind.Core;
 using Nethermind.State;
 using Nethermind.Evm.TransactionProcessing;
 using Nethermind.Facade;
+using Nethermind.Int256;
+using Nethermind.Specs.Forks;
 
 namespace Nethermind.Consensus.AuRa.Contracts
 {
@@ -21,7 +23,7 @@ namespace Nethermind.Consensus.AuRa.Contracts
         /// the "change" finalized is the activation of the initial set.
         /// function finalizeChange();
         /// </summary>
-        void FinalizeChange(BlockHeader blockHeader);
+        void FinalizeChange(BlockHeader blockHeader, IWorldState worldState);
 
         /// <summary>
         /// Get current validator set (last enacted or initial if no changes ever made)
@@ -44,12 +46,11 @@ namespace Nethermind.Consensus.AuRa.Contracts
         /// </summary>
         bool CheckInitiateChangeEvent(BlockHeader blockHeader, TxReceipt[] receipts, out Address[] addresses);
 
-        void EnsureSystemAccount();
+        void EnsureSystemAccount(IWorldState worldState);
     }
 
     public sealed partial class ValidatorContract : CallableContract, IValidatorContract
     {
-        private readonly IWorldState _stateProvider;
         private readonly ISigner _signer;
 
         private IConstantContract Constant { get; }
@@ -58,12 +59,10 @@ namespace Nethermind.Consensus.AuRa.Contracts
             ITransactionProcessor transactionProcessor,
             IAbiEncoder abiEncoder,
             Address contractAddress,
-            IWorldState stateProvider,
             IReadOnlyTxProcessorSource readOnlyTxProcessorSource,
             ISigner signer)
             : base(transactionProcessor, abiEncoder, contractAddress ?? throw new ArgumentNullException(nameof(contractAddress)))
         {
-            _stateProvider = stateProvider ?? throw new ArgumentNullException(nameof(stateProvider));
             _signer = signer ?? throw new ArgumentNullException(nameof(signer));
             Constant = GetConstant(readOnlyTxProcessorSource);
         }
@@ -76,7 +75,7 @@ namespace Nethermind.Consensus.AuRa.Contracts
         /// the "change" finalized is the activation of the initial set.
         /// function finalizeChange();
         /// </summary>
-        public void FinalizeChange(BlockHeader blockHeader) => TryCall(blockHeader, nameof(FinalizeChange), Address.SystemUser, UnlimitedGas, out _);
+        public void FinalizeChange(BlockHeader blockHeader, IWorldState worldState) => TryCall(blockHeader, nameof(FinalizeChange), Address.SystemUser, UnlimitedGas, worldState, out _);
 
         internal static readonly string GetValidatorsFunction = AbiDefinition.GetName(nameof(GetValidators));
 
@@ -115,15 +114,20 @@ namespace Nethermind.Consensus.AuRa.Contracts
             return false;
         }
 
+        public new void EnsureSystemAccount(IWorldState stateProvider)
+        {
+            if (!stateProvider.AccountExists(Address.SystemUser))
+            {
+                stateProvider.CreateAccount(Address.SystemUser, UInt256.Zero);
+                stateProvider.Commit(Homestead.Instance);
+            }
+        }
+
         private Address[] DecodeAddresses(byte[] data)
         {
             var objects = DecodeReturnData(nameof(GetValidators), data);
             return (Address[])objects[0];
         }
 
-        public void EnsureSystemAccount()
-        {
-            EnsureSystemAccount(_stateProvider);
-        }
     }
 }

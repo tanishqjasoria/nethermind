@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Nethermind.Blockchain;
 using Nethermind.Blockchain.Blocks;
@@ -44,10 +45,11 @@ namespace Nethermind.JsonRpc.Test.Modules.Trace
         private Tracer? _tracer;
         private IPoSSwitcher? _poSSwitcher;
         private IStateReader _stateReader;
+        private IDbProvider _dbProvider = null!;
         private readonly IJsonRpcConfig _jsonRpcConfig = new JsonRpcConfig();
 
         [SetUp]
-        public void Setup()
+        public async Task Setup()
         {
             ISpecProvider specProvider = MainnetSpecProvider.Instance;
 
@@ -56,26 +58,28 @@ namespace Nethermind.JsonRpc.Test.Modules.Trace
                 .WithSpecProvider(specProvider)
                 .TestObject;
 
-            MemDb stateDb = new();
-            MemDb codeDb = new();
-            ITrieStore trieStore = new TrieStore(stateDb, LimboLogs.Instance).AsReadOnly();
-            WorldState stateProvider = new(trieStore, codeDb, LimboLogs.Instance);
-            _stateReader = new StateReader(trieStore, codeDb, LimboLogs.Instance);
+            _dbProvider = await TestMemDbProvider.InitAsync();
+            ITrieStore trieStore = new TrieStore(_dbProvider.StateDb, LimboLogs.Instance).AsReadOnly();
+            WorldState stateProvider = new(trieStore, _dbProvider.CodeDb, LimboLogs.Instance);
+            _stateReader = new StateReader(trieStore, _dbProvider.CodeDb, LimboLogs.Instance);
 
-            BlockhashProvider blockhashProvider = new(_blockTree, specProvider, stateProvider, LimboLogs.Instance);
+            var worldStateManager =
+                new WorldStateManager(stateProvider, trieStore, _dbProvider, LimboLogs.Instance);
+
+            BlockhashProvider blockhashProvider = new(_blockTree, specProvider, LimboLogs.Instance);
             CodeInfoRepository codeInfoRepository = new();
             VirtualMachine virtualMachine = new(blockhashProvider, specProvider, codeInfoRepository, LimboLogs.Instance);
-            TransactionProcessor transactionProcessor = new(specProvider, stateProvider, virtualMachine, codeInfoRepository, LimboLogs.Instance);
+            TransactionProcessor transactionProcessor = new(specProvider, virtualMachine, codeInfoRepository, LimboLogs.Instance);
 
             _poSSwitcher = Substitute.For<IPoSSwitcher>();
             BlockProcessor blockProcessor = new(
                 specProvider,
                 Always.Valid,
                 new MergeRpcRewardCalculator(NoBlockRewards.Instance, _poSSwitcher),
-                new BlockProcessor.BlockValidationTransactionsExecutor(transactionProcessor, stateProvider),
-                stateProvider,
+                new BlockProcessor.BlockValidationTransactionsExecutor(transactionProcessor),
+                worldStateManager,
                 NullReceiptStorage.Instance,
-                new BlockhashStore(specProvider, stateProvider),
+                new BlockhashStore(specProvider),
                 LimboLogs.Instance);
 
             RecoverSignatures txRecovery = new(new EthereumEcdsa(TestBlockchainIds.ChainId), NullTxPool.Instance, specProvider, LimboLogs.Instance);
@@ -85,7 +89,7 @@ namespace Nethermind.JsonRpc.Test.Modules.Trace
             _blockTree.SuggestBlock(genesis);
             _processor.Process(genesis, ProcessingOptions.None, NullBlockTracer.Instance);
 
-            _tracer = new Tracer(stateProvider, _processor, _processor);
+            _tracer = new Tracer(worldStateManager, _processor, _processor);
         }
 
         [TearDown]
