@@ -20,7 +20,7 @@ namespace Nethermind.Blockchain.Test.FullPruning
     [Parallelizable(ParallelScope.All)]
     public class CopyTreeVisitorTests
     {
-        [Test]
+        [Test, Timeout(Timeout.MaxTestTime)]
         public void copies_state_between_dbs()
         {
             MemDb trieDb = new();
@@ -32,7 +32,7 @@ namespace Nethermind.Blockchain.Test.FullPruning
             clonedDb.Values.Should().BeEquivalentTo(trieDb.Values);
         }
 
-        [Test]
+        [Test, Timeout(Timeout.MaxTestTime)]
         public async Task cancel_coping_state_between_dbs()
         {
             MemDb trieDb = new();
@@ -51,7 +51,7 @@ namespace Nethermind.Blockchain.Test.FullPruning
         {
             LimboLogs logManager = LimboLogs.Instance;
             PatriciaTree trie = Build.A.Trie(trieDb).WithAccountsByIndex(0, 100).TestObject;
-            IStateReader stateReader = new StateReader(new TrieStore(trieDb, logManager), new MemDb(), logManager);
+            IStateReader stateReader = new StateReader(new TrieStore(trieDb, logManager), new TrieStore(trieDb, logManager), new MemDb(), logManager);
 
             using CopyTreeVisitor copyTreeVisitor = new(pruningContext, logManager);
             stateReader.RunTreeVisitor(copyTreeVisitor, trie.RootHash);
@@ -63,7 +63,7 @@ namespace Nethermind.Blockchain.Test.FullPruning
             IRocksDbFactory rocksDbFactory = Substitute.For<IRocksDbFactory>();
             rocksDbFactory.CreateDb(Arg.Any<RocksDbSettings>()).Returns(trieDb, clonedDb);
 
-            FullPruningDb fullPruningDb = new(new RocksDbSettings("Test", "Test"), rocksDbFactory);
+            FullPruningDb fullPruningDb = new(new RocksDbSettings("test", "test"), rocksDbFactory);
             fullPruningDb.TryStartPruning(out IPruningContext pruningContext);
             return pruningContext;
         }

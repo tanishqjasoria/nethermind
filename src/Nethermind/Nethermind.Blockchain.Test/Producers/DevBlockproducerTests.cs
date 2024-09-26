@@ -30,7 +30,7 @@ namespace Nethermind.Blockchain.Test.Producers
     [TestFixture]
     public class DevBlockProducerTests
     {
-        [Test]
+        [Test, Timeout(Timeout.MaxTestTime)]
         public void Test()
         {
             ISpecProvider specProvider = MainnetSpecProvider.Instance;
@@ -57,7 +57,7 @@ namespace Nethermind.Blockchain.Test.Producers
                 trieStore,
                 dbProvider.RegisteredDbs[DbNames.Code],
                 LimboLogs.Instance);
-            StateReader stateReader = new(trieStore, dbProvider.GetDb<IDb>(DbNames.State), LimboLogs.Instance);
+            StateReader stateReader = new(trieStore, trieStore, dbProvider.GetDb<IDb>(DbNames.State), LimboLogs.Instance);
             StorageProvider storageProvider = new(trieStore, stateProvider, LimboLogs.Instance);
             BlockhashProvider blockhashProvider = new(blockTree, LimboLogs.Instance);
             VirtualMachine virtualMachine = new(
