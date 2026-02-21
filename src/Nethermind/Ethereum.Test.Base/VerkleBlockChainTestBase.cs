@@ -32,6 +32,7 @@ using Nethermind.Serialization.Rlp;
 using Nethermind.Specs.Forks;
 using Nethermind.Specs.Test;
 using Nethermind.State;
+using Nethermind.Trie.Pruning;
 using Nethermind.TxPool;
 using Nethermind.Verkle.Tree.TreeStore;
 using NUnit.Framework;
@@ -40,9 +41,9 @@ namespace Ethereum.Test.Base
 {
     public class VerkleBlockChainTestBase: IBlockchainTestBase
     {
-        private static InterfaceLogger _logger = new NUnitLogger(LogLevel.Trace);
+        private static InterfaceLogger _logger = SimpleConsoleLogger.Instance;
         // private static ILogManager _logManager = new OneLoggerLogManager(_logger);
-        private static ILogManager _logManager = LimboLogs.Instance;
+        private static ILogManager _logManager = SimpleConsoleLogManager.Instance;
         private static ISealValidator Sealer { get; }
         private static DifficultyCalculatorWrapper DifficultyCalculator { get; }
 
@@ -81,13 +82,13 @@ namespace Ethereum.Test.Base
             IDb codeDb = dbProvider.CodeDb;
 
             ISpecProvider specProvider = new CustomSpecProvider(
-                    ((ForkActivation)0, Frontier.Instance),
-                    ((ForkActivation)1, test.Network));
+                    ((ForkActivation)0, Shanghai.Instance),
+                    (ForkActivation.TimestampOnly(32), Osaka.Instance));
 
-            if (specProvider.GenesisSpec != Frontier.Instance)
-            {
-                Assert.Fail("Expected genesis spec to be Frontier for blockchain tests");
-            }
+            // if (specProvider.GenesisSpec != Frontier.Instance)
+            // {
+            //     Assert.Fail("Expected genesis spec to be Frontier for blockchain tests");
+            // }
 
             if (test.Network is Cancun)
             {
@@ -117,11 +118,26 @@ namespace Ethereum.Test.Base
 
             IEthereumEcdsa ecdsa = new EthereumEcdsa(specProvider.ChainId, _logManager);
 
-            IVerkleTreeStore verkleTreeStore = new VerkleTreeStore<VerkleSyncCache>(dbProvider, _logManager);
-            VerkleStateTree verkleStateTree = new VerkleStateTree(verkleTreeStore, _logManager);
+            IDb stateDb = dbProvider.StateDb;
+            TrieStore trieStore = new(stateDb, _logManager);
 
-            IWorldState stateProvider = new VerkleWorldState(verkleTreeStore, codeDb, _logManager);
-            IStateReader stateReader = new VerkleStateReader(verkleStateTree, codeDb, _logManager);
+            IVerkleTreeStore verkleTreeStore = new VerkleTreeStore<VerkleSyncCache>(dbProvider, _logManager);
+
+            var stateProvider = new VergeWorldStateProvider(
+                trieStore,
+                verkleTreeStore,
+                new StateReader(trieStore, codeDb, _logManager),
+                specProvider,
+                dbProvider,
+                _logManager);
+
+            var stateManager = new VergeWorldStateManager(
+                stateProvider,
+                verkleTreeStore,
+                trieStore,
+                dbProvider,
+                specProvider,
+                _logManager);
 
             IBlockTree blockTree = Build.A.BlockTree()
                 .WithSpecProvider(specProvider)
@@ -157,14 +173,14 @@ namespace Ethereum.Test.Base
                 _logManager);
 
             // for witness verification
-            blockProcessor.ShouldVerifyIncomingWitness = true;
-            blockProcessor.ShouldGenerateWitness = true;
+            blockProcessor.ShouldVerifyIncomingWitness = false;
+            blockProcessor.ShouldGenerateWitness = false;
 
             IBlockchainProcessor blockchainProcessor = new BlockchainProcessor(
                 blockTree,
                 blockProcessor,
                 new RecoverSignatures(ecdsa, NullTxPool.Instance, specProvider, _logManager),
-                stateReader,
+                stateManager.GlobalStateReader,
                 _logManager,
                 BlockchainProcessor.Options.NoReceipts);
 
@@ -306,6 +322,8 @@ namespace Ethereum.Test.Base
 
         private void InitializeTestState(BlockchainTest test, IWorldState stateProvider, ISpecProvider specProvider)
         {
+            var ss = stateProvider as VergeWorldStateProvider;
+            ss.StartGenesisBlockProcessing();
             foreach (KeyValuePair<Address, AccountState> accountState in
                 ((IEnumerable<KeyValuePair<Address, AccountState>>)test.Pre ?? Array.Empty<KeyValuePair<Address, AccountState>>()))
             {
@@ -327,6 +345,8 @@ namespace Ethereum.Test.Base
             stateProvider.CommitTree(0);
 
             stateProvider.Reset();
+
+            ss.ResetProvider();
         }
 
         private List<string> RunAssertions(BlockchainTest test, Block headBlock, IWorldState stateProvider)

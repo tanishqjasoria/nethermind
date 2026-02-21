@@ -95,6 +95,10 @@ public class VerkleWorldState : IWorldState
         _storageProvider = new VerkleStorageProvider(Tree, logManager);
     }
 
+    public virtual void SweepLeaves(int blockNumber)
+    {
+    }
+
     public bool ValuePresentInTree(Hash256 key)
     {
         return Tree.HasLeaf(key);
@@ -580,8 +584,13 @@ public class VerkleWorldState : IWorldState
         setStateAction.Completion.Wait();
     }
 
-    protected void SetState(Address address, Account account, bool isNew)
+    protected void SetState(Address address, Account account, bool isNew, bool moveCode = false)
     {
+        if (account.HasCode)
+        {
+            if(moveCode) account.Code = CodeDb[account.CodeHash.Bytes];
+            account.CodeSize = (UInt256) account.Code.Length;
+        }
         Db.Metrics.StateTreeWrites++;
 
         byte[] headerTreeKey = AccountHeader.GetTreeKeyPrefix(address.Bytes, 0);
@@ -603,7 +612,7 @@ public class VerkleWorldState : IWorldState
 
     protected readonly HashSet<Address> _nullAccountReads = [];
 
-    protected virtual Account? GetAndAddToCache(Address address)
+    protected virtual Account? GetAndAddToCache(Address address, bool onlyVerkle = false)
     {
         if (_nullAccountReads.Contains(address)) return null;
 
@@ -806,11 +815,11 @@ public class VerkleWorldState : IWorldState
     {
         if (_currentPosition == -1)
         {
-            if (_logger.IsTrace) _logger.Trace("  no state changes to commit");
+            _logger.Info("  no state changes to commit");
             return;
         }
 
-        if (_logger.IsTrace) _logger.Trace($"Committing state changes (at {_currentPosition})");
+        _logger.Info($"Committing state changes (at {_currentPosition})");
         if (Changes[_currentPosition] is null)
         {
             throw new InvalidOperationException($"Change at current position {_currentPosition} was null when commiting {nameof(WorldState)}");
@@ -873,9 +882,8 @@ public class VerkleWorldState : IWorldState
                     {
                         // No need for account deletion here even when Eip158 is enabled because we should not delete
                         // anything from the tree that is already there
-                        if (_logger.IsTrace)
                             if (change.Account != null)
-                                _logger.Trace($"  Commit update {change.Address} B = {change.Account.Balance} N = {change.Account.Nonce} C = {change.Account.CodeHash}");
+                                _logger.Info($"  Commit update {change.Address} B = {change.Account.Balance} N = {change.Account.Nonce} C = {change.Account.CodeHash}");
                         accountChange[change.Address] = (change.Account, false);
                         if (isTracing)
                         {
@@ -887,9 +895,9 @@ public class VerkleWorldState : IWorldState
                 case ChangeType.New:
                     {
                         // For new accounts we do not need to save empty accounts when Eip158 enabled with Verkle
-                        if (change.Account != null && (!releaseSpec.IsEip158Enabled || !change.Account.IsEmpty || isGenesis))
+                        if (change.Account != null && (!releaseSpec.IsEip158Enabled || !change.Account.IsEmpty || isGenesis || change.Address == new Address("0xfffffffffffffffffffffffffffffffffffffffe")))
                         {
-                            if (_logger.IsTrace) _logger.Trace($"  Commit create {change.Address} B = {change.Account.Balance} N = {change.Account.Nonce}");
+                            _logger.Info($"  Commit create {change.Address} B = {change.Account.Balance} N = {change.Account.Nonce}");
                             accountChange[change.Address] = (change.Account, true);
                             if (isTracing)
                             {
@@ -901,7 +909,7 @@ public class VerkleWorldState : IWorldState
                     }
                 case ChangeType.Delete:
                     {
-                        if (_logger.IsTrace) _logger.Trace($"  Commit remove {change.Address}");
+                        _logger.Info($"  Commit remove {change.Address}");
                         bool wasItCreatedNow = false;
                         while (stack.Count > 0)
                         {

@@ -6,6 +6,7 @@ using System.Threading;
 using Nethermind.Core;
 using Nethermind.Core.Buffers;
 using Nethermind.Core.Crypto;
+using Nethermind.Serialization.Rlp;
 using Nethermind.Trie.Pruning;
 
 namespace Nethermind.Trie;
@@ -19,6 +20,8 @@ public class TransitionQueryVisitor : ITreeVisitor<TreePathContextWithStorage>, 
 
     public TreePath CurrentAccountPath;
     public TreePath CurrentStoragePath;
+
+    private bool midStorage = false;
 
     private int _currentLeafCount;
 
@@ -49,7 +52,11 @@ public class TransitionQueryVisitor : ITreeVisitor<TreePathContextWithStorage>, 
         if (storageStartHash == ValueKeccak.Zero)
             _skipStorageStartHashComparison = true;
         else
+        {
+            midStorage = true;
             _storageStartHash = new TreePath(storageStartHash, 64);
+        }
+
 
         _cancellationToken = cancellationToken;
         _valueCollector = valueCollector;
@@ -82,10 +89,8 @@ public class TransitionQueryVisitor : ITreeVisitor<TreePathContextWithStorage>, 
         else
         {
             if (_skipAccountStartHashComparison) return true;
-            if (_startHash.CompareToTruncated(path, path.Length) > 0)
-            {
-                return false;
-            }
+            var val = _startHash.CompareToTruncated(path, path.Length);
+            if (val > 0) return false;
         }
         return true;
     }
@@ -133,7 +138,7 @@ public class TransitionQueryVisitor : ITreeVisitor<TreePathContextWithStorage>, 
         switch (trieVisitContext.IsStorage)
         {
             case true:
-                if (_skipStorageStartHashComparison)
+                if ((_skipAccountStartHashComparison || midStorage) && _skipStorageStartHashComparison)
                 {
                     _valueCollector.CollectStorage(ctx.Storage, in path.Path, node.Value);
                     _currentLeafCount++;
@@ -145,10 +150,16 @@ public class TransitionQueryVisitor : ITreeVisitor<TreePathContextWithStorage>, 
                 CurrentStoragePath = new TreePath(path.Path, 64);
                 break;
             case false:
-                if (_skipAccountStartHashComparison)
+                if (_skipAccountStartHashComparison || midStorage)
                 {
                     _valueCollector.CollectAccount(in path.Path, node.Value);
+                    Account? account = AccountDecoder.Instance.Decode(node.Value);
+                    if (account.HasCode)
+                    {
+                        _currentLeafCount += _valueCollector.CollectCode(in path.Path, account.CodeHash);
+                    }
                     _currentLeafCount++;
+                    midStorage = false;
                 }
                 // We found at least one leaf, don't compare with startHash anymore
                 _skipAccountStartHashComparison = true;
@@ -172,6 +183,7 @@ public class TransitionQueryVisitor : ITreeVisitor<TreePathContextWithStorage>, 
         // no needed because when we move the account we already have a codeHash and we can query the _codeDb directly
         // int CollectCode(in ValueHash256 account, CappedArray<byte> value);
         void CollectStorage(in ValueHash256 account, in ValueHash256 path, CappedArray<byte> value);
+        int CollectCode(in ValueHash256 path, Hash256 codeHash);
     }
 
 }

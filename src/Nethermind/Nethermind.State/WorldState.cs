@@ -28,6 +28,7 @@ namespace Nethermind.State
         internal readonly PersistentStorageProvider _persistentStorageProvider;
         private readonly TransientStorageProvider _transientStorageProvider;
         private readonly ITrieStore _trieStore;
+        private readonly IKeyValueStore _codeDb;
         public StateType StateType => StateType.Merkle;
         public Hash256 StateRoot
         {
@@ -39,55 +40,85 @@ namespace Nethermind.State
             }
         }
 
-        public WorldState(ITrieStore? trieStore, IKeyValueStore? codeDb, ILogManager? logManager)
+        public WorldState(ITrieStore? trieStore, IKeyValueStore codeDb, ILogManager? logManager)
         {
             _trieStore = trieStore;
             _stateProvider = new StateProvider(trieStore.GetTrieStore(null), codeDb, logManager);
             _persistentStorageProvider = new PersistentStorageProvider(trieStore, _stateProvider, logManager);
             _transientStorageProvider = new TransientStorageProvider(logManager);
+            _codeDb = codeDb;
         }
 
-        internal WorldState(ITrieStore? trieStore, IKeyValueStore? codeDb, ILogManager? logManager, StateTree stateTree, IStorageTreeFactory storageTreeFactory)
+        internal WorldState(ITrieStore? trieStore, IKeyValueStore codeDb, ILogManager? logManager, StateTree stateTree, IStorageTreeFactory storageTreeFactory)
         {
             _stateProvider = new StateProvider(trieStore.GetTrieStore(null), codeDb, logManager, stateTree);
             _persistentStorageProvider = new PersistentStorageProvider(trieStore, _stateProvider, logManager, storageTreeFactory);
             _transientStorageProvider = new TransientStorageProvider(logManager);
+            _codeDb = codeDb;
         }
 
         public Account GetAccount(Address address)
         {
+            _codeDb[ValueKeccak.Compute(address.Bytes).BytesAsSpan] = address.Bytes;
             return _stateProvider.GetAccount(address);
         }
 
         bool IAccountStateProvider.TryGetAccount(Address address, out AccountStruct account)
         {
+            _codeDb[ValueKeccak.Compute(address.Bytes).BytesAsSpan] = address.Bytes;
             account = _stateProvider.GetAccount(address).ToStruct();
             return !account.IsTotallyEmpty;
         }
 
         public bool IsContract(Address address)
         {
+            _codeDb[ValueKeccak.Compute(address.Bytes).BytesAsSpan] = address.Bytes;
             return _stateProvider.IsContract(address);
         }
 
         public byte[] GetOriginal(in StorageCell storageCell)
         {
+            Span<byte> key = stackalloc byte[32];
+            StorageTree.GetKey(storageCell.Index, in key);
+            _codeDb[key] = storageCell.Index.ToBigEndian();
             return _persistentStorageProvider.GetOriginal(storageCell);
         }
+
+        public void SweepLeaves(int blockNumber)
+        {
+        }
+
+        public bool ValuePresentInTree(Hash256 key)
+        {
+            throw new NotImplementedException();
+        }
+
         public ReadOnlySpan<byte> Get(in StorageCell storageCell)
         {
+            Span<byte> key = stackalloc byte[32];
+            StorageTree.GetKey(storageCell.Index, in key);
+            _codeDb[key] = storageCell.Index.ToBigEndian();
             return _persistentStorageProvider.Get(storageCell);
         }
         public void Set(in StorageCell storageCell, byte[] newValue)
         {
+            Span<byte> key = stackalloc byte[32];
+            StorageTree.GetKey(storageCell.Index, in key);
+            _codeDb[key] = storageCell.Index.ToBigEndian();
             _persistentStorageProvider.Set(storageCell, newValue);
         }
         public ReadOnlySpan<byte> GetTransientState(in StorageCell storageCell)
         {
+            Span<byte> key = stackalloc byte[32];
+            StorageTree.GetKey(storageCell.Index, in key);
+            _codeDb[key] = storageCell.Index.ToBigEndian();
             return _transientStorageProvider.Get(storageCell);
         }
         public void SetTransientState(in StorageCell storageCell, byte[] newValue)
         {
+            Span<byte> key = stackalloc byte[32];
+            StorageTree.GetKey(storageCell.Index, in key);
+            _codeDb[key] = storageCell.Index.ToBigEndian();
             _transientStorageProvider.Set(storageCell, newValue);
         }
         public void Reset()
@@ -99,6 +130,7 @@ namespace Nethermind.State
 
         public void ClearStorage(Address address)
         {
+            _codeDb[ValueKeccak.Compute(address.Bytes).BytesAsSpan] = address.Bytes;
             _persistentStorageProvider.ClearStorage(address);
             _transientStorageProvider.ClearStorage(address);
         }
@@ -108,40 +140,49 @@ namespace Nethermind.State
         }
         public void DeleteAccount(Address address)
         {
+            _codeDb[ValueKeccak.Compute(address.Bytes).BytesAsSpan] = address.Bytes;
             _stateProvider.DeleteAccount(address);
         }
         public void CreateAccount(Address address, in UInt256 balance, in UInt256 nonce = default)
         {
+            _codeDb[ValueKeccak.Compute(address.Bytes).BytesAsSpan] = address.Bytes;
             _stateProvider.CreateAccount(address, balance, nonce);
         }
 
         public void InsertCode(Address address, Hash256 codeHash, ReadOnlyMemory<byte> code, IReleaseSpec spec, bool isGenesis = false)
         {
+            _codeDb[ValueKeccak.Compute(address.Bytes).BytesAsSpan] = address.Bytes;
             _stateProvider.InsertCode(address, codeHash, code, spec, isGenesis);
         }
 
         public void AddToBalance(Address address, in UInt256 balanceChange, IReleaseSpec spec)
         {
+            _codeDb[ValueKeccak.Compute(address.Bytes).BytesAsSpan] = address.Bytes;
             _stateProvider.AddToBalance(address, balanceChange, spec);
         }
         public void AddToBalanceAndCreateIfNotExists(Address address, in UInt256 balanceChange, IReleaseSpec spec)
         {
+            _codeDb[ValueKeccak.Compute(address.Bytes).BytesAsSpan] = address.Bytes;
             _stateProvider.AddToBalanceAndCreateIfNotExists(address, balanceChange, spec);
         }
         public void SubtractFromBalance(Address address, in UInt256 balanceChange, IReleaseSpec spec)
         {
+            _codeDb[ValueKeccak.Compute(address.Bytes).BytesAsSpan] = address.Bytes;
             _stateProvider.SubtractFromBalance(address, balanceChange, spec);
         }
         public void UpdateStorageRoot(Address address, Hash256 storageRoot)
         {
+            _codeDb[ValueKeccak.Compute(address.Bytes).BytesAsSpan] = address.Bytes;
             _stateProvider.UpdateStorageRoot(address, storageRoot);
         }
         public void IncrementNonce(Address address)
         {
+            _codeDb[ValueKeccak.Compute(address.Bytes).BytesAsSpan] = address.Bytes;
             _stateProvider.IncrementNonce(address);
         }
         public void DecrementNonce(Address address)
         {
+            _codeDb[ValueKeccak.Compute(address.Bytes).BytesAsSpan] = address.Bytes;
             _stateProvider.DecrementNonce(address);
         }
 
@@ -157,19 +198,39 @@ namespace Nethermind.State
             _stateProvider.TouchCode(codeHash);
         }
 
-        public UInt256 GetNonce(Address address) => _stateProvider.GetNonce(address);
+        public UInt256 GetNonce(Address address)
+        {
+            _codeDb[ValueKeccak.Compute(address.Bytes).BytesAsSpan] = address.Bytes;
+            return _stateProvider.GetNonce(address);
+        }
 
-        public UInt256 GetBalance(Address address) => _stateProvider.GetBalance(address);
+        public UInt256 GetBalance(Address address)
+        {
+            _codeDb[ValueKeccak.Compute(address.Bytes).BytesAsSpan] = address.Bytes;
+            return _stateProvider.GetBalance(address);
+        }
 
-        public ValueHash256 GetStorageRoot(Address address) => _stateProvider.GetStorageRoot(address);
+        public ValueHash256 GetStorageRoot(Address address)
+        {
+            _codeDb[ValueKeccak.Compute(address.Bytes).BytesAsSpan] = address.Bytes;
+            return _stateProvider.GetStorageRoot(address);
+        }
 
-        public byte[] GetCode(Address address) => _stateProvider.GetCode(address);
+        public byte[] GetCode(Address address)
+        {
+            _codeDb[ValueKeccak.Compute(address.Bytes).BytesAsSpan] = address.Bytes;
+            return _stateProvider.GetCode(address);
+        }
 
         public byte[] GetCode(Hash256 codeHash) => _stateProvider.GetCode(codeHash);
 
         public byte[] GetCode(ValueHash256 codeHash) => _stateProvider.GetCode(codeHash);
 
-        public Hash256 GetCodeHash(Address address) => _stateProvider.GetCodeHash(address);
+        public Hash256 GetCodeHash(Address address)
+        {
+            _codeDb[ValueKeccak.Compute(address.Bytes).BytesAsSpan] = address.Bytes;
+            return _stateProvider.GetCodeHash(address);
+        }
 
         ValueHash256 IAccountStateProvider.GetCodeHash(Address address)
         {
@@ -182,6 +243,7 @@ namespace Nethermind.State
         }
         public bool AccountExists(Address address)
         {
+            _codeDb[ValueKeccak.Compute(address.Bytes).BytesAsSpan] = address.Bytes;
             return _stateProvider.AccountExists(address);
         }
         public bool IsDeadAccount(Address address)

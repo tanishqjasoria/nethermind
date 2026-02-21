@@ -170,6 +170,32 @@ public class VerkleTreeTests
 
     [TestCase(DbMode.MemDb)]
     [TestCase(DbMode.PersistantDb)]
+    public void TestEmptyTrieTr(DbMode dbMode)
+    {
+        VerkleTree tree = VerkleTestUtils.GetVerkleTreeForTest<VerkleSyncCache>(dbMode);
+
+        var k1 = "0365b079a274a1808d56484ce5bd97914629907d75767f51439102e22cd50d00";
+        var v1 = "0000000000000000000000000000000000000000000000000000000000000064";
+        var k2 = "5b5fdfedd6a0e932da408ac7d772a36513d1eee9b9926e52620c43a433aad701";
+        var v2 = "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
+        var k3 = "5b5fdfedd6a0e932da408ac7d772a36513d1eee9b9926e52620c43a433aad741";
+        var v3 = "e0be0a761b6a436b0788275c19421a0c6e25b90086c478fa455259cb644d73a7";
+        var k4 = "5b5fdfedd6a0e932da408ac7d772a36513d1eee9b9926e52620c43a433aad700";
+        var v4 = "0000000000000000000000000000000000000000000000000000000000000000";
+        var k5 = "0365b079a274a1808d56484ce5bd97914629907d75767f51439102e22cd50d01";
+        var v5 = "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470";
+
+        tree.Insert((Hash256)Bytes.FromHexString(k1), Bytes.FromHexString(v1));
+        tree.Insert((Hash256)Bytes.FromHexString(k2), Bytes.FromHexString(v2));
+        tree.Insert((Hash256)Bytes.FromHexString(k3), Bytes.FromHexString(v3));
+        tree.Insert((Hash256)Bytes.FromHexString(k4), Bytes.FromHexString(v4));
+        tree.Insert((Hash256)Bytes.FromHexString(k5), Bytes.FromHexString(v5));
+        tree.Commit();
+        Console.WriteLine(tree.StateRoot.Bytes.ToHexString());
+    }
+
+    [TestCase(DbMode.MemDb)]
+    [TestCase(DbMode.PersistantDb)]
     public void TestSimpleUpdate(DbMode dbMode)
     {
         VerkleTree tree = VerkleTestUtils.GetVerkleTreeForTest<VerkleSyncCache>(dbMode);

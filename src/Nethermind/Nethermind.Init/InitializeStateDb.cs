@@ -20,6 +20,7 @@ using Nethermind.JsonRpc.Converters;
 using Nethermind.Logging;
 using Nethermind.Serialization.Json;
 using Nethermind.State;
+using Nethermind.State.Transition;
 using Nethermind.State.Witnesses;
 using Nethermind.Synchronization.Trie;
 using Nethermind.Synchronization.Witness;
@@ -130,69 +131,39 @@ public class InitializeStateDb : IStep
         }
 
         INodeStorage mainNodeStorage = _api.NodeStorageFactory.WrapKeyValueStore(stateWitnessedBy);
-        IWorldState worldState;
+
+        // merkle trie store
+        VergeWorldStateProvider worldState;
         IWorldStateManager stateManager;
-        TrieStore? trieStore = null;
-        if (!getApi.SpecProvider.GenesisSpec.IsVerkleTreeEipEnabled)
-        {
-            trieStore = syncConfig.TrieHealing
-                ? new HealingTrieStore(
-                    mainNodeStorage,
-                    pruningStrategy,
-                    persistenceStrategy,
-                    getApi.LogManager)
-                : new TrieStore(
-                    mainNodeStorage,
-                    pruningStrategy,
-                    persistenceStrategy,
-                    getApi.LogManager);
-
-            // TODO: Needed by node serving. Probably should use `StateReader` instead.
-            setApi.TrieStore = trieStore;
-
-            worldState = syncConfig.TrieHealing
-                ? new HealingWorldState(
-                    trieStore,
-                    codeDb,
-                    getApi.LogManager)
-                : new WorldState(
-                    trieStore,
-                    codeDb,
-                    getApi.LogManager);
-
-            stateManager = setApi.WorldStateManager = new WorldStateManager(
-                worldState,
-                trieStore,
-                getApi.DbProvider,
+        TrieStore? trieStore = new TrieStore(
+                mainNodeStorage,
+                pruningStrategy,
+                persistenceStrategy,
                 getApi.LogManager);
-            getApi.DisposeStack.Push(trieStore);
-        }
-        else
-        {
-            if (initConfig.StatelessProcessingEnabled)
-            {
-                IVerkleTreeStore verkleTreeStore;
-                setApi.VerkleTreeStore = verkleTreeStore = new NullVerkleTreeStore();
-                worldState = setApi.WorldState = new VerkleWorldState(new VerkleStateTree(verkleTreeStore, getApi.LogManager), codeDb, getApi.LogManager);
-                stateManager = setApi.WorldStateManager = new VerkleWorldStateManager(
-                    worldState,
-                    verkleTreeStore,
-                    getApi.DbProvider,
-                    getApi.LogManager);
-            }
-            else
-            {
-                VerkleTreeStore<VerkleSyncCache> verkleTreeStore;
-                setApi.VerkleTreeStore = verkleTreeStore = new VerkleTreeStore<VerkleSyncCache>(getApi.DbProvider, getApi.LogManager);
-                setApi.VerkleArchiveStore = new(verkleTreeStore, getApi.DbProvider, getApi.LogManager);
-                worldState = setApi.WorldState = new VerkleWorldState(new VerkleStateTree(verkleTreeStore, getApi.LogManager), codeDb, getApi.LogManager);
-                stateManager = setApi.WorldStateManager = new VerkleWorldStateManager(
-                    worldState,
-                    verkleTreeStore,
-                    getApi.DbProvider,
-                    getApi.LogManager);
-            }
-        }
+
+        VerkleTreeStore<VerkleSyncCache> verkleTreeStore;
+        setApi.VerkleTreeStore = verkleTreeStore = new VerkleTreeStore<VerkleSyncCache>(getApi.DbProvider, getApi.LogManager);
+
+
+        // TODO: Needed by node serving. Probably should use `StateReader` instead.
+        setApi.TrieStore = trieStore;
+
+        worldState = new VergeWorldStateProvider(
+            trieStore,
+            verkleTreeStore,
+            new StateReader(trieStore, codeDb, getApi.LogManager),
+            getApi.SpecProvider,
+            getApi.DbProvider,
+            getApi.LogManager);
+
+        stateManager = setApi.WorldStateManager = new VergeWorldStateManager(
+            worldState,
+            verkleTreeStore,
+            trieStore,
+            getApi.DbProvider,
+            getApi.SpecProvider,
+            getApi.LogManager);
+        getApi.DisposeStack.Push(trieStore);
 
         // TODO: Don't forget this
         TrieStoreBoundaryWatcher trieStoreBoundaryWatcher = new(stateManager, _api.BlockTree!, _api.LogManager);

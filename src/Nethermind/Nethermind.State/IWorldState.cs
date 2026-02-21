@@ -24,6 +24,10 @@ public interface IWorldState : IJournal<Snapshot>, IReadOnlyStateProvider
     /// <returns></returns>
     byte[] GetOriginal(in StorageCell storageCell);
 
+    void SweepLeaves(int blockNumber);
+
+    bool ValuePresentInTree(Hash256 key);
+
     /// <summary>
     /// Get the persistent storage value at the specified storage cell
     /// </summary>

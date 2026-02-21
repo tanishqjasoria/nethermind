@@ -188,6 +188,7 @@ namespace Nethermind.Api
         public ISynchronizer? Synchronizer { get; set; }
         public ISyncServer? SyncServer { get; set; }
         public IWorldState? WorldState { get; set; }
+        public VergeWorldStateProvider? WorldStateProvider { get; set; }
         public IReadOnlyStateProvider? ChainHeadStateProvider { get; set; }
         public IWorldStateManager? WorldStateManager { get; set; }
         public IStateReader? StateReader { get; set; }

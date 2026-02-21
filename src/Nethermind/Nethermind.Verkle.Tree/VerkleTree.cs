@@ -94,6 +94,7 @@ public partial class VerkleTree(IVerkleTreeStore verkleStateStore, ILogManager l
         foreach (var (index, value) in leafIndexValueMap)
         {
             key[31] = index;
+            // Console.WriteLine($"InsertStemBatch: {key.ToHexString()} {value.ToHexString()}");
             leafUpdateDelta.UpdateDelta(UpdateLeafAndGetDelta(new Hash256(key.ToArray()), value), key[31]);
         }
 
@@ -109,7 +110,9 @@ public partial class VerkleTree(IVerkleTreeStore verkleStateStore, ILogManager l
         stem.CopyTo(key);
         foreach (LeafInSubTree leaf in leafIndexValueMap)
         {
+
             key[31] = leaf.SuffixByte;
+            // Console.WriteLine($"InsertStemBatch: {key.ToHexString()} {leaf.Leaf.ToHexString()}");
             leafUpdateDelta.UpdateDelta(UpdateLeafAndGetDelta(new Hash256(key.ToArray()), leaf.Leaf), key[31]);
         }
 
@@ -149,6 +152,10 @@ public partial class VerkleTree(IVerkleTreeStore verkleStateStore, ILogManager l
 
     public void CommitTree(long blockNumber)
     {
+        foreach (var VARIABLE in TreeCache.LeafTable)
+        {
+            Console.WriteLine($"CommitTree: {VARIABLE.Key.ToHexString()} {VARIABLE.Value.ToHexString()}");
+        }
         VerkleStateStore.InsertBatch(blockNumber, TreeCache);
         Reset();
     }

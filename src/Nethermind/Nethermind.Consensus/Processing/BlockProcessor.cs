@@ -135,6 +135,9 @@ public partial class BlockProcessor : IBlockProcessor
 
                 // be cautious here as AuRa depends on processing
                 PreCommitBlock(newBranchStateRoot, suggestedBlocks[i].Number);
+
+                var sss  = _stateProvider as VergeWorldStateProvider;
+                sss?.ResetProvider();
                 if (notReadOnly)
                 {
                     _witnessCollector.Persist(processedBlock.Hash!);
@@ -283,6 +286,8 @@ public partial class BlockProcessor : IBlockProcessor
 
     protected virtual (IBlockProcessor.IBlockTransactionsExecutor, IWorldState) GetOrCreateExecutorAndState(Block block)
     {
+        var ss = _stateProvider as VergeWorldStateProvider;
+        ss!.StartBlockProcessing(block.Header);
         return (_blockTransactionsExecutor, _stateProvider);
     }
 
@@ -333,7 +338,9 @@ public partial class BlockProcessor : IBlockProcessor
         ApplyMinerRewards(block, blockTracer, spec);
         _withdrawalProcessor.ProcessWithdrawals(block, ExecutionTracer, spec, worldState);
         ExecutionTracer.EndBlockTrace();
+        worldState.Commit(spec);
 
+        worldState.SweepLeaves((int)block.Number);
         // generate and add execution witness to the block
         bool isProducingBlocks = options.ContainsFlag(ProcessingOptions.ProducingBlock);
         if (!block.IsGenesis && spec.IsVerkleTreeEipEnabled && (isProducingBlocks || ShouldGenerateWitness))
@@ -375,6 +382,8 @@ public partial class BlockProcessor : IBlockProcessor
             worldState.Commit(spec);
         }
 
+        Console.WriteLine($"THIS IS THE END OF BLOCK CHANGES");
+        worldState.CommitTree(block.Number);
         if (ShouldComputeStateRoot(block.Header))
         {
             worldState.RecalculateStateRoot();

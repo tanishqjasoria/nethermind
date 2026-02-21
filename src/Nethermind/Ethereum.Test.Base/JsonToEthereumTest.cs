@@ -41,6 +41,7 @@ namespace Ethereum.Test.Base
             network = network.Replace("GrayGlacier+1153", "Cancun");
             network = network.Replace("Merge+1153", "Cancun");
             network = network.Replace("Verkle", "Osaka");
+            network = network.Replace("ShanghaiToVerkleAtTime32", "Osaka");
             return network switch
             {
                 "Frontier" => Frontier.Instance,

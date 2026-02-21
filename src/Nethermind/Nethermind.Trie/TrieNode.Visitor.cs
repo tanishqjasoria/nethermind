@@ -296,10 +296,8 @@ namespace Nethermind.Trie
 
                 case NodeType.Leaf:
                     {
-                        visitor.VisitLeaf(nodeContext, this, trieVisitContext, Value.AsSpan());
 
-                        trieVisitContext.AddVisited();
-
+                        // TODO: this is temporary change to accomodate moving storage before account
                         TNodeContext leafContext = nodeContext.Add(Key!);
 
                         if (!trieVisitContext.IsStorage && trieVisitContext.ExpectAccounts) // can combine these conditions
@@ -342,6 +340,12 @@ namespace Nethermind.Trie
                                 trieVisitContext.Level--;
                             }
                         }
+
+                        visitor.VisitLeaf(nodeContext, this, trieVisitContext, Value.AsSpan());
+
+                        trieVisitContext.AddVisited();
+
+
 
                         break;
                     }

@@ -47,9 +47,9 @@ namespace Nethermind.Logging
         }
 
         public bool IsInfo => true;
-        public bool IsWarn => true;
-        public bool IsDebug => true;
-        public bool IsTrace => true;
-        public bool IsError => true;
+        public bool IsWarn => false;
+        public bool IsDebug => false;
+        public bool IsTrace => false;
+        public bool IsError => false;
     }
 }

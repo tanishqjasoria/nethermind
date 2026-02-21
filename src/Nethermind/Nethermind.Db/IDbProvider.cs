@@ -40,5 +40,6 @@ namespace Nethermind.Db
         public IDb ReverseDiff => GetDb<IDb>(DbNames.ReverseDiff);
         public IDb StateRootToBlocks => GetDb<IDb>(DbNames.StateRootToBlock);
         public IDb HistoryOfAccounts => GetDb<IDb>(DbNames.HistoryOfAccounts);
+        public IDb Preimages => GetDb<IDb>(DbNames.Preimages);
     }
 }

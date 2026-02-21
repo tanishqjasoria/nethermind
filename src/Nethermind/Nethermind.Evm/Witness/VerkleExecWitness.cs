@@ -18,7 +18,7 @@ using Nethermind.State;
 [assembly: InternalsVisibleTo("Nethermind.State.Test")]
 namespace Nethermind.Evm.Witness;
 
-public class VerkleExecWitness(ILogManager logManager, VerkleWorldState? verkleWorldState) : IExecutionWitness
+public class VerkleExecWitness(ILogManager logManager, IWorldState? verkleWorldState) : IExecutionWitness
 {
     private readonly HashSet<Hash256> _accessedLeaves = new();
     private readonly HashSet<byte[]> _accessedSubtrees = new(Bytes.EqualityComparer);
@@ -27,7 +27,7 @@ public class VerkleExecWitness(ILogManager logManager, VerkleWorldState? verkleW
     private readonly HashSet<Hash256> _modifiedLeaves = new();
     private readonly HashSet<byte[]> _modifiedSubtrees = new(Bytes.EqualityComparer);
 
-    private readonly VerkleWorldState _verkleWorldState =
+    private readonly IWorldState _verkleWorldState =
         verkleWorldState ?? throw new ArgumentNullException(nameof(verkleWorldState));
 
     private bool ChargeFillCost { get; } = false;

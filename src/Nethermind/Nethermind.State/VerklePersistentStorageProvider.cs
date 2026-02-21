@@ -86,7 +86,7 @@ internal class VerklePersistentStorageProvider : PartialStorageProviderBase
     /// <param name="tracer">Storage tracer</param>
     protected override void CommitCore(IStorageTracer tracer)
     {
-        if (_logger.IsTrace) _logger.Trace("Committing storage changes");
+        _logger.Info("Committing storage changes");
 
         if (_changes[_currentPosition] is null)
         {
@@ -150,10 +150,8 @@ internal class VerklePersistentStorageProvider : PartialStorageProviderBase
                 case ChangeType.JustCache:
                     break;
                 case ChangeType.Update:
-                    if (_logger.IsTrace)
-                    {
-                        _logger.Trace($"  Update {change.StorageCell.Address}_{change.StorageCell.Index} V = {change.Value.ToHexString(true)}");
-                    }
+                    _logger.Info($"  Update {change.StorageCell.Address}_{change.StorageCell.Index} V = {change.Value.ToHexString(true)}");
+
 
                     Db.Metrics.StorageTreeWrites++;
                     if (!_selfDestructAddress.Contains(change.StorageCell.Address))

@@ -45,7 +45,7 @@ namespace Nethermind.State
             TrieType = TrieType.Storage;
         }
 
-        private static void GetKey(in UInt256 index, in Span<byte> key)
+        public static void GetKey(in UInt256 index, in Span<byte> key)
         {
             if (index < CacheSize)
             {

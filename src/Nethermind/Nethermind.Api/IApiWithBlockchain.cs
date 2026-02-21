@@ -62,6 +62,7 @@ namespace Nethermind.Api
         /// DO NOT USE OUTSIDE OF PROCESSING BLOCK CONTEXT!
         /// </remarks>
         IWorldState? WorldState { get; set; }
+        VergeWorldStateProvider? WorldStateProvider { get; set; }
         IReadOnlyStateProvider? ChainHeadStateProvider { get; set; }
         IStateReader? StateReader { get; set; }
         IWorldStateManager? WorldStateManager { get; set; }
